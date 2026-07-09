@@ -1,0 +1,212 @@
+<!-- ==========================================
+     Preview Question Modal
+     Nursephere Admin Portal
+========================================== -->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Preview Question</title>
+
+    <link rel="stylesheet" href="../css/question-modals.css">
+
+</head>
+
+<body>
+
+<div class="modal-overlay" id="previewQuestionModal">
+
+    <div class="modal modal-lg">
+
+        <!-- ==========================================
+             Modal Header
+        =========================================== -->
+        <div class="modal-header">
+
+            <h2 class="modal-title">
+                Preview Question
+            </h2>
+
+            <button
+                class="modal-close"
+                type="button"
+                aria-label="Close">
+
+                &times;
+
+            </button>
+
+        </div>
+
+        <!-- ==========================================
+             Modal Body
+        =========================================== -->
+        <div class="modal-body">
+
+            <!-- ==========================================
+                 Student Preview
+            =========================================== -->
+            <div class="student-preview">
+
+                <div class="student-preview-header">
+
+                    <span
+                        class="preview-exam"
+                        id="previewExam">
+                    </span>
+
+                    <span
+                        class="preview-subject"
+                        id="previewSubject">
+                    </span>
+
+                </div>
+
+                                <!-- ==========================================
+                     Question Card
+                =========================================== -->
+                <div class="question-card">
+
+                    <div class="question-number">
+
+                        <span id="previewQuestionNumber">
+                            Question
+                        </span>
+
+                    </div>
+
+                    <div class="question-text">
+
+                        <p id="previewQuestionText">
+
+                        </p>
+
+                    </div>
+
+                </div>
+
+                <!-- ==========================================
+                     Answer Options
+                =========================================== -->
+                <div class="preview-options">
+
+                    <div class="preview-option" id="previewOptionA">
+
+                        <span class="option-letter">
+                            A
+                        </span>
+
+                        <p id="previewOptionAText"></p>
+
+                    </div>
+
+                    <div class="preview-option" id="previewOptionB">
+
+                        <span class="option-letter">
+                            B
+                        </span>
+
+                        <p id="previewOptionBText"></p>
+
+                    </div>
+
+                    <div class="preview-option" id="previewOptionC">
+
+                        <span class="option-letter">
+                            C
+                        </span>
+
+                        <p id="previewOptionCText"></p>
+
+                    </div>
+
+                    <div class="preview-option" id="previewOptionD">
+
+                        <span class="option-letter">
+                            D
+                        </span>
+
+                        <p id="previewOptionDText"></p>
+
+                    </div>
+
+                </div>
+
+                                <!-- ==========================================
+                     Correct Answer
+                =========================================== -->
+                <div class="preview-result">
+
+                    <h3 class="section-title">
+                        Correct Answer
+                    </h3>
+
+                    <div class="correct-answer-card">
+
+                        <span class="correct-badge">
+                            ✓ Correct Answer
+                        </span>
+
+                        <p id="previewCorrectAnswer"></p>
+
+                    </div>
+
+                </div>
+
+                <!-- ==========================================
+                     Explanation
+                =========================================== -->
+                <div class="preview-explanation">
+
+                    <h3 class="section-title">
+                        Explanation
+                    </h3>
+
+                    <div class="explanation-card">
+
+                        <p id="previewExplanation"></p>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- ==========================================
+             Modal Footer
+        =========================================== -->
+        <div class="modal-footer">
+
+            <button
+                type="button"
+                class="btn btn-secondary"
+                id="btnClosePreview">
+
+                Close
+
+            </button>
+
+            <button
+                type="button"
+                class="btn btn-primary"
+                id="btnEditQuestion">
+
+                Edit Question
+
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+</body>
+
+</html>

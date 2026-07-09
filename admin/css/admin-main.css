@@ -1,0 +1,187 @@
+/*=========================================
+        GOOGLE FONT RESET
+=========================================*/
+
+*{
+
+    margin:0;
+
+    padding:0;
+
+    box-sizing:border-box;
+
+}
+
+html{
+
+    scroll-behavior:smooth;
+
+}
+
+body{
+
+    font-family:'Poppins',sans-serif;
+
+    background:#f8fafc;
+
+    color:#1e293b;
+
+    overflow-x:hidden;
+
+}
+
+/*=========================================
+        LINKS
+=========================================*/
+
+a{
+
+    text-decoration:none;
+
+    color:inherit;
+
+}
+
+/*=========================================
+        BUTTONS
+=========================================*/
+
+button{
+
+    border:none;
+
+    outline:none;
+
+    background:none;
+
+    cursor:pointer;
+
+    font-family:inherit;
+
+}
+
+/*=========================================
+        IMAGES
+=========================================*/
+
+img{
+
+    max-width:100%;
+
+    display:block;
+
+}
+
+/*=========================================
+        INPUTS
+=========================================*/
+
+input,
+
+select,
+
+textarea{
+
+    font-family:inherit;
+
+    outline:none;
+
+}
+
+/*=========================================
+        ADMIN APPLICATION LAYOUT
+=========================================*/
+
+.admin-layout{
+
+    display:flex;
+
+    min-height:100vh;
+
+}
+
+.admin-main{
+
+    flex:1;
+
+    display:flex;
+
+    flex-direction:column;
+
+    margin-left:280px;
+
+    transition:.35s ease;
+
+}
+
+/*=========================================
+        COLLAPSED MAIN
+=========================================*/
+
+.admin-main.expanded{
+
+    margin-left:90px;
+
+}
+
+.dashboard-content{
+
+    flex:1;
+
+    padding:35px;
+
+}
+
+/*=========================================
+        SIDEBAR COLLAPSED
+=========================================*/
+
+.admin-main.expanded{
+
+    margin-left:90px;
+
+}
+
+/*=========================================
+        SCROLLBAR
+=========================================*/
+
+::-webkit-scrollbar{
+
+    width:8px;
+
+}
+
+::-webkit-scrollbar-thumb{
+
+    background:#cbd5e1;
+
+    border-radius:20px;
+
+}
+
+::-webkit-scrollbar-track{
+
+    background:#f8fafc;
+
+}
+
+/*=========================================
+        RESPONSIVE
+=========================================*/
+
+@media(max-width:992px){
+
+    .admin-main{
+
+        margin-left:0;
+
+    }
+
+    .dashboard-content{
+
+        padding:25px;
+
+    }
+
+}

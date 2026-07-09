@@ -1,0 +1,325 @@
+/*=========================================
+        DOCUMENTS HERO
+=========================================*/
+
+.dashboard-top{
+
+    background:#f4f8ff;
+
+    border-radius:24px;
+
+    padding:45px;
+
+    margin-bottom:35px;
+
+}
+
+.dashboard-top h1{
+
+    font-size:2.2rem;
+
+    color:#1d3557;
+
+    margin-bottom:15px;
+
+}
+
+.dashboard-top p{
+
+    max-width:720px;
+
+    color:#64748b;
+
+    line-height:1.8;
+
+}
+
+@media(max-width:768px){
+
+    .dashboard-top{
+
+        padding:30px;
+
+    }
+
+    .dashboard-top h1{
+
+        font-size:1.8rem;
+
+    }
+
+}
+
+/*=========================================
+        MY DOCUMENTS
+=========================================*/
+
+.documents-section{
+
+    margin-bottom:45px;
+
+}
+
+.section-heading{
+
+    margin-bottom:30px;
+
+}
+
+.section-heading h2{
+
+    color:#1d3557;
+
+    font-size:1.8rem;
+
+    margin-bottom:10px;
+
+}
+
+.section-heading p{
+
+    color:#64748b;
+
+    line-height:1.8;
+
+}
+
+
+
+/*=========================================
+        UPLOAD AREA
+=========================================*/
+
+.upload-area{
+
+    background:#ffffff;
+
+    border:3px dashed #cbd5e1;
+
+    border-radius:24px;
+
+    padding:60px 40px;
+
+    text-align:center;
+
+    transition:.3s;
+
+    margin-bottom:35px;
+
+}
+
+.upload-area:hover{
+
+    border-color:#2563eb;
+
+    background:#f8fbff;
+
+}
+
+.upload-area i{
+
+    font-size:60px;
+
+    color:#2563eb;
+
+    margin-bottom:20px;
+
+}
+
+.upload-area h3{
+
+    color:#1d3557;
+
+    margin-bottom:12px;
+
+}
+
+.upload-area p{
+
+    color:#64748b;
+
+    margin-bottom:30px;
+
+}
+
+.upload-btn{
+
+    background:#2563eb;
+
+    color:#ffffff;
+
+    border:none;
+
+    border-radius:14px;
+
+    padding:15px 30px;
+
+    font-size:1rem;
+
+    font-weight:600;
+
+    cursor:pointer;
+
+    display:inline-flex;
+
+    align-items:center;
+
+    gap:10px;
+
+    transition:.3s;
+
+}
+
+.upload-btn:hover{
+
+    background:#1d4ed8;
+
+}
+
+
+
+/*=========================================
+        DOCUMENT LIST
+=========================================*/
+
+.documents-list{
+
+    background:#ffffff;
+
+    border-radius:22px;
+
+    padding:35px;
+
+    box-shadow:0 10px 25px rgba(15,23,42,.08);
+
+}
+
+.documents-list h3{
+
+    color:#1d3557;
+
+    margin-bottom:20px;
+
+}
+
+.empty-state{
+
+    color:#94a3b8;
+
+    text-align:center;
+
+    padding:40px;
+
+    border:2px dashed #e2e8f0;
+
+    border-radius:18px;
+
+}
+
+/*=========================================
+        RECEIPTS
+=========================================*/
+
+.receipts-section{
+
+    margin-bottom:40px;
+
+}
+
+.receipt-card{
+
+    background:#ffffff;
+
+    border-radius:22px;
+
+    padding:30px;
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:space-between;
+
+    gap:25px;
+
+    box-shadow:0 10px 25px rgba(15,23,42,.08);
+
+}
+
+.receipt-icon{
+
+    width:70px;
+
+    height:70px;
+
+    border-radius:18px;
+
+    background:#edf4ff;
+
+    color:#2563eb;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+}
+
+.receipt-icon i{
+
+    font-size:30px;
+
+}
+
+.receipt-details{
+
+    flex:1;
+
+}
+
+.receipt-details h3{
+
+    color:#1d3557;
+
+    margin-bottom:8px;
+
+}
+
+.receipt-details p{
+
+    color:#64748b;
+
+    line-height:1.7;
+
+}
+
+.receipt-btn{
+
+    background:#cbd5e1;
+
+    color:#ffffff;
+
+    border:none;
+
+    border-radius:12px;
+
+    padding:14px 24px;
+
+    cursor:not-allowed;
+
+    font-weight:600;
+
+}
+
+@media(max-width:768px){
+
+    .receipt-card{
+
+        flex-direction:column;
+
+        text-align:center;
+
+    }
+
+}

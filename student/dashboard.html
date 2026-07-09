@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Student Dashboard | Nursephere</title>
+
+    <meta name="description"
+        content="Nursephere Student Dashboard">
+
+    <!-- Favicon -->
+
+    <link rel="icon" type="image/png" sizes="32x32"
+        href="../assets/favicon/favicon-32x32.png">
+
+    <link rel="icon" type="image/png" sizes="16x16"
+        href="../assets/favicon/favicon-16x16.png">
+
+    <!-- Google Fonts -->
+
+    <link rel="preconnect"
+        href="https://fonts.googleapis.com">
+
+    <link rel="preconnect"
+        href="https://fonts.gstatic.com"
+        crossorigin>
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <!-- Font Awesome -->
+
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+
+    <!-- CSS -->
+
+    <link rel="stylesheet"
+        href="../css/sidebar.css">
+
+    <link rel="stylesheet"
+        href="../css/header.css">
+
+    <link rel="stylesheet"
+        href="../css/dashboard-student.css">
+
+    <link rel="stylesheet"
+        href="../css/practice.css">
+        
+
+</head>
+
+<body>
+
+    <!-- ===================================
+            STUDENT APPLICATION LAYOUT
+    ==================================== -->
+
+    <div class="student-layout">
+
+        <!-- Sidebar -->
+
+<aside class="student-sidebar" id="studentSidebar">
+
+    <!-- Logo -->
+    <div class="sidebar-brand">
+
+        <a href="dashboard.html" class="brand-link">
+
+            <img src="../assets/logo/logo.jpeg" alt="Nursephere Logo">
+
+            <div class="brand-text">
+                <h2>Nursephere</h2>
+                <span>Learn • Practice • Pass</span>
+            </div>
+
+        </a>
+
+    </div>
+
+    <!-- Main Navigation -->
+
+    <div class="sidebar-section">
+
+        <h3 class="sidebar-title">MAIN MENU</h3>
+
+        <ul class="sidebar-menu">
+
+            <li>
+                <a href="dashboard.html">
+                    <i class="fas fa-house"></i>
+                    <span>Dashboard</span>
+                </a>
+            </li>
+
+            <li>
+                <a href="practice.html">
+                    <i class="fas fa-book-medical"></i>
+                    <span>Practice</span>
+                </a>
+            </li>
+
+            <li>
+                <a href="progress.html">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Track Progress</span>
+                </a>
+            </li>
+
+            <li>
+                <a href="documents.html">
+                    <i class="fas fa-folder-open"></i>
+                    <span>Documents</span>
+                </a>
+            </li>
+
+        </ul>
+
+    </div>
+
+    <!-- Account -->
+
+    <div class="sidebar-section">
+
+        <h3 class="sidebar-title">ACCOUNT</h3>
+
+        <ul class="sidebar-menu">
+
+            <li>
+                <a href="profile.html">
+                    <i class="fas fa-user"></i>
+                    <span>Profile</span>
+                </a>
+            </li>
+
+            <li>
+                <a href="referral.html">
+                    <i class="fas fa-user-plus"></i>
+                    <span>Referral</span>
+                </a>
+            </li>
+
+            <li>
+                <a href="subscription.html">
+                    <i class="fas fa-credit-card"></i>
+                    <span>Subscription</span>
+                </a>
+            </li>
+
+            <li>
+                <a href="settings.html">
+                    <i class="fas fa-gear"></i>
+                    <span>Settings</span>
+                </a>
+            </li>
+
+            <li>
+                <a href="../index.html" id="logoutBtn">
+                    <i class="fas fa-right-from-bracket"></i>
+                    <span>Logout</span>
+                </a>
+            </li>
+
+        </ul>
+
+    </div>
+
+    <div class="upgrade-card">
+
+        <div class="upgrade-icon">
+
+            <i class="fas fa-crown"></i>
+
+        </div>
+
+        <div class="upgrade-text">
+
+            <h3>Upgrade to Premium</h3>
+
+            <p>
+
+                Unlock unlimited questions,
+                full mock exams,
+                detailed analytics,
+                and every nursing subject.
+
+            </p>
+
+        </div>
+
+        <a href="../pricing.html" class="upgrade-btn">
+
+            Upgrade Now
+
+        </a>
+
+    </div>
+
+</aside>
+
+        <!-- ===========================
+                MAIN APPLICATION
+        ============================ -->
+
+        <div class="student-main">
+
+            <!-- Header -->
+
+            <header class="student-header">
+
+    <div class="header-left">
+
+        <button class="menu-toggle" id="menuToggle">
+
+            <i class="fas fa-bars"></i>
+
+        </button>
+
+        <div class="search-box">
+
+            <i class="fas fa-search"></i>
+
+            <input
+                type="text"
+                id="searchInput"
+                placeholder="Search questions, exams or documents...">
+
+        </div>
+
+    </div>
+
+    <div class="header-right">
+
+        <button class="header-icon notification-btn">
+
+            <i class="fas fa-bell"></i>
+
+            <span class="notification-badge">
+
+                3
+
+            </span>
+
+        </button>
+
+        <div class="profile-dropdown">
+
+            <button class="profile-btn" id="profileToggle">
+
+                <div class="avatar-wrapper">
+
+                    <img
+                        src="../assets/images/avatar-placeholder.png"
+                        id="studentAvatar"
+                        alt="Student">
+
+                    <input
+                        type="file"
+                        id="avatarUpload"
+                        hidden>
+
+                </div>
+
+                <div class="profile-info">
+
+                    <h4 id="studentName">
+
+                        Student
+
+                    </h4>
+
+                    <span id="studentPlan">
+
+                        Free Trial
+
+                    </span>
+
+                </div>
+
+                <i class="fas fa-chevron-down"></i>
+
+            </button>
+
+            <div class="profile-menu" id="profileMenu">
+
+                <a href="#" id="uploadPhoto">
+
+                    <i class="fas fa-camera"></i>
+
+                    Upload Photo
+
+                </a>
+
+                <a href="profile.html">
+
+                    <i class="fas fa-user"></i>
+
+                    My Profile
+
+                </a>
+
+                <a href="subscription.html">
+
+                    <i class="fas fa-credit-card"></i>
+
+                    Subscription
+
+                </a>
+
+                <a href="settings.html">
+
+                    <i class="fas fa-gear"></i>
+
+                    Settings
+
+                </a>
+
+                <hr>
+
+                <a href="../index.html" id="logoutBtn">
+
+                    <i class="fas fa-right-from-bracket"></i>
+
+                    Logout
+
+                </a>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</header>
+
+            <!-- ===========================
+                    PAGE CONTENT
+            ============================ -->
+
+            <main class="dashboard-content">
+
+                <!-- ===========================
+                        PAGE HEADER
+                ============================ -->
+
+                <section class="dashboard-top">
+
+                    <div>
+
+                        <h1>
+                            Welcome Back,
+                            <span id="studentName">Student</span>
+                            👋
+                        </h1>
+
+                        <p>
+
+                            Continue your nursing preparation and keep
+                            improving every day.
+
+                        </p>
+
+                    </div>
+
+                    <a href="practice.html" class="primary-btn">
+
+                        Start Practice
+
+                    </a>
+
+                </section>
+
+                <!-- ===========================
+                        FREE TRIAL CARD
+                ============================ -->
+
+                <section class="trial-card">
+
+                    <div class="trial-left">
+
+                        <h2>
+
+                            🎉 3-Day Free Trial
+
+                        </h2>
+
+                        <p>
+
+                            You have access to
+                            <strong>30 FREE Questions</strong>
+                            during your trial.
+
+                        </p>
+
+                        <p>
+
+                            Maximum
+                            <strong>10 Questions per Subject.</strong>
+
+                        </p>
+
+                    </div>
+
+                    <div class="trial-right">
+
+                        <div class="trial-stat">
+
+                            <h3 id="daysLeft">
+
+                                3
+
+                            </h3>
+
+                            <span>
+
+                                Days Left
+
+                            </span>
+
+                        </div>
+
+                        <div class="trial-stat">
+
+                            <h3 id="questionsLeft">
+
+                                30
+
+                            </h3>
+
+                            <span>
+
+                                Questions Left
+
+                            </span>
+
+                        </div>
+
+                    </div>
+
+                </section>
+
+                <!-- ===========================
+                        QUICK STATS
+                ============================ -->
+
+                <section class="stats-grid">
+
+                    <div class="stat-card">
+
+                        <h2 id="subjectsStarted">
+
+                            0
+
+                        </h2>
+
+                        <p>
+
+                            Subjects Started
+
+                        </p>
+
+                    </div>
+
+                    <div class="stat-card">
+
+                        <h2 id="questionsAnswered">
+
+                            0
+
+                        </h2>
+
+                        <p>
+
+                            Questions Answered
+
+                        </p>
+
+                    </div>
+
+                    <div class="stat-card">
+
+                        <h2 id="successRate">
+
+                            0%
+
+                        </h2>
+
+                        <p>
+
+                            Success Rate
+
+                        </p>
+
+                    </div>
+
+                    <div class="stat-card">
+
+                        <h2 id="dayStreak">
+
+                            0
+
+                        </h2>
+
+                        <p>
+
+                            Day Streak
+
+                        </p>
+
+                    </div>
+
+                </section>
+
+                              <!-- ===========================
+        ACTION CARDS
+=========================== -->
+
+<section class="action-grid">
+
+    <!-- Practice -->
+
+    <a href="practice.html" class="action-card action-primary">
+
+        <div class="action-icon">
+            <i class="fas fa-book-medical"></i>
+        </div>
+
+        <div>
+
+            <h3>Practice Questions</h3>
+
+            <p>
+
+                Continue practicing and improve
+                your nursing knowledge.
+
+            </p>
+
+        </div>
+
+    </a>
+
+    <!-- Progress -->
+
+    <a href="progress.html" class="action-card">
+
+        <div class="action-icon">
+
+            <i class="fas fa-chart-line"></i>
+
+        </div>
+
+        <div>
+
+            <h3>Track Progress</h3>
+
+            <p>
+
+                View your scores,
+                performance and weak areas.
+
+            </p>
+
+        </div>
+
+    </a>
+
+    <!-- Upgrade -->
+
+    <a href="subscription.html" class="action-card">
+
+        <div class="action-icon">
+
+            <i class="fas fa-crown"></i>
+
+        </div>
+
+        <div>
+
+            <h3>Upgrade to Premium</h3>
+
+            <p>
+
+                Unlock unlimited questions
+                and all nursing subjects.
+
+            </p>
+
+        </div>
+
+    </a>
+
+</section>
+
+<!-- ===========================
+        RECENT ACTIVITY
+=========================== -->
+
+<section class="dashboard-card">
+
+    <div class="card-header">
+
+        <h2>Recent Activity</h2>
+
+    </div>
+
+    <div id="recentActivity" class="empty-state">
+
+        <i class="fas fa-clock-rotate-left"></i>
+
+        <h3>No Activity Yet</h3>
+
+        <p>
+
+            Your completed practice sessions
+            will appear here.
+
+        </p>
+
+        <a href="practice.html" class="secondary-btn">
+
+            Start Practicing
+
+        </a>
+
+    </div>
+
+</section>
+
+            </main>
+
+        </div>
+
+    </div>
+
+    <!-- JavaScript -->
+
+    <script src="../js/student-main.js"></script>
+
+    <script src="../js/dashboard-student.js"></script>
+
+</body>
+
+</html>
+                         

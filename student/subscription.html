@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Student Dashboard | Nursephere</title>
+
+    <meta name="description"
+        content="Nursephere Student Dashboard">
+
+    <!-- Favicon -->
+
+    <link rel="icon" type="image/png" sizes="32x32"
+        href="../assets/favicon/favicon-32x32.png">
+
+    <link rel="icon" type="image/png" sizes="16x16"
+        href="../assets/favicon/favicon-16x16.png">
+
+    <!-- Google Fonts -->
+
+    <link rel="preconnect"
+        href="https://fonts.googleapis.com">
+
+    <link rel="preconnect"
+        href="https://fonts.gstatic.com"
+        crossorigin>
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <!-- Font Awesome -->
+
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+
+    <!-- CSS -->
+
+    <link rel="stylesheet"
+        href="../css/sidebar.css">
+
+    <link rel="stylesheet"
+        href="../css/header.css">
+
+    <link rel="stylesheet"
+        href="../css/dashboard-student.css">
+
+    <link rel="stylesheet"
+        href="../css/practice.css">
+
+    <link rel="stylesheet"
+        href="../css/subscription.css">
+        
+
+</head>
+
+<body>
+
+    <!-- ===================================
+            STUDENT APPLICATION LAYOUT
+    ==================================== -->
+
+    <div class="student-layout">
+
+        <!-- Sidebar -->
+
+<aside class="student-sidebar" id="studentSidebar">
+
+    <!-- Logo -->
+    <div class="sidebar-brand">
+
+        <a href="dashboard.html" class="brand-link">
+
+            <img src="../assets/logo/logo.jpeg" alt="Nursephere Logo">
+
+            <div class="brand-text">
+                <h2>Nursephere</h2>
+                <span>Learn • Practice • Pass</span>
+            </div>
+
+        </a>
+
+    </div>
+
+    <!-- Main Navigation -->
+
+    <div class="sidebar-section">
+
+        <h3 class="sidebar-title">MAIN MENU</h3>
+
+        <ul class="sidebar-menu">
+
+            <li>
+                <a href="dashboard.html">
+                    <i class="fas fa-house"></i>
+                    <span>Dashboard</span>
+                </a>
+            </li>
+
+            <li>
+                <a href="practice.html">
+                    <i class="fas fa-book-medical"></i>
+                    <span>Practice</span>
+                </a>
+            </li>
+
+            <li>
+                <a href="progress.html">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Track Progress</span>
+                </a>
+            </li>
+
+            <li>
+                <a href="documents.html">
+                    <i class="fas fa-folder-open"></i>
+                    <span>Documents</span>
+                </a>
+            </li>
+
+        </ul>
+
+    </div>
+
+    <!-- Account -->
+
+    <div class="sidebar-section">
+
+        <h3 class="sidebar-title">ACCOUNT</h3>
+
+        <ul class="sidebar-menu">
+
+            <li>
+                <a href="profile.html">
+                    <i class="fas fa-user"></i>
+                    <span>Profile</span>
+                </a>
+            </li>
+
+            <li>
+                <a href="referral.html">
+                    <i class="fas fa-user-plus"></i>
+                    <span>Referral</span>
+                </a>
+            </li>
+
+            <li>
+                <a href="subscription.html">
+                    <i class="fas fa-credit-card"></i>
+                    <span>Subscription</span>
+                </a>
+            </li>
+
+            <li>
+                <a href="settings.html">
+                    <i class="fas fa-gear"></i>
+                    <span>Settings</span>
+                </a>
+            </li>
+
+            <li>
+                <a href="../index.html" id="logoutBtn">
+                    <i class="fas fa-right-from-bracket"></i>
+                    <span>Logout</span>
+                </a>
+            </li>
+
+        </ul>
+
+    </div>
+
+    <div class="upgrade-card">
+
+        <div class="upgrade-icon">
+
+            <i class="fas fa-crown"></i>
+
+        </div>
+
+        <div class="upgrade-text">
+
+            <h3>Upgrade to Premium</h3>
+
+            <p>
+
+                Unlock unlimited questions,
+                full mock exams,
+                detailed analytics,
+                and every nursing subject.
+
+            </p>
+
+        </div>
+
+        <a href="../pricing.html" class="upgrade-btn">
+
+            Upgrade Now
+
+        </a>
+
+    </div>
+
+</aside>
+
+        <!-- ===========================
+                MAIN APPLICATION
+        ============================ -->
+
+        <div class="student-main">
+
+            <!-- Header -->
+
+            <header class="student-header">
+
+    <div class="header-left">
+
+        <button class="menu-toggle" id="menuToggle">
+
+            <i class="fas fa-bars"></i>
+
+        </button>
+
+        <div class="search-box">
+
+            <i class="fas fa-search"></i>
+
+            <input
+                type="text"
+                id="searchInput"
+                placeholder="Search questions, exams or documents...">
+
+        </div>
+
+    </div>
+
+    <div class="header-right">
+
+        <button class="header-icon notification-btn">
+
+            <i class="fas fa-bell"></i>
+
+            <span class="notification-badge">
+
+                3
+
+            </span>
+
+        </button>
+
+        <div class="profile-dropdown">
+
+            <button class="profile-btn" id="profileToggle">
+
+                <div class="avatar-wrapper">
+
+                    <img
+                        src="../assets/images/avatar-placeholder.png"
+                        id="studentAvatar"
+                        alt="Student">
+
+                    <input
+                        type="file"
+                        id="avatarUpload"
+                        hidden>
+
+                </div>
+
+                <div class="profile-info">
+
+                    <h4 id="studentName">
+
+                        Student
+
+                    </h4>
+
+                    <span id="studentPlan">
+
+                        Free Trial
+
+                    </span>
+
+                </div>
+
+                <i class="fas fa-chevron-down"></i>
+
+            </button>
+
+            <div class="profile-menu" id="profileMenu">
+
+                <a href="#" id="uploadPhoto">
+
+                    <i class="fas fa-camera"></i>
+
+                    Upload Photo
+
+                </a>
+
+                <a href="profile.html">
+
+                    <i class="fas fa-user"></i>
+
+                    My Profile
+
+                </a>
+
+                <a href="subscription.html">
+
+                    <i class="fas fa-credit-card"></i>
+
+                    Subscription
+
+                </a>
+
+                <a href="settings.html">
+
+                    <i class="fas fa-gear"></i>
+
+                    Settings
+
+                </a>
+
+                <hr>
+
+                <a href="../index.html" id="logoutBtn">
+
+                    <i class="fas fa-right-from-bracket"></i>
+
+                    Logout
+
+                </a>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</header>
+
+            <!-- ===========================
+                    PAGE CONTENT
+            ============================ -->
+
+            <main class="dashboard-content">
+
+                <!-- ===========================
+        SUBSCRIPTION HERO
+=========================== -->
+
+<section class="dashboard-top">
+
+    <div>
+
+        <h1>
+
+            Subscription
+
+        </h1>
+
+        <p>
+
+            Manage your Nursephere membership,
+            monitor your subscription status,
+            and unlock premium features designed
+            to support your nursing exam success.
+
+        </p>
+
+    </div>
+
+</section>
+
+<!-- ===========================
+        CURRENT SUBSCRIPTION
+=========================== -->
+
+<section class="subscription-section">
+
+    <div class="section-heading">
+
+        <h2>
+
+            Current Subscription
+
+        </h2>
+
+        <p>
+
+            View your current membership,
+            subscription status, and renewal
+            information.
+
+        </p>
+
+    </div>
+
+    <div class="subscription-card">
+
+        <div class="plan-info">
+
+            <span>
+
+                Current Plan
+
+            </span>
+
+            <h2 id="currentPlan">
+
+                Loading...
+
+            </h2>
+
+            <p>
+
+                Your subscription details will
+                automatically appear here.
+
+            </p>
+
+        </div>
+
+        <div class="plan-status">
+
+            <div class="status-item">
+
+                <span>
+
+                    Status
+
+                </span>
+
+                <strong id="subscriptionStatus">
+
+                    Loading...
+
+                </strong>
+
+            </div>
+
+            <div class="status-item">
+
+                <span>
+
+                    Renewal Date
+
+                </span>
+
+                <strong id="renewalDate">
+
+                    Loading...
+
+                </strong>
+
+            </div>
+        </div>
+
+        <div class="plan-actions">
+
+            <button class="upgrade-btn">
+
+                <i class="fas fa-crown"></i>
+
+                Upgrade Plan
+
+            </button>
+
+        </div>
+
+    </div>
+
+</section>
+
+<!-- ===========================
+        SUBSCRIPTION DETAILS
+=========================== -->
+
+<section class="subscription-details-section">
+
+    <div class="section-heading">
+
+        <h2>
+
+            Subscription Details
+
+        </h2>
+
+        <p>
+
+            Review your subscription information
+            and payment details.
+
+        </p>
+
+    </div>
+
+    <div class="details-card">
+
+        <div class="detail-item">
+
+            <span>
+
+                Subscription Started
+
+            </span>
+
+            <strong id="subscriptionStart">
+
+                Loading...
+
+            </strong>
+
+        </div>
+
+        <div class="detail-item">
+
+            <span>
+
+                Renewal Date
+
+            </span>
+
+            <strong id="subscriptionRenewal">
+
+                Loading...
+
+            </strong>
+
+        </div>
+
+        <div class="detail-item">
+
+            <span>
+
+                Payment Method
+
+            </span>
+
+            <strong id="paymentMethod">
+
+                Loading...
+
+            </strong>
+
+        </div>
+
+        <div class="detail-item">
+
+            <span>
+
+                Last Payment
+
+            </span>
+
+            <strong id="lastPayment">
+
+                Loading...
+
+            </strong>
+
+        </div>
+
+    </div>
+
+</section>
+
+<!-- ===========================
+        MANAGE SUBSCRIPTION
+=========================== -->
+
+<section class="manage-subscription-section">
+
+    <div class="manage-card">
+
+        <div>
+
+            <h2>
+
+                Manage Subscription
+
+            </h2>
+
+            <p>
+
+                Upgrade, renew, or manage your
+                Nursephere subscription whenever
+                you need.
+
+            </p>
+
+        </div>
+
+        <div class="manage-actions">
+
+            <button class="renew-btn">
+
+                <i class="fas fa-arrows-rotate"></i>
+
+                Renew Plan
+
+            </button>
+
+            <button class="upgrade-btn">
+
+                <i class="fas fa-crown"></i>
+
+                Upgrade Plan
+
+            </button>
+
+        </div>
+
+    </div>
+
+</section>
+
+            </main>
+
+        </div>
+
+    </div>
+
+    <!-- JavaScript -->
+
+    <script src="../js/student-main.js"></script>
+
+    <script src="../js/dashboard-student.js"></script>
+
+</body>
+
+</html>
+                         

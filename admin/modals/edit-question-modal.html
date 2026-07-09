@@ -1,0 +1,345 @@
+<!-- ==========================================
+     Edit Question Modal
+     Nursephere Admin Portal
+========================================== -->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Edit Question Modal</title>
+
+    <link rel="stylesheet" href="../css/question-modals.css">
+</head>
+
+<body>
+
+<div class="modal-overlay" id="editQuestionModal">
+
+    <div class="modal modal-lg">
+
+        <!-- ==========================================
+             Modal Header
+        =========================================== -->
+        <div class="modal-header">
+
+            <h2 class="modal-title">
+                Edit Question
+            </h2>
+
+            <button
+                class="modal-close"
+                type="button"
+                aria-label="Close">
+
+                &times;
+
+            </button>
+
+        </div>
+
+        <!-- ==========================================
+             Modal Body
+        =========================================== -->
+        <div class="modal-body">
+
+            <!-- ==========================================
+                 Question Information
+            =========================================== -->
+            <section class="modal-section">
+
+                <h3 class="section-title">
+                    Question Information
+                </h3>
+
+                <div class="modal-grid">
+                    <div class="form-group">
+
+    <label for="question_exam">
+        Exam
+    </label>
+
+    <select
+        id="question_exam"
+        class="form-control">
+
+        <option value="">
+            Select Exam
+        </option>
+
+    </select>
+
+</div>
+
+                    <div class="form-group">
+
+                        <label for="question_subject">
+                            Subject
+                        </label>
+
+                        <select
+                            id="question_subject"
+                            class="form-control">
+
+                            <option value="">
+                                Select Subject
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    <div class="form-group full-width">
+
+                        <label for="question_source">
+                            Question Source <span class="optional">(Optional)</span>
+                        </label>
+
+                        <input
+                            type="text"
+                            id="question_source"
+                            class="form-control"
+                            placeholder="Question source">
+
+                    </div>
+
+                </div>
+
+            </section>
+
+                        <!-- ==========================================
+                 Question
+            =========================================== -->
+            <section class="modal-section">
+
+                <h3 class="section-title">
+                    Question
+                    <span class="required">*</span>
+                </h3>
+
+                <div class="form-group">
+
+                    <label for="question_text">
+                        Enter Question
+                    </label>
+
+                    <textarea
+                        id="question_text"
+                        class="form-control question-textarea"
+                        name="question_text"
+                        rows="3"
+                        placeholder="Type the question here..."
+                        required></textarea>
+
+                    <small class="form-hint">
+                        Character Count:
+                        <span id="questionCharacterCount">0</span>
+                    </small>
+
+                </div>
+
+            </section>
+
+            <!-- ==========================================
+                 Answer Options
+            =========================================== -->
+            <section class="modal-section">
+
+                <h3 class="section-title">
+                    Answer Options
+                    <span class="required">*</span>
+                </h3>
+
+                <!-- Option A -->
+                <div class="answer-option">
+
+                    <div class="answer-option-header">
+
+                        <input
+                            type="radio"
+                            id="correct_option_a"
+                            name="correct_answer"
+                            value="A">
+
+                        <label
+                            for="correct_option_a"
+                            class="option-label">
+
+                            Option A
+
+                        </label>
+
+                    </div>
+
+                    <textarea
+                        id="question_option_a"
+                        class="form-control option-textarea"
+                        name="question_option_a"
+                        rows="3"
+                        placeholder="Enter option A..."
+                        required></textarea>
+
+                </div>
+
+                <!-- Option B -->
+                <div class="answer-option">
+
+                    <div class="answer-option-header">
+
+                        <input
+                            type="radio"
+                            id="correct_option_b"
+                            name="correct_answer"
+                            value="B">
+
+                        <label
+                            for="correct_option_b"
+                            class="option-label">
+
+                            Option B
+
+                        </label>
+
+                    </div>
+
+                    <textarea
+                        id="question_option_b"
+                        class="form-control option-textarea"
+                        name="question_option_b"
+                        rows="3"
+                        placeholder="Enter option B..."
+                        required></textarea>
+
+                </div>
+
+                <!-- Option C -->
+                <div class="answer-option">
+
+                    <div class="answer-option-header">
+
+                        <input
+                            type="radio"
+                            id="correct_option_c"
+                            name="correct_answer"
+                            value="C">
+
+                        <label
+                            for="correct_option_c"
+                            class="option-label">
+
+                            Option C
+
+                        </label>
+
+                    </div>
+
+                    <textarea
+                        id="question_option_c"
+                        class="form-control option-textarea"
+                        name="question_option_c"
+                        rows="3"
+                        placeholder="Enter option C..."
+                        required></textarea>
+
+                </div>
+
+                <!-- Option D -->
+                <div class="answer-option">
+
+                    <div class="answer-option-header">
+
+                        <input
+                            type="radio"
+                            id="correct_option_d"
+                            name="correct_answer"
+                            value="D">
+
+                        <label
+                            for="correct_option_d"
+                            class="option-label">
+
+                            Option D
+
+                        </label>
+
+                    </div>
+
+                    <textarea
+                        id="question_option_d"
+                        class="form-control option-textarea"
+                        name="question_option_d"
+                        rows="3"
+                        placeholder="Enter option D..."
+                        required></textarea>
+
+                </div>
+
+            </section>
+
+                        <!-- ==========================================
+                 Explanation
+            =========================================== -->
+            <section class="modal-section">
+
+                <h3 class="section-title">
+                    Explanation
+                </h3>
+
+                <div class="form-group">
+
+                    <label for="question_explanation">
+                        
+                    </label>
+
+                    <textarea
+                        id="question_explanation"
+                        class="form-control explanation-textarea"
+                        name="question_explanation"
+                        rows="3"
+                        placeholder="Provide an explanation for the correct answer..."></textarea>
+
+                    <small class="form-hint">
+                        This explanation will help students understand why the selected answer is correct.
+                    </small>
+
+                </div>
+
+            </section>
+
+        </div>
+
+        <!-- ==========================================
+             Modal Footer
+        =========================================== -->
+        <div class="modal-footer">
+
+            <button
+                type="button"
+                class="btn btn-secondary"
+                id="btnCancelQuestion">
+
+                Cancel
+
+            </button>
+
+            <button
+                type="button"
+                class="btn btn-outline"
+                id="btnSaveChanges">
+
+                Save Changes
+
+            </button>
+
+
+        </div>
+
+    </div>
+
+</div>
+
+</body>
+
+</html>

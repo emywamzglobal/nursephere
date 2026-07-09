@@ -1,0 +1,371 @@
+/*=========================================
+        REFERRAL HERO
+=========================================*/
+
+.dashboard-top{
+
+    background:#f4f8ff;
+
+    border-radius:24px;
+
+    padding:45px;
+
+    margin-bottom:35px;
+
+}
+
+.dashboard-top h1{
+
+    font-size:2.2rem;
+
+    color:#1d3557;
+
+    margin-bottom:15px;
+
+}
+
+.dashboard-top p{
+
+    max-width:720px;
+
+    color:#64748b;
+
+    line-height:1.8;
+
+}
+
+@media(max-width:768px){
+
+    .dashboard-top{
+
+        padding:30px;
+
+    }
+
+    .dashboard-top h1{
+
+        font-size:1.8rem;
+
+    }
+
+}
+
+/*=========================================
+        MY REFERRAL CODE
+=========================================*/
+
+.referral-section{
+
+    margin-bottom:45px;
+
+}
+
+.section-heading{
+
+    margin-bottom:30px;
+
+}
+
+.section-heading h2{
+
+    color:#1d3557;
+
+    font-size:1.8rem;
+
+    margin-bottom:10px;
+
+}
+
+.section-heading p{
+
+    color:#64748b;
+
+    line-height:1.8;
+
+}
+
+.referral-card{
+
+    background:#ffffff;
+
+    border-radius:24px;
+
+    padding:40px;
+
+    box-shadow:0 10px 25px rgba(15,23,42,.08);
+
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:center;
+
+    gap:30px;
+
+}
+
+.referral-info span{
+
+    color:#64748b;
+
+    font-weight:600;
+
+}
+
+.referral-info h2{
+
+    margin:15px 0;
+
+    font-size:2rem;
+
+    color:#2563eb;
+
+}
+
+.referral-info small{
+
+    color:#94a3b8;
+
+}
+
+.referral-actions{
+
+    display:flex;
+
+    gap:15px;
+
+    flex-wrap:wrap;
+
+}
+
+.copy-btn,
+
+.share-btn{
+
+    border:none;
+
+    padding:15px 28px;
+
+    border-radius:12px;
+
+    cursor:pointer;
+
+    font-weight:600;
+
+    display:flex;
+
+    align-items:center;
+
+    gap:10px;
+
+    transition:.3s;
+
+}
+
+.copy-btn{
+
+    background:#2563eb;
+
+    color:#ffffff;
+
+}
+
+.copy-btn:hover{
+
+    background:#1d4ed8;
+
+}
+
+.share-btn{
+
+    background:#edf4ff;
+
+    color:#2563eb;
+
+}
+
+.share-btn:hover{
+
+    background:#dbeafe;
+
+}
+
+@media(max-width:768px){
+
+    .referral-card{
+
+        flex-direction:column;
+
+        text-align:center;
+
+    }
+
+    .referral-actions{
+
+        justify-content:center;
+
+    }
+
+}
+
+/*=========================================
+        REFERRAL STATISTICS
+=========================================*/
+
+.referral-stats-section{
+
+    margin-bottom:45px;
+
+}
+
+.stats-grid{
+
+    display:grid;
+
+    grid-template-columns:repeat(4,1fr);
+
+    gap:25px;
+
+}
+
+.stat-card{
+
+    background:#ffffff;
+
+    border-radius:22px;
+
+    padding:30px;
+
+    text-align:center;
+
+    box-shadow:0 10px 25px rgba(15,23,42,.08);
+
+    transition:.3s;
+
+}
+
+.stat-card:hover{
+
+    transform:translateY(-5px);
+
+}
+
+.stat-card i{
+
+    font-size:34px;
+
+    color:#2563eb;
+
+    margin-bottom:18px;
+
+}
+
+.stat-card h3{
+
+    color:#64748b;
+
+    margin-bottom:12px;
+
+    font-size:1rem;
+
+}
+
+.stat-card h2{
+
+    color:#1d3557;
+
+    font-size:2rem;
+
+}
+
+
+
+
+
+/*=========================================
+        REFERRAL ACTIVITY
+=========================================*/
+
+.activity-section{
+
+    margin-bottom:40px;
+
+}
+
+.activity-card{
+
+    background:#ffffff;
+
+    border-radius:24px;
+
+    padding:50px;
+
+    text-align:center;
+
+    box-shadow:0 10px 25px rgba(15,23,42,.08);
+
+}
+
+.activity-card i{
+
+    font-size:60px;
+
+    color:#2563eb;
+
+    margin-bottom:25px;
+
+}
+
+.activity-card h3{
+
+    color:#1d3557;
+
+    margin-bottom:15px;
+
+}
+
+.activity-card p{
+
+    color:#64748b;
+
+    max-width:600px;
+
+    margin:auto;
+
+    line-height:1.8;
+
+}
+
+
+
+
+
+/*=========================================
+        RESPONSIVE
+=========================================*/
+
+@media(max-width:992px){
+
+    .stats-grid{
+
+        grid-template-columns:repeat(2,1fr);
+
+    }
+
+}
+
+@media(max-width:768px){
+
+    .stats-grid{
+
+        grid-template-columns:1fr;
+
+    }
+
+    .activity-card{
+
+        padding:35px 25px;
+
+    }
+
+}

@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Secure Checkout | Nursephere</title>
+
+    <meta name="description"
+        content="Complete your Nursephere subscription securely.">
+
+    <!-- Favicon -->
+
+    <link rel="icon" type="image/png" sizes="32x32"
+        href="assets/favicon/favicon-32x32.png">
+
+    <link rel="icon" type="image/png" sizes="16x16"
+        href="assets/favicon/favicon-16x16.png">
+
+    <!-- Google Fonts -->
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <!-- Font Awesome -->
+
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+
+    <!-- Main CSS -->
+
+    <link rel="stylesheet" href="css/style.css">
+
+</head>
+
+<body>
+
+<section class="checkout-page">
+
+<div class="container">
+
+<a href="pricing.html" class="back-btn">
+
+<i class="fas fa-arrow-left"></i>
+
+Back to Pricing
+
+</a>
+
+<div class="checkout-header">
+
+<h1>
+
+Secure Checkout
+
+</h1>
+
+<p>
+
+Complete your subscription securely and get instant access to your selected nursing exam preparation plan.
+
+</p>
+
+</div>
+
+<div class="checkout-grid">
+
+<!-- ================= LEFT ================= -->
+
+<div class="checkout-card">
+
+<h2>
+
+Billing Information
+
+</h2>
+
+<form id="checkoutForm">
+
+<div class="form-group">
+
+<label>Full Name</label>
+
+<input
+type="text"
+id="fullname"
+required>
+
+</div>
+
+<div class="form-group">
+
+<label>Email Address</label>
+
+<input
+type="email"
+id="email"
+required>
+
+</div>
+
+<div class="form-group">
+
+<label>Phone Number</label>
+
+<input
+type="tel"
+id="phone"
+placeholder="+1"
+required>
+
+</div>
+
+<div class="form-group">
+
+<label>Country</label>
+
+<input
+type="text"
+value="United States"
+readonly>
+
+</div>
+
+<div class="form-group">
+
+<label>State</label>
+
+<input
+type="text"
+id="state"
+required>
+
+</div>
+
+<h2 class="payment-heading">
+
+Secure Payment
+
+</h2>
+
+<div class="payment-box">
+
+<i class="fas fa-lock"></i>
+
+<h3>
+
+Your payment is protected.
+
+</h3>
+
+<p>
+
+Accepted payment methods will appear here during secure checkout.
+
+</p>
+
+<div class="card-icons">
+
+<i class="fab fa-cc-visa"></i>
+
+<i class="fab fa-cc-mastercard"></i>
+
+<i class="fab fa-cc-amex"></i>
+
+<i class="fab fa-cc-discover"></i>
+
+</div>
+
+</div>
+
+</form>
+
+</div>
+
+<!-- ================= RIGHT ================= -->
+
+<div class="summary-card">
+
+<h2>
+
+Order Summary
+
+</h2>
+
+<div class="summary-row">
+
+<span>
+
+Selected Plan
+
+</span>
+
+<strong id="planName">
+
+Loading...
+
+</strong>
+
+</div>
+
+<div class="summary-row">
+
+<span>
+
+Subscription
+
+</span>
+
+<strong id="planDuration">
+
+Loading...
+
+</strong>
+
+</div>
+
+<div class="summary-row">
+
+<span>
+
+Price
+
+</span>
+
+<strong id="planPrice">
+
+Loading...
+
+</strong>
+
+</div>
+
+<div class="summary-row">
+
+<span>
+
+Tax
+
+</span>
+
+<strong>
+
+$0.00
+
+</strong>
+
+</div>
+
+<hr>
+
+<div class="summary-total">
+
+<span>
+
+Total
+
+</span>
+
+<strong id="totalPrice">
+
+Loading...
+
+</strong>
+
+</div>
+
+<div class="summary-benefits">
+
+<p>
+
+<i class="fas fa-check-circle"></i>
+
+Instant account access
+
+</p>
+
+<p>
+
+<i class="fas fa-check-circle"></i>
+
+Unlimited practice questions
+
+</p>
+
+<p>
+
+<i class="fas fa-check-circle"></i>
+
+Study on mobile & desktop
+
+</p>
+
+<p>
+
+<i class="fas fa-check-circle"></i>
+
+Secure encrypted checkout
+
+</p>
+
+</div>
+
+<button
+type="submit"
+form="checkoutForm"
+class="btn btn-primary checkout-btn">
+
+Continue
+
+</button>
+
+<div class="checkout-support">
+
+Need assistance?
+
+<a href="contact.html">
+
+Contact Support
+
+</a>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+</section>
+
+<script src="js/checkout.js"></script>
+
+</body>
+
+</html>

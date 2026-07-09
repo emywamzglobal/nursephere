@@ -1,0 +1,448 @@
+/*==========================================
+  QUESTION MODALS
+  Nursephere Admin Portal
+==========================================*/
+
+/*==========================================
+  Modal Overlay
+==========================================*/
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 30px;
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(4px);
+    z-index: 9999;
+    overflow-y: auto;
+}
+
+/*==========================================
+  Modal Container
+==========================================*/
+.modal {
+    width: 100%;
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.15);
+    animation: modalFade .25s ease;
+}
+
+.modal-lg {
+    max-width: 900px;
+}
+
+/*==========================================
+  Modal Header
+==========================================*/
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 25px;
+    border-bottom: 1px solid #E5E7EB;
+}
+
+.modal-title {
+    margin: 0;
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: #0F172A;
+}
+
+.modal-close {
+    width: 42px;
+    height: 42px;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: #0F172A;
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: .3s;
+}
+
+.modal-close:hover {
+    background: #F3F4F6;
+    color: #2563EB;
+}
+
+/*==========================================
+  Modal Body
+==========================================*/
+.modal-body {
+    padding: 25px;
+    max-height: 75vh;
+    overflow-y: auto;
+}
+
+/*==========================================
+  Sections
+==========================================*/
+.modal-section {
+    margin-bottom: 35px;
+}
+
+.section-title {
+    margin-bottom: 18px;
+    color: #0F172A;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.required {
+    color: #EF4444;
+}
+
+/*==========================================
+  Grid Layout
+==========================================*/
+.modal-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.full-width {
+    grid-column: 1 / -1;
+}
+
+/*==========================================
+  Form Elements
+==========================================*/
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-group label {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #0F172A;
+}
+
+.form-control {
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 0.95rem;
+    font-family: "Poppins", sans-serif;
+    color: #0F172A;
+    background: #FFFFFF;
+    border: 1px solid #D1D5DB;
+    border-radius: 10px;
+    outline: none;
+    transition: all .25s ease;
+    box-sizing: border-box;
+}
+
+.form-control:focus {
+    border-color: #2563EB;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, .15);
+}
+
+/*==========================================
+  Textareas
+==========================================*/
+.question-textarea,
+.option-textarea,
+.explanation-textarea {
+    min-height: 72px;
+    resize: vertical;
+    line-height: 1.6;
+}
+
+.form-hint {
+    margin-top: 5px;
+    font-size: .82rem;
+    color: #6B7280;
+}
+
+/*==========================================
+  Answer Options
+==========================================*/
+.answer-option {
+    margin-bottom: 18px;
+    padding: 14px 18px;
+    background: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    border-radius: 12px;
+    transition: all .25s ease;
+}
+
+.answer-option:hover {
+    border-color: #2563EB;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.08);
+}
+
+.answer-option-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.answer-option-header input[type="radio"] {
+    width: 18px;
+    height: 18px;
+    accent-color: #2563EB;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.option-label {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #0F172A;
+    cursor: pointer;
+    letter-spacing: .3px;
+}
+
+.option-textarea {
+    width: 100%;
+    min-height: 72px;
+    resize: vertical;
+}
+
+/*==========================================
+  Modal Footer
+==========================================*/
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 15px;
+    padding: 20px 25px;
+    border-top: 1px solid #E5E7EB;
+    background: #F8FAFC;
+}
+
+/*==========================================
+  Buttons
+==========================================*/
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 10px;
+    font-family: "Poppins", sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    text-decoration: none;
+}
+
+/* Cancel */
+.btn-secondary {
+    background: #E5E7EB;
+    color: #374151;
+}
+
+.btn-secondary:hover {
+    background: #D1D5DB;
+}
+
+/* Save Draft */
+.btn-outline {
+    background: transparent;
+    color: #2563EB;
+    border: 1px solid #2563EB;
+}
+
+.btn-outline:hover {
+    background: #2563EB;
+    color: #FFFFFF;
+}
+
+/* Publish */
+.btn-primary {
+    background: #2563EB;
+    color: #FFFFFF;
+}
+
+.btn-primary:hover {
+    background: #1D4ED8;
+}
+
+/*==========================================
+  Import Questions Modal
+==========================================*/
+
+.upload-area{
+    padding:40px 25px;
+    text-align:center;
+    border:2px dashed #CBD5E1;
+    border-radius:14px;
+    background:#F8FAFC;
+    transition:all .3s ease;
+}
+
+.upload-area:hover{
+    border-color:#2563EB;
+    background:#EFF6FF;
+}
+
+.upload-icon{
+    font-size:3rem;
+    margin-bottom:15px;
+}
+
+.upload-title{
+    margin-bottom:8px;
+    font-size:1.15rem;
+    font-weight:600;
+    color:#0F172A;
+}
+
+.upload-text{
+    margin-bottom:20px;
+    color:#64748B;
+    font-size:.95rem;
+}
+
+.file-input{
+    width:100%;
+    padding:12px;
+    border:1px solid #D1D5DB;
+    border-radius:10px;
+    background:#FFFFFF;
+    cursor:pointer;
+    font-family:"Poppins",sans-serif;
+}
+
+/*==========================================
+  Supported Formats
+==========================================*/
+
+.supported-formats{
+    margin:0;
+    padding-left:20px;
+}
+
+.supported-formats li{
+    margin-bottom:10px;
+    color:#334155;
+    line-height:1.6;
+}
+
+/*==========================================
+  Template Links
+==========================================*/
+
+.template-links{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+}
+
+.template-link{
+    padding:12px 16px;
+    text-decoration:none;
+    color:#2563EB;
+    background:#EFF6FF;
+    border:1px solid #BFDBFE;
+    border-radius:10px;
+    transition:.3s;
+}
+
+.template-link:hover{
+    background:#DBEAFE;
+}
+
+/*==========================================
+  Selected File
+==========================================*/
+
+.selected-file{
+    padding:16px;
+    border:1px solid #E5E7EB;
+    border-radius:10px;
+    background:#F8FAFC;
+    color:#475569;
+    font-weight:500;
+}
+
+/*==========================================
+  Small Modal
+==========================================*/
+.modal-sm{
+    max-width:520px;
+}
+
+/*==========================================
+  Delete Question Modal
+==========================================*/
+.delete-warning{
+    text-align:center;
+    margin-bottom:30px;
+}
+
+.delete-icon{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:80px;
+    height:80px;
+    margin:0 auto 20px;
+    font-size:2.5rem;
+    background:#FEF2F2;
+    border:1px solid #FECACA;
+    border-radius:50%;
+}
+
+.delete-title{
+    margin-bottom:12px;
+    font-size:1.2rem;
+    font-weight:600;
+    color:#0F172A;
+}
+
+.delete-message{
+    color:#64748B;
+    line-height:1.6;
+}
+
+/*==========================================
+  Question Preview
+==========================================*/
+.delete-question-preview{
+    padding:18px;
+    background:#F8FAFC;
+    border:1px solid #E5E7EB;
+    border-radius:12px;
+}
+
+.delete-question-preview p{
+    margin:0;
+    color:#334155;
+    line-height:1.7;
+}
+
+/*==========================================
+  Danger Button
+==========================================*/
+.btn-danger{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    padding:12px 24px;
+    border:none;
+    border-radius:10px;
+    background:#DC2626;
+    color:#FFFFFF;
+    font-family:"Poppins",sans-serif;
+    font-size:.95rem;
+    font-weight:600;
+    cursor:pointer;
+    transition:all .25s ease;
+}
+
+.btn-danger:hover{
+    background:#B91C1C;
+}

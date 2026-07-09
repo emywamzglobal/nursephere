@@ -1,0 +1,81 @@
+/*==========================================
+  Account Settings
+==========================================*/
+
+.settings-card{
+    max-width:700px;
+    background:#FFFFFF;
+    border:1px solid #E5E7EB;
+    border-radius:20px;
+    padding:40px;
+    box-shadow:0 8px 24px rgba(15,23,42,.05);
+}
+
+.settings-title{
+    margin-bottom:30px;
+    font-size:1.6rem;
+    font-weight:700;
+    color:#0F172A;
+}
+
+.settings-form{
+    display:flex;
+    flex-direction:column;
+    gap:24px;
+}
+
+.form-group{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+}
+
+.form-group label{
+    font-weight:600;
+    color:#0F172A;
+}
+
+.form-control{
+    height:58px;
+    padding:0 18px;
+    border:1px solid #DCE6F5;
+    border-radius:14px;
+    background:#FFFFFF;
+    font-family:"Poppins",sans-serif;
+    font-size:1rem;
+    color:#0F172A;
+    transition:border-color .3s ease;
+}
+
+.form-control:focus{
+    outline:none;
+    border-color:#2563EB;
+}
+
+/*==========================================
+  Settings Actions
+==========================================*/
+
+.settings-actions{
+    margin-top:20px;
+}
+
+.settings-actions .btn{
+    min-width:260px;
+    height:65px;
+    padding:0 35px;
+    border:none;
+    border-radius:18px;
+    background:linear-gradient(135deg,#2563EB,#4F46E5);
+    color:#FFFFFF;
+    font-size:1.1rem;
+    font-weight:600;
+    cursor:pointer;
+    transition:all .3s ease;
+    box-shadow:0 10px 25px rgba(37,99,235,.20);
+}
+
+.settings-actions .btn:hover{
+    transform:translateY(-2px);
+    box-shadow:0 15px 35px rgba(37,99,235,.30);
+}

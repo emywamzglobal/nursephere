@@ -1,0 +1,613 @@
+/*=========================================
+        PROGRESS HERO
+=========================================*/
+
+.dashboard-top{
+
+    background:#f4f8ff;
+
+    border-radius:24px;
+
+    padding:45px;
+
+    margin-bottom:35px;
+
+}
+
+.dashboard-top h1{
+
+    font-size:2.2rem;
+
+    color:#1d3557;
+
+    margin-bottom:15px;
+
+}
+
+.dashboard-top p{
+
+    max-width:720px;
+
+    color:#64748b;
+
+    line-height:1.8;
+
+}
+
+
+
+/*=========================================
+        OVERVIEW CARDS
+=========================================*/
+
+.progress-overview{
+
+    display:grid;
+
+    grid-template-columns:repeat(4,1fr);
+
+    gap:25px;
+
+    margin-bottom:40px;
+
+}
+
+.progress-card{
+
+    background:#ffffff;
+
+    border-radius:20px;
+
+    padding:35px 25px;
+
+    text-align:center;
+
+    box-shadow:0 12px 30px rgba(15,23,42,.08);
+
+    transition:.3s ease;
+
+}
+
+.progress-card:hover{
+
+    transform:translateY(-6px);
+
+    box-shadow:0 20px 40px rgba(37,99,235,.15);
+
+}
+
+.progress-icon{
+
+    width:70px;
+
+    height:70px;
+
+    border-radius:18px;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    margin:0 auto 25px;
+
+}
+
+.progress-icon i{
+
+    font-size:30px;
+
+}
+
+
+
+/*=========================================
+        ICON COLORS
+=========================================*/
+
+.progress-icon.blue{
+
+    background:#eaf2ff;
+
+    color:#2563eb;
+
+}
+
+.progress-icon.green{
+
+    background:#eafaf0;
+
+    color:#16a34a;
+
+}
+
+.progress-icon.orange{
+
+    background:#fff4e6;
+
+    color:#ea580c;
+
+}
+
+.progress-icon.purple{
+
+    background:#f4edff;
+
+    color:#7c3aed;
+
+}
+
+
+
+/*=========================================
+        CARD TEXT
+=========================================*/
+
+.progress-card h2{
+
+    font-size:2.2rem;
+
+    color:#1d3557;
+
+    margin-bottom:10px;
+
+}
+
+.progress-card span{
+
+    display:block;
+
+    color:#64748b;
+
+    font-weight:500;
+
+}
+
+
+
+/*=========================================
+        RESPONSIVE
+=========================================*/
+
+@media(max-width:992px){
+
+    .progress-overview{
+
+        grid-template-columns:repeat(2,1fr);
+
+    }
+
+}
+
+@media(max-width:768px){
+
+    .dashboard-top{
+
+        padding:30px;
+
+    }
+
+    .dashboard-top h1{
+
+        font-size:1.8rem;
+
+    }
+
+    .progress-overview{
+
+        grid-template-columns:1fr;
+
+    }
+
+}
+
+/*=========================================
+        PERFORMANCE SECTION
+=========================================*/
+
+.performance-section{
+
+    margin-bottom:45px;
+
+}
+
+.section-heading{
+
+    margin-bottom:30px;
+
+}
+
+.section-heading h2{
+
+    font-size:1.8rem;
+
+    color:#1d3557;
+
+    margin-bottom:10px;
+
+}
+
+.section-heading p{
+
+    color:#64748b;
+
+    line-height:1.7;
+
+}
+
+
+
+/*=========================================
+        PERFORMANCE CARD
+=========================================*/
+
+.performance-card{
+
+    background:#ffffff;
+
+    border-radius:18px;
+
+    padding:25px 30px;
+
+    box-shadow:0 10px 25px rgba(15,23,42,.08);
+
+    margin-bottom:20px;
+
+}
+
+.performance-header{
+
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:center;
+
+    margin-bottom:18px;
+
+}
+
+.performance-header h3{
+
+    color:#1d3557;
+
+    font-size:1.1rem;
+
+}
+
+.performance-header span{
+
+    color:#2563eb;
+
+    font-weight:700;
+
+    font-size:1rem;
+
+}
+
+
+
+/*=========================================
+        PROGRESS BAR
+=========================================*/
+
+.progress-bar{
+
+    width:100%;
+
+    height:12px;
+
+    background:#e9eef8;
+
+    border-radius:30px;
+
+    overflow:hidden;
+
+}
+
+.progress-fill{
+
+    height:100%;
+
+    width:0%;
+
+    border-radius:30px;
+
+    transition:width .5s ease;
+
+}
+
+
+
+/*=========================================
+        EXAM COLORS
+=========================================*/
+
+.progress-fill.nclex{
+
+    background:#2563eb;
+
+}
+
+.progress-fill.ati{
+
+    background:#7c3aed;
+
+}
+
+.progress-fill.hesi-a2{
+
+    background:#16a34a;
+
+}
+
+.progress-fill.hesi-exit{
+
+    background:#f59e0b;
+
+}
+
+
+
+/*=========================================
+        RESPONSIVE
+=========================================*/
+
+@media(max-width:768px){
+
+    .performance-card{
+
+        padding:22px;
+
+    }
+
+    .performance-header h3{
+
+        font-size:1rem;
+
+    }
+
+}
+
+/*=========================================
+        PERFORMANCE INSIGHTS
+=========================================*/
+
+.insights-grid{
+
+    display:grid;
+
+    grid-template-columns:repeat(2,1fr);
+
+    gap:30px;
+
+    margin-bottom:45px;
+
+}
+
+.insight-card{
+
+    background:#ffffff;
+
+    border-radius:22px;
+
+    padding:35px;
+
+    box-shadow:0 10px 25px rgba(15,23,42,.08);
+
+    transition:.3s ease;
+
+}
+
+.insight-card:hover{
+
+    transform:translateY(-5px);
+
+}
+
+.insight-icon{
+
+    width:70px;
+
+    height:70px;
+
+    border-radius:18px;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    margin-bottom:25px;
+
+}
+
+.insight-icon i{
+
+    font-size:30px;
+
+}
+
+.success .insight-icon{
+
+    background:#eafaf0;
+
+    color:#16a34a;
+
+}
+
+.warning .insight-icon{
+
+    background:#fff7e8;
+
+    color:#ea580c;
+
+}
+
+.insight-card h3{
+
+    color:#64748b;
+
+    font-size:1rem;
+
+    margin-bottom:10px;
+
+}
+
+.insight-card h2{
+
+    color:#1d3557;
+
+    margin-bottom:15px;
+
+}
+
+.insight-card p{
+
+    color:#64748b;
+
+    line-height:1.8;
+
+}
+
+@media(max-width:768px){
+
+    .insights-grid{
+
+        grid-template-columns:1fr;
+
+    }
+
+}
+
+/*=========================================
+        RESUME PRACTICE
+=========================================*/
+
+.resume-section{
+
+    margin-bottom:40px;
+
+}
+
+.resume-card{
+
+    background:linear-gradient(135deg,#2563eb,#7c3aed);
+
+    color:#ffffff;
+
+    border-radius:24px;
+
+    padding:35px 40px;
+
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:center;
+
+    gap:30px;
+
+    box-shadow:0 15px 35px rgba(37,99,235,.20);
+
+}
+
+.resume-left{
+
+    display:flex;
+
+    align-items:center;
+
+    gap:25px;
+
+}
+
+.resume-icon{
+
+    width:80px;
+
+    height:80px;
+
+    border-radius:20px;
+
+    background:rgba(255,255,255,.18);
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+}
+
+.resume-icon i{
+
+    font-size:34px;
+
+}
+
+.resume-card h2{
+
+    margin-bottom:10px;
+
+}
+
+.resume-card p{
+
+    max-width:620px;
+
+    line-height:1.8;
+
+    opacity:.95;
+
+}
+
+.resume-btn{
+
+    background:#ffffff;
+
+    color:#2563eb;
+
+    padding:15px 28px;
+
+    border-radius:14px;
+
+    text-decoration:none;
+
+    font-weight:700;
+
+    display:flex;
+
+    align-items:center;
+
+    gap:10px;
+
+    transition:.3s;
+
+}
+
+.resume-btn:hover{
+
+    transform:translateY(-3px);
+
+}
+
+@media(max-width:900px){
+
+    .resume-card{
+
+        flex-direction:column;
+
+        text-align:center;
+
+    }
+
+    .resume-left{
+
+        flex-direction:column;
+
+    }
+
+}

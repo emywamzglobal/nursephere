@@ -1,0 +1,187 @@
+<!-- ==========================================
+     Import Questions Modal
+     Nursephere Admin Portal
+========================================== -->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Import Questions</title>
+
+    <link rel="stylesheet" href="../css/question-modals.css">
+
+</head>
+
+<body>
+
+<div class="modal-overlay" id="importQuestionsModal">
+
+    <div class="modal modal-md">
+
+        <!-- ==========================================
+             Modal Header
+        =========================================== -->
+        <div class="modal-header">
+
+            <h2 class="modal-title">
+                Import Questions
+            </h2>
+
+            <button
+                class="modal-close"
+                type="button"
+                aria-label="Close">
+
+                &times;
+
+            </button>
+
+        </div>
+
+        <!-- ==========================================
+             Modal Body
+        =========================================== -->
+        <div class="modal-body">
+
+            <!-- ==========================================
+                 Upload Questions
+            =========================================== -->
+            <section class="modal-section">
+
+                <h3 class="section-title">
+                    Upload Questions
+                </h3>
+
+                <div class="upload-area">
+
+                    <div class="upload-icon">
+
+                        📁
+
+                    </div>
+
+                    <h4 class="upload-title">
+                        Drag &amp; Drop Files Here
+                    </h4>
+
+                    <p class="upload-text">
+                        or click to browse your computer.
+                    </p>
+
+                    <input
+                        type="file"
+                        id="questionImportFile"
+                        class="file-input"
+                        accept=".docx,.xlsx,.csv,.json">
+
+                </div>
+
+            </section>
+
+                        <!-- ==========================================
+                 Supported Formats
+            =========================================== -->
+            <section class="modal-section">
+
+                <h3 class="section-title">
+                    Supported Formats
+                </h3>
+
+                <ul class="supported-formats">
+
+                    <li>Microsoft Word (.docx)</li>
+
+                    <li>Microsoft Excel (.xlsx)</li>
+
+                    <li>CSV (.csv)</li>
+
+                    <li>JSON (.json)</li>
+
+                </ul>
+
+            </section>
+
+            <!-- ==========================================
+                 Download Templates
+            =========================================== -->
+            <section class="modal-section">
+
+                <h3 class="section-title">
+                    Download Templates
+                </h3>
+
+                <div class="template-links">
+
+                    <a href="#" class="template-link">
+                        📄 Nursephere Word Template
+                    </a>
+
+                    <a href="#" class="template-link">
+                        📊 Nursephere Excel Template
+                    </a>
+
+                    <a href="#" class="template-link">
+                        📄 Nursephere CSV Template
+                    </a>
+
+                </div>
+
+            </section>
+
+            <!-- ==========================================
+                 Selected File
+            =========================================== -->
+            <section class="modal-section">
+
+                <h3 class="section-title">
+                    Selected File
+                </h3>
+
+                <div class="selected-file">
+
+                    <span id="selectedFileName">
+                        No file selected.
+                    </span>
+
+                </div>
+
+            </section>
+
+        </div>
+
+        <!-- ==========================================
+             Modal Footer
+        =========================================== -->
+        <div class="modal-footer">
+
+            <button
+                type="button"
+                class="btn btn-secondary"
+                id="btnCancelImport">
+
+                Cancel
+
+            </button>
+
+            <button
+                type="button"
+                class="btn btn-primary"
+                id="btnImportQuestions">
+
+                Import Questions
+
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+</body>
+
+</html>

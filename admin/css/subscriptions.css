@@ -1,0 +1,50 @@
+/*==========================================
+  Subscriptions Table
+==========================================*/
+
+.table-section{
+    background:#FFFFFF;
+    border:1px solid #E5E7EB;
+    border-radius:20px;
+    overflow-x:auto;
+    box-shadow:0 8px 24px rgba(15,23,42,.05);
+}
+
+.data-table{
+    width:100%;
+    border-collapse:collapse;
+}
+
+.data-table thead{
+    background:#F8FAFC;
+}
+
+.data-table th{
+    padding:20px 24px;
+    text-align:left;
+    font-size:.95rem;
+    font-weight:600;
+    color:#0F172A;
+    border-bottom:1px solid #E5E7EB;
+    white-space:nowrap;
+}
+
+.data-table td{
+    padding:20px 24px;
+    font-size:.95rem;
+    color:#475569;
+    border-bottom:1px solid #F1F5F9;
+    vertical-align:middle;
+}
+
+.data-table tbody tr{
+    transition:background .25s ease;
+}
+
+.data-table tbody tr:hover{
+    background:#F8FAFC;
+}
+
+.data-table tbody tr:last-child td{
+    border-bottom:none;
+}

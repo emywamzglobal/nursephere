@@ -1,0 +1,120 @@
+<!-- ==========================================
+     Delete Question Modal
+     Nursephere Admin Portal
+========================================== -->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Delete Question</title>
+
+    <link rel="stylesheet" href="../css/question-modals.css">
+
+</head>
+
+<body>
+
+<div class="modal-overlay" id="deleteQuestionModal">
+
+    <div class="modal modal-sm">
+
+        <!-- ==========================================
+             Modal Header
+        =========================================== -->
+        <div class="modal-header">
+
+            <h2 class="modal-title">
+                Delete Question
+            </h2>
+
+            <button
+                class="modal-close"
+                type="button"
+                aria-label="Close">
+
+                &times;
+
+            </button>
+
+        </div>
+
+        <!-- ==========================================
+             Modal Body
+        =========================================== -->
+        <div class="modal-body">
+
+            <div class="delete-warning">
+
+                <div class="delete-icon">
+
+                    🗑️
+
+                </div>
+
+                <h3 class="delete-title">
+                    Delete this question?
+                </h3>
+
+                <p class="delete-message">
+                    This action cannot be undone.
+                </p>
+
+            </div>
+
+            <!-- ==========================================
+                 Question Preview
+            =========================================== -->
+            <section class="modal-section">
+
+                <h3 class="section-title">
+                    Question
+                </h3>
+
+                <div class="delete-question-preview">
+
+                    <p id="deleteQuestionPreview">
+
+                    </p>
+
+                </div>
+
+            </section>
+
+                    </div>
+
+        <!-- ==========================================
+             Modal Footer
+        =========================================== -->
+        <div class="modal-footer">
+
+            <button
+                type="button"
+                class="btn btn-secondary"
+                id="btnCancelDelete">
+
+                Cancel
+
+            </button>
+
+            <button
+                type="button"
+                class="btn btn-danger"
+                id="btnDeleteQuestion">
+
+                Delete Question
+
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+</body>
+
+</html>

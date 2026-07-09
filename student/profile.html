@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Student Dashboard | Nursephere</title>
+
+    <meta name="description"
+        content="Nursephere Student Dashboard">
+
+    <!-- Favicon -->
+
+    <link rel="icon" type="image/png" sizes="32x32"
+        href="../assets/favicon/favicon-32x32.png">
+
+    <link rel="icon" type="image/png" sizes="16x16"
+        href="../assets/favicon/favicon-16x16.png">
+
+    <!-- Google Fonts -->
+
+    <link rel="preconnect"
+        href="https://fonts.googleapis.com">
+
+    <link rel="preconnect"
+        href="https://fonts.gstatic.com"
+        crossorigin>
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <!-- Font Awesome -->
+
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+
+    <!-- CSS -->
+
+    <link rel="stylesheet"
+        href="../css/sidebar.css">
+
+    <link rel="stylesheet"
+        href="../css/header.css">
+
+    <link rel="stylesheet"
+        href="../css/dashboard-student.css">
+
+    
+    <link rel="stylesheet"
+        href="../css/profile.css">
+        
+
+</head>
+
+<body>
+
+    <!-- ===================================
+            STUDENT APPLICATION LAYOUT
+    ==================================== -->
+
+    <div class="student-layout">
+
+        <!-- Sidebar -->
+
+<aside class="student-sidebar" id="studentSidebar">
+
+    <!-- Logo -->
+    <div class="sidebar-brand">
+
+        <a href="dashboard.html" class="brand-link">
+
+            <img src="../assets/logo/logo.jpeg" alt="Nursephere Logo">
+
+            <div class="brand-text">
+                <h2>Nursephere</h2>
+                <span>Learn • Practice • Pass</span>
+            </div>
+
+        </a>
+
+    </div>
+
+    <!-- Main Navigation -->
+
+    <div class="sidebar-section">
+
+        <h3 class="sidebar-title">MAIN MENU</h3>
+
+        <ul class="sidebar-menu">
+
+            <li>
+                <a href="dashboard.html">
+                    <i class="fas fa-house"></i>
+                    <span>Dashboard</span>
+                </a>
+            </li>
+
+            <li>
+                <a href="practice.html">
+                    <i class="fas fa-book-medical"></i>
+                    <span>Practice</span>
+                </a>
+            </li>
+
+            <li>
+                <a href="progress.html">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Track Progress</span>
+                </a>
+            </li>
+
+            <li>
+                <a href="documents.html">
+                    <i class="fas fa-folder-open"></i>
+                    <span>Documents</span>
+                </a>
+            </li>
+
+        </ul>
+
+    </div>
+
+    <!-- Account -->
+
+    <div class="sidebar-section">
+
+        <h3 class="sidebar-title">ACCOUNT</h3>
+
+        <ul class="sidebar-menu">
+
+            <li>
+                <a href="profile.html">
+                    <i class="fas fa-user"></i>
+                    <span>Profile</span>
+                </a>
+            </li>
+
+            <li>
+                <a href="referral.html">
+                    <i class="fas fa-user-plus"></i>
+                    <span>Referral</span>
+                </a>
+            </li>
+
+            <li>
+                <a href="subscription.html">
+                    <i class="fas fa-credit-card"></i>
+                    <span>Subscription</span>
+                </a>
+            </li>
+
+            <li>
+                <a href="settings.html">
+                    <i class="fas fa-gear"></i>
+                    <span>Settings</span>
+                </a>
+            </li>
+
+            <li>
+                <a href="../index.html" id="logoutBtn">
+                    <i class="fas fa-right-from-bracket"></i>
+                    <span>Logout</span>
+                </a>
+            </li>
+
+        </ul>
+
+    </div>
+
+    <div class="upgrade-card">
+
+        <div class="upgrade-icon">
+
+            <i class="fas fa-crown"></i>
+
+        </div>
+
+        <div class="upgrade-text">
+
+            <h3>Upgrade to Premium</h3>
+
+            <p>
+
+                Unlock unlimited questions,
+                full mock exams,
+                detailed analytics,
+                and every nursing subject.
+
+            </p>
+
+        </div>
+
+        <a href="../pricing.html" class="upgrade-btn">
+
+            Upgrade Now
+
+        </a>
+
+    </div>
+
+</aside>
+
+        <!-- ===========================
+                MAIN APPLICATION
+        ============================ -->
+
+        <div class="student-main">
+
+            <!-- Header -->
+
+            <header class="student-header">
+
+    <div class="header-left">
+
+        <button class="menu-toggle" id="menuToggle">
+
+            <i class="fas fa-bars"></i>
+
+        </button>
+
+        <div class="search-box">
+
+            <i class="fas fa-search"></i>
+
+            <input
+                type="text"
+                id="searchInput"
+                placeholder="Search questions, exams or documents...">
+
+        </div>
+
+    </div>
+
+    <div class="header-right">
+
+        <button class="header-icon notification-btn">
+
+            <i class="fas fa-bell"></i>
+
+            <span class="notification-badge">
+
+                3
+
+            </span>
+
+        </button>
+
+        <div class="profile-dropdown">
+
+            <button class="profile-btn" id="profileToggle">
+
+                <div class="avatar-wrapper">
+
+                    <img
+                        src="../assets/images/avatar-placeholder.png"
+                        id="studentAvatar"
+                        alt="Student">
+
+                    <input
+                        type="file"
+                        id="avatarUpload"
+                        hidden>
+
+                </div>
+
+                <div class="profile-info">
+
+                    <h4 id="studentName">
+
+                        Student
+
+                    </h4>
+
+                    <span id="studentPlan">
+
+                        Free Trial
+
+                    </span>
+
+                </div>
+
+                <i class="fas fa-chevron-down"></i>
+
+            </button>
+
+            <div class="profile-menu" id="profileMenu">
+
+                <a href="#" id="uploadPhoto">
+
+                    <i class="fas fa-camera"></i>
+
+                    Upload Photo
+
+                </a>
+
+                <a href="profile.html">
+
+                    <i class="fas fa-user"></i>
+
+                    My Profile
+
+                </a>
+
+                <a href="subscription.html">
+
+                    <i class="fas fa-credit-card"></i>
+
+                    Subscription
+
+                </a>
+
+                <a href="settings.html">
+
+                    <i class="fas fa-gear"></i>
+
+                    Settings
+
+                </a>
+
+                <hr>
+
+                <a href="../index.html" id="logoutBtn">
+
+                    <i class="fas fa-right-from-bracket"></i>
+
+                    Logout
+
+                </a>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</header>
+
+            <!-- ===========================
+                    PAGE CONTENT
+            ============================ -->
+
+            <main class="dashboard-content">
+
+                <!-- ===========================
+        PROFILE HERO
+=========================== -->
+
+<section class="dashboard-top">
+
+    <div>
+
+        <h1>
+
+            My Profile
+
+        </h1>
+
+        <p>
+
+            Manage your personal information,
+            academic details, and account profile.
+            Keep your information up to date to enjoy
+            a personalized Nursephere experience.
+
+        </p>
+
+    </div>
+
+</section>
+
+<!-- ===========================
+        PERSONAL INFORMATION
+=========================== -->
+
+<section class="profile-section">
+
+    <div class="section-heading">
+
+        <h2>
+
+            Personal Information
+
+        </h2>
+
+        <p>
+
+            Manage your personal details and keep
+            your Nursephere profile up to date.
+
+        </p>
+
+    </div>
+
+    <div class="profile-card">
+
+        <!-- Profile Photo -->
+
+        <div class="profile-avatar">
+
+            <img src="../assets/images/avatar-placeholder.png"
+                 alt="Student Photo"
+                 id="profileImage">
+
+            <input
+                type="file"
+                id="profileUpload"
+                hidden>
+
+            <button class="photo-btn"
+                onclick="document.getElementById('profileUpload').click()">
+
+                <i class="fas fa-camera"></i>
+
+                Change Photo
+
+            </button>
+
+        </div>
+
+
+
+        <!-- Personal Details -->
+
+        <div class="profile-form">
+
+            <div class="form-group">
+
+                <label>
+
+                    First Name
+
+                </label>
+
+                <input
+                    type="text"
+                    placeholder="First Name">
+
+            </div>
+
+            <div class="form-group">
+
+                <label>
+
+                    Last Name
+
+                </label>
+
+                <input
+                    type="text"
+                    placeholder="Last Name">
+
+            </div>
+
+            <div class="form-group">
+
+                <label>
+
+                    Email Address
+
+                </label>
+
+                <input
+                    type="email"
+                    placeholder="Email Address">
+
+            </div>
+
+            <div class="form-group">
+
+                <label>
+
+                    Phone Number
+
+                </label>
+
+                <input
+                    type="tel"
+                    placeholder="Phone Number">
+
+            </div>
+
+            <div class="form-group">
+
+                <label>
+
+                    Country
+
+                </label>
+
+                <input
+                    type="text"
+                    placeholder="Country">
+
+            </div>
+
+            <div class="form-group">
+
+                <label>
+
+                    Gender
+
+                </label>
+
+                <select>
+
+                    <option>Select Gender</option>
+
+                    <option>Male</option>
+
+                    <option>Female</option>
+
+                    <option>Prefer not to say</option>
+
+                </select>
+
+            </div>
+
+            <div class="form-group">
+
+                <label>
+
+                    Date of Birth
+
+                </label>
+
+                <input
+                    type="date">
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+<!-- ===========================
+        STUDY INFORMATION
+=========================== -->
+
+<section class="study-section">
+
+    <div class="section-heading">
+
+        <h2>
+
+            Study Information
+
+        </h2>
+
+        <p>
+
+            Keep your nursing education details
+            updated to personalize your learning
+            experience.
+
+        </p>
+
+    </div>
+
+    <div class="study-card">
+
+        <div class="study-grid">
+
+            <div class="form-group">
+
+                <label>
+
+                    Current Examination
+
+                </label>
+
+                <select>
+
+                    <option>Select Examination</option>
+
+                    <option>NCLEX</option>
+
+                    <option>ATI TEAS</option>
+
+                    <option>HESI A2</option>
+
+                    <option>HESI Exit</option>
+
+                </select>
+
+            </div>
+
+            <div class="form-group">
+
+                <label>
+
+                    Nursing School / Institution
+
+                </label>
+
+                <input
+                    type="text"
+                    placeholder="Institution Name">
+
+            </div>
+
+            <div class="form-group">
+
+                <label>
+
+                    Expected Graduation
+
+                </label>
+
+                <input
+                    type="date">
+
+            </div>
+
+            <div class="form-group">
+
+                <label>
+
+                    Expected Exam Date
+
+                </label>
+
+                <input
+                    type="date">
+
+            </div>
+
+            <div class="form-group">
+
+                <label>
+
+                    Current Study Level
+
+                </label>
+
+                <select>
+
+                    <option>Select Study Stage</option>
+
+                    <option>New to Preparation</option>
+
+                    <option>Actively Preparing</option>
+
+                    <option>Exam Scheduled</option>
+
+                    <option>Final Revision</option>
+                    
+
+                </select>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+<!-- ===========================
+        ACCOUNT SUMMARY
+=========================== -->
+
+<section class="summary-section">
+
+    <div class="section-heading">
+
+        <h2>
+
+            Account Summary
+
+        </h2>
+
+        <p>
+
+            A quick overview of your Nursephere
+            account activity and learning progress.
+
+        </p>
+
+    </div>
+
+    <div class="summary-grid">
+
+        <!-- Member Since -->
+
+        <div class="summary-card">
+
+            <i class="fas fa-calendar-check"></i>
+
+            <h3>
+
+                Member Since
+
+            </h3>
+
+            <h2>
+
+                Loading...
+
+            </h2>
+
+        </div>
+
+
+
+        <!-- Current Plan -->
+
+        <div class="summary-card">
+
+            <i class="fas fa-crown"></i>
+
+            <h3>
+
+                Current Plan
+
+            </h3>
+
+            <h2>
+
+                Free Trial
+
+            </h2>
+
+        </div>
+
+
+
+        <!-- Questions Answered -->
+
+        <div class="summary-card">
+
+            <i class="fas fa-circle-question"></i>
+
+            <h3>
+
+                Questions Answered
+
+            </h3>
+
+            <h2>
+
+                0
+
+            </h2>
+
+        </div>
+
+
+
+        <!-- Practice Sessions -->
+
+        <div class="summary-card">
+
+            <i class="fas fa-book-medical"></i>
+
+            <h3>
+
+                Practice Sessions
+
+            </h3>
+
+            <h2>
+
+                0
+
+            </h2>
+
+        </div>
+
+
+
+        <!-- Documents Uploaded -->
+
+        <div class="summary-card">
+
+            <i class="fas fa-folder-open"></i>
+
+            <h3>
+
+                Documents Uploaded
+
+            </h3>
+
+            <h2>
+
+                0
+
+            </h2>
+
+        </div>
+
+
+
+        <!-- Study Streak -->
+
+        <div class="summary-card">
+
+            <i class="fas fa-fire"></i>
+
+            <h3>
+
+                Study Streak
+
+            </h3>
+
+            <h2>
+
+                0 Days
+
+            </h2>
+
+        </div>
+
+    </div>
+
+</section>
+
+<!-- ===========================
+        SAVE PROFILE
+=========================== -->
+
+<section class="save-profile-section">
+
+    <div class="save-profile-card">
+
+        <div>
+
+            <h2>
+
+                Save Your Changes
+
+            </h2>
+
+            <p>
+
+                Ensure your personal and study
+                information is up to date before
+                leaving this page.
+
+            </p>
+
+        </div>
+
+        <div class="save-actions">
+
+            <button class="cancel-btn">
+
+                Cancel
+
+            </button>
+
+            <button class="save-btn">
+
+                <i class="fas fa-floppy-disk"></i>
+
+                Save Changes
+
+            </button>
+
+        </div>
+
+    </div>
+
+</section>
+
+            </main>
+
+        </div>
+
+    </div>
+
+    <!-- JavaScript -->
+
+    <script src="../js/student-main.js"></script>
+
+    <script src="../js/dashboard-student.js"></script>
+
+</body>
+
+</html>
+                         

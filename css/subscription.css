@@ -1,0 +1,425 @@
+/*=========================================
+        SUBSCRIPTION HERO
+=========================================*/
+
+.dashboard-top{
+
+    background:#f4f8ff;
+
+    border-radius:24px;
+
+    padding:45px;
+
+    margin-bottom:35px;
+
+}
+
+.dashboard-top h1{
+
+    font-size:2.2rem;
+
+    color:#1d3557;
+
+    margin-bottom:15px;
+
+}
+
+.dashboard-top p{
+
+    max-width:720px;
+
+    color:#64748b;
+
+    line-height:1.8;
+
+}
+
+@media(max-width:768px){
+
+    .dashboard-top{
+
+        padding:30px;
+
+    }
+
+    .dashboard-top h1{
+
+        font-size:1.8rem;
+
+    }
+
+}
+
+/*=========================================
+        CURRENT SUBSCRIPTION
+=========================================*/
+
+.subscription-section{
+
+    margin-bottom:45px;
+
+}
+
+.section-heading{
+
+    margin-bottom:30px;
+
+}
+
+.section-heading h2{
+
+    color:#1d3557;
+
+    font-size:1.8rem;
+
+    margin-bottom:10px;
+
+}
+
+.section-heading p{
+
+    color:#64748b;
+
+    line-height:1.8;
+
+}
+
+.subscription-card{
+
+    background:linear-gradient(135deg,#2563eb,#7c3aed);
+
+    color:#ffffff;
+
+    border-radius:24px;
+
+    padding:40px;
+
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:center;
+
+    gap:40px;
+
+    box-shadow:0 15px 35px rgba(37,99,235,.20);
+
+}
+
+.plan-info{
+
+    flex:1;
+
+}
+
+.plan-info span{
+
+    opacity:.9;
+
+}
+
+.plan-info h2{
+
+    margin:12px 0;
+
+    font-size:2.1rem;
+
+}
+
+.plan-info p{
+
+    max-width:420px;
+
+    line-height:1.8;
+
+}
+
+.plan-status{
+
+    display:flex;
+
+    gap:40px;
+
+}
+
+.status-item{
+
+    display:flex;
+
+    flex-direction:column;
+
+}
+
+.status-item span{
+
+    opacity:.8;
+
+    margin-bottom:10px;
+
+}
+
+.status-item strong{
+
+    font-size:1.2rem;
+
+}
+
+.upgrade-btn{
+
+    background:#ffffff;
+
+    color:#2563eb;
+
+    border:none;
+
+    border-radius:14px;
+
+    padding:15px 28px;
+
+    cursor:pointer;
+
+    font-weight:700;
+
+    display:flex;
+
+    align-items:center;
+
+    gap:10px;
+
+    transition:.3s;
+
+}
+
+.upgrade-btn:hover{
+
+    transform:translateY(-3px);
+
+}
+
+@media(max-width:992px){
+
+    .subscription-card{
+
+        flex-direction:column;
+
+        text-align:center;
+
+    }
+
+    .plan-status{
+
+        justify-content:center;
+
+    }
+
+}
+
+@media(max-width:768px){
+
+    .plan-status{
+
+        flex-direction:column;
+
+        gap:20px;
+
+    }
+
+}
+
+/*=========================================
+        SUBSCRIPTION DETAILS
+=========================================*/
+
+.subscription-details-section{
+
+    margin-bottom:45px;
+
+}
+
+.details-card{
+
+    background:#ffffff;
+
+    border-radius:24px;
+
+    padding:35px;
+
+    box-shadow:0 10px 25px rgba(15,23,42,.08);
+
+    display:grid;
+
+    grid-template-columns:repeat(2,1fr);
+
+    gap:25px;
+
+}
+
+.detail-item{
+
+    padding:20px;
+
+    background:#f8fbff;
+
+    border-radius:16px;
+
+}
+
+.detail-item span{
+
+    display:block;
+
+    color:#64748b;
+
+    margin-bottom:10px;
+
+    font-size:.95rem;
+
+}
+
+.detail-item strong{
+
+    color:#1d3557;
+
+    font-size:1.1rem;
+
+}
+
+@media(max-width:768px){
+
+    .details-card{
+
+        grid-template-columns:1fr;
+
+    }
+
+}
+
+/*=========================================
+        MANAGE SUBSCRIPTION
+=========================================*/
+
+.manage-subscription-section{
+
+    margin-bottom:40px;
+
+}
+
+.manage-card{
+
+    background:#ffffff;
+
+    border-radius:24px;
+
+    padding:35px 40px;
+
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:center;
+
+    gap:30px;
+
+    box-shadow:0 10px 25px rgba(15,23,42,.08);
+
+}
+
+.manage-card h2{
+
+    color:#1d3557;
+
+    margin-bottom:10px;
+
+}
+
+.manage-card p{
+
+    color:#64748b;
+
+    line-height:1.8;
+
+    max-width:500px;
+
+}
+
+.manage-actions{
+
+    display:flex;
+
+    gap:15px;
+
+    flex-wrap:wrap;
+
+}
+
+.renew-btn,
+
+.manage-actions .upgrade-btn{
+
+    border:none;
+
+    border-radius:12px;
+
+    padding:15px 28px;
+
+    cursor:pointer;
+
+    font-weight:600;
+
+    display:flex;
+
+    align-items:center;
+
+    gap:10px;
+
+    transition:.3s;
+
+}
+
+.renew-btn{
+
+    background:#edf4ff;
+
+    color:#2563eb;
+
+}
+
+.renew-btn:hover{
+
+    background:#dbeafe;
+
+}
+
+.manage-actions .upgrade-btn{
+
+    background:#2563eb;
+
+    color:#ffffff;
+
+}
+
+.manage-actions .upgrade-btn:hover{
+
+    background:#1d4ed8;
+
+}
+
+@media(max-width:768px){
+
+    .manage-card{
+
+        flex-direction:column;
+
+        text-align:center;
+
+    }
+
+    .manage-actions{
+
+        justify-content:center;
+
+        width:100%;
+
+    }
+
+}

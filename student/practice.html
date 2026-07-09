@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Student Dashboard | Nursephere</title>
+
+    <meta name="description"
+        content="Nursephere Student Dashboard">
+
+    <!-- Favicon -->
+
+    <link rel="icon" type="image/png" sizes="32x32"
+        href="../assets/favicon/favicon-32x32.png">
+
+    <link rel="icon" type="image/png" sizes="16x16"
+        href="../assets/favicon/favicon-16x16.png">
+
+    <!-- Google Fonts -->
+
+    <link rel="preconnect"
+        href="https://fonts.googleapis.com">
+
+    <link rel="preconnect"
+        href="https://fonts.gstatic.com"
+        crossorigin>
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <!-- Font Awesome -->
+
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+
+    <!-- CSS -->
+
+    <link rel="stylesheet"
+        href="../css/sidebar.css">
+
+    <link rel="stylesheet"
+        href="../css/header.css">
+
+    <link rel="stylesheet"
+        href="../css/dashboard-student.css">
+
+    <link rel="stylesheet"
+        href="../css/practice.css">
+        
+
+</head>
+
+<body>
+
+    <!-- ===================================
+            STUDENT APPLICATION LAYOUT
+    ==================================== -->
+
+    <div class="student-layout">
+
+        <!-- Sidebar -->
+
+<aside class="student-sidebar" id="studentSidebar">
+
+    <!-- Logo -->
+    <div class="sidebar-brand">
+
+        <a href="dashboard.html" class="brand-link">
+
+            <img src="../assets/logo/logo.jpeg" alt="Nursephere Logo">
+
+            <div class="brand-text">
+                <h2>Nursephere</h2>
+                <span>Learn • Practice • Pass</span>
+            </div>
+
+        </a>
+
+    </div>
+
+    <!-- Main Navigation -->
+
+    <div class="sidebar-section">
+
+        <h3 class="sidebar-title">MAIN MENU</h3>
+
+        <ul class="sidebar-menu">
+
+            <li>
+                <a href="dashboard.html">
+                    <i class="fas fa-house"></i>
+                    <span>Dashboard</span>
+                </a>
+            </li>
+
+            <li>
+                <a href="practice.html">
+                    <i class="fas fa-book-medical"></i>
+                    <span>Practice</span>
+                </a>
+            </li>
+
+            <li>
+                <a href="progress.html">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Track Progress</span>
+                </a>
+            </li>
+
+            <li>
+                <a href="documents.html">
+                    <i class="fas fa-folder-open"></i>
+                    <span>Documents</span>
+                </a>
+            </li>
+
+        </ul>
+
+    </div>
+
+    <!-- Account -->
+
+    <div class="sidebar-section">
+
+        <h3 class="sidebar-title">ACCOUNT</h3>
+
+        <ul class="sidebar-menu">
+
+            <li>
+                <a href="profile.html">
+                    <i class="fas fa-user"></i>
+                    <span>Profile</span>
+                </a>
+            </li>
+
+            <li>
+                <a href="referral.html">
+                    <i class="fas fa-user-plus"></i>
+                    <span>Referral</span>
+                </a>
+            </li>
+
+            <li>
+                <a href="subscription.html">
+                    <i class="fas fa-credit-card"></i>
+                    <span>Subscription</span>
+                </a>
+            </li>
+
+            <li>
+                <a href="settings.html">
+                    <i class="fas fa-gear"></i>
+                    <span>Settings</span>
+                </a>
+            </li>
+
+            <li>
+                <a href="../index.html" id="logoutBtn">
+                    <i class="fas fa-right-from-bracket"></i>
+                    <span>Logout</span>
+                </a>
+            </li>
+
+        </ul>
+
+    </div>
+
+    <div class="upgrade-card">
+
+        <div class="upgrade-icon">
+
+            <i class="fas fa-crown"></i>
+
+        </div>
+
+        <div class="upgrade-text">
+
+            <h3>Upgrade to Premium</h3>
+
+            <p>
+
+                Unlock unlimited questions,
+                full mock exams,
+                detailed analytics,
+                and every nursing subject.
+
+            </p>
+
+        </div>
+
+        <a href="../pricing.html" class="upgrade-btn">
+
+            Upgrade Now
+
+        </a>
+
+    </div>
+
+</aside>
+
+        <!-- ===========================
+                MAIN APPLICATION
+        ============================ -->
+
+        <div class="student-main">
+
+            <!-- Header -->
+
+            <header class="student-header">
+
+    <div class="header-left">
+
+        <button class="menu-toggle" id="menuToggle">
+
+            <i class="fas fa-bars"></i>
+
+        </button>
+
+        <div class="search-box">
+
+            <i class="fas fa-search"></i>
+
+            <input
+                type="text"
+                id="searchInput"
+                placeholder="Search questions, exams or documents...">
+
+        </div>
+
+    </div>
+
+    <div class="header-right">
+
+        <button class="header-icon notification-btn">
+
+            <i class="fas fa-bell"></i>
+
+            <span class="notification-badge">
+
+                3
+
+            </span>
+
+        </button>
+
+        <div class="profile-dropdown">
+
+            <button class="profile-btn" id="profileToggle">
+
+                <div class="avatar-wrapper">
+
+                    <img
+                        src="../assets/images/avatar-placeholder.png"
+                        id="studentAvatar"
+                        alt="Student">
+
+                    <input
+                        type="file"
+                        id="avatarUpload"
+                        hidden>
+
+                </div>
+
+                <div class="profile-info">
+
+                    <h4 id="studentName">
+
+                        Student
+
+                    </h4>
+
+                    <span id="studentPlan">
+
+                        Free Trial
+
+                    </span>
+
+                </div>
+
+                <i class="fas fa-chevron-down"></i>
+
+            </button>
+
+            <div class="profile-menu" id="profileMenu">
+
+                <a href="#" id="uploadPhoto">
+
+                    <i class="fas fa-camera"></i>
+
+                    Upload Photo
+
+                </a>
+
+                <a href="profile.html">
+
+                    <i class="fas fa-user"></i>
+
+                    My Profile
+
+                </a>
+
+                <a href="subscription.html">
+
+                    <i class="fas fa-credit-card"></i>
+
+                    Subscription
+
+                </a>
+
+                <a href="settings.html">
+
+                    <i class="fas fa-gear"></i>
+
+                    Settings
+
+                </a>
+
+                <hr>
+
+                <a href="../index.html" id="logoutBtn">
+
+                    <i class="fas fa-right-from-bracket"></i>
+
+                    Logout
+
+                </a>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</header>
+
+            <!-- ===========================
+                    PAGE CONTENT
+            ============================ -->
+
+            <main class="dashboard-content">
+
+                <!-- ===========================
+        PRACTICE HEADER
+=========================== -->
+
+<section class="dashboard-top">
+
+    <div>
+
+        <h1>
+
+            Practice
+
+        </h1>
+
+        <p>
+
+            Choose the nursing examination you are preparing for.
+
+        </p>
+
+    </div>
+
+</section>
+  
+              <!-- ===================================
+        EXAM CATEGORIES
+=================================== -->
+
+<section class="exam-grid">
+
+    <!-- ===========================
+            NCLEX
+    ============================ -->
+
+    <div class="exam-card">
+
+        <div class="exam-icon">
+
+            <i class="fas fa-user-nurse"></i>
+
+        </div>
+
+        <div class="exam-content">
+
+            <h2>NCLEX</h2>
+
+            <p>
+
+                Prepare for the National Council Licensure Examination
+                for Registered Nurses (RN) and Practical Nurses (PN).
+
+            </p>
+
+            <div class="exam-stats">
+
+                <div class="exam-stat">
+
+                    <span class="meta-label">
+
+                        Questions
+
+                    </span>
+
+                    <strong id="nclexQuestions">
+
+                        Loading...
+
+                    </strong>
+
+                </div>
+
+                <div class="exam-stat">
+
+                    <span class="meta-label">
+
+                        Progress
+
+                    </span>
+
+                    <strong id="nclexProgress">
+
+                        0%
+
+                    </strong>
+
+                </div>
+
+            </div>
+
+            <a href="nclex.html"
+               class="primary-btn exam-button">
+
+                Explore NCLEX
+
+                <i class="fas fa-arrow-right"></i>
+
+            </a>
+
+        </div>
+
+    </div>
+
+    <!-- ===========================
+            ATI TEAS 7
+    ============================ -->
+
+    <div class="exam-card">
+
+        <div class="exam-icon">
+
+            <i class="fas fa-book-medical"></i>
+
+        </div>
+
+        <div class="exam-content">
+
+            <h2>ATI TEAS 7</h2>
+
+            <p>
+
+                Prepare for the Test of Essential Academic Skills
+                including Reading, Mathematics,
+                Science and English & Language Usage.
+
+            </p>
+
+            <div class="exam-stats">
+
+                <div class="exam-stat">
+
+                    <span class="meta-label">
+
+                        Questions
+
+                    </span>
+
+                    <strong id="teasQuestions">
+
+                        Loading...
+
+                    </strong>
+
+                </div>
+
+                <div class="exam-stat">
+
+                    <span class="meta-label">
+
+                        Progress
+
+                    </span>
+
+                    <strong id="teasProgress">
+
+                        0%
+
+                    </strong>
+
+                </div>
+
+            </div>
+
+            <a href="ati-teas.html"
+               class="primary-btn exam-button">
+
+                Explore ATI TEAS
+
+                <i class="fas fa-arrow-right"></i>
+
+            </a>
+
+        </div>
+
+    </div>
+
+    <!-- ===========================
+            HESI A2
+    ============================ -->
+
+    <div class="exam-card">
+
+        <div class="exam-icon">
+
+            <i class="fas fa-notes-medical"></i>
+
+        </div>
+
+        <div class="exam-content">
+
+            <h2>HESI A2</h2>
+
+            <p>
+
+                Practice for the HESI Admission Assessment
+                covering Math, Reading, Grammar,
+                Vocabulary, Biology, Chemistry
+                and Anatomy & Physiology.
+
+            </p>
+
+            <div class="exam-stats">
+
+                <div class="exam-stat">
+
+                    <span class="meta-label">
+
+                        Questions
+
+                    </span>
+
+                    <strong id="hesiA2Questions">
+
+                        Loading...
+
+                    </strong>
+
+                </div>
+
+                <div class="exam-stat">
+
+                    <span class="meta-label">
+
+                        Progress
+
+                    </span>
+
+                    <strong id="hesiA2Progress">
+
+                        0%
+
+                    </strong>
+
+                </div>
+
+            </div>
+
+            <a href="hesi-a2.html"
+               class="primary-btn exam-button">
+
+                Explore HESI A2
+
+                <i class="fas fa-arrow-right"></i>
+
+            </a>
+
+        </div>
+
+    </div>
+
+    <!-- ===========================
+            EXIT EXAMS
+    ============================ -->
+
+    <div class="exam-card">
+
+        <div class="exam-icon">
+
+            <i class="fas fa-user-graduate"></i>
+
+        </div>
+
+        <div class="exam-content">
+
+            <h2>Exit Exams</h2>
+
+            <p>
+
+                Prepare for specialty nursing examinations
+                including Fundamentals,
+                Pharmacology,
+                Medical-Surgical,
+                Pediatrics,
+                Psychiatric,
+                and Maternity.
+
+            </p>
+
+            <div class="exam-stats">
+
+                <div class="exam-stat">
+
+                    <span class="meta-label">
+
+                        Questions
+
+                    </span>
+
+                    <strong id="hesiExitQuestions">
+
+                        Loading...
+
+                    </strong>
+
+                </div>
+
+                <div class="exam-stat">
+
+                    <span class="meta-label">
+
+                        Progress
+
+                    </span>
+
+                    <strong id="hesiExitProgress">
+
+                        0%
+
+                    </strong>
+
+                </div>
+
+            </div>
+
+            <a href="hesi-exit.html"
+               class="primary-btn exam-button">
+
+                Explore Exit Exams
+
+                <i class="fas fa-arrow-right"></i>
+
+            </a>
+
+        </div>
+
+    </div>
+
+</section>
+                              
+<!-- ===========================
+        HOW PRACTICE WORKS
+=========================== -->
+
+<section class="dashboard-card practice-guide">
+
+    <div class="card-header">
+
+        <h2>
+
+            <i class="fas fa-circle-info"></i>
+
+            How Practice Works
+
+        </h2>
+
+    </div>
+
+    <div class="practice-guide-grid">
+
+        <div class="guide-step">
+
+            <div class="guide-number">
+
+                1
+
+            </div>
+
+            <div>
+
+                <h3>
+
+                    Choose an Examination
+
+                </h3>
+
+                <p>
+
+                    Select one of the four major examination categories
+                    to begin your preparation journey.
+
+                </p>
+
+            </div>
+
+        </div>
+
+        <div class="guide-step">
+
+            <div class="guide-number">
+
+                2
+
+            </div>
+
+            <div>
+
+                <h3>
+
+                    Select a Subject
+
+                </h3>
+
+                <p>
+
+                    Choose the exact nursing examination
+                    you want to practice.
+
+                </p>
+
+            </div>
+
+        </div>
+
+        <div class="guide-step">
+
+            <div class="guide-number">
+
+                3
+
+            </div>
+
+            <div>
+
+                <h3>
+
+                    Answer Questions
+
+                </h3>
+
+                <p>
+
+                    During the free trial,
+                    every subject allows
+                    up to 10 practice questions.
+
+                </p>
+
+            </div>
+
+        </div>
+
+        <div class="guide-step">
+
+            <div class="guide-number">
+
+                4
+
+            </div>
+
+            <div>
+
+                <h3>
+
+                    Review & Improve
+
+                </h3>
+
+                <p>
+
+                    Review explanations,
+                    identify weak areas,
+                    and monitor your progress
+                    as you continue learning.
+
+                </p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+            </main>
+
+        </div>
+
+    </div>
+
+    <!-- JavaScript -->
+
+    <script src="../js/student-main.js"></script>
+
+    <script src="../js/dashboard-student.js"></script>
+
+</body>
+
+</html>
+                         `  

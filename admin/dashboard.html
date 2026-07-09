@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <!-- Character Encoding -->
+
+    <meta charset="UTF-8">
+
+    <!-- Responsive Design -->
+
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0">
+
+    <!-- Page Title -->
+
+    <title>Admin Dashboard | Nursephere</title>
+
+    <!-- Description -->
+
+    <meta name="description"
+        content="Nursephere Administration Dashboard">
+
+    <!-- Favicon -->
+
+    <link rel="icon"
+        type="image/png"
+        sizes="32x32"
+        href="../assets/favicon/favicon-32x32.png">
+
+    <link rel="icon"
+        type="image/png"
+        sizes="16x16"
+        href="../assets/favicon/favicon-16x16.png">
+
+    <!-- Google Fonts -->
+
+    <link rel="preconnect"
+        href="https://fonts.googleapis.com">
+
+    <link rel="preconnect"
+        href="https://fonts.gstatic.com"
+        crossorigin>
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <!-- Font Awesome -->
+
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+
+    <!-- Admin CSS -->
+
+    <link rel="stylesheet"
+        href="css/admin-main.css">
+
+    <link rel="stylesheet"
+        href="css/dashboard.css">
+
+    <link rel="stylesheet"
+        href="css/header.css">
+
+    <link rel="stylesheet"
+        href="css/sidebar.css">
+        
+
+
+</head>
+
+<body>
+
+    <!-- ===================================
+            ADMIN APPLICATION LAYOUT
+    ==================================== -->
+
+    <div class="admin-layout">
+
+        <!-- Sidebar -->
+
+        <!-- ===========================
+        ADMIN SIDEBAR
+=========================== -->
+
+<aside class="admin-sidebar" id="adminSidebar">
+
+    <!-- Logo -->
+
+    <div class="sidebar-logo">
+
+        <img src="../assets/logo/logo.jpeg"
+             alt="Nursephere Logo">
+
+        <div class="logo-text">
+
+            <h2>
+
+                Nursephere
+
+            </h2>
+
+            <p>
+
+                Admin Portal
+
+            </p>
+
+        </div>
+
+    </div>
+
+    <!-- Navigation -->
+
+    <nav class="sidebar-nav">
+
+        <span class="nav-title">
+
+            ADMINISTRATION
+
+        </span>
+
+        <a href="dashboard.html" class="nav-link">
+
+            <i class="fas fa-chart-line"></i>
+
+            <span>
+
+                Dashboard
+
+            </span>
+
+        </a>
+
+        <a href="question-management.html" class="nav-link">
+
+            <i class="fas fa-circle-question"></i>
+
+            <span>
+
+                Question Management
+
+            </span>
+
+        </a>
+
+        <a href="students.html" class="nav-link">
+
+            <i class="fas fa-user-graduate"></i>
+
+            <span>
+
+                Students
+
+            </span>
+
+        </a>
+
+        <a href="subscriptions.html" class="nav-link">
+
+            <i class="fas fa-credit-card"></i>
+
+            <span>
+
+                Subscriptions
+
+            </span>
+
+        </a>
+
+        <a href="referrals.html" class="nav-link">
+
+            <i class="fas fa-user-plus"></i>
+
+            <span>
+
+                Referrals
+
+            </span>
+
+        </a>
+
+        <a href="reports.html" class="nav-link">
+
+            <i class="fas fa-chart-pie"></i>
+
+            <span>
+
+                Reports
+
+            </span>
+
+        </a>
+
+    </nav>
+
+    <!-- Account -->
+
+    <div class="sidebar-bottom">
+
+        <span class="nav-title">
+
+            ACCOUNT
+
+        </span>
+
+        <a href="settings.html" class="nav-link">
+
+            <i class="fas fa-gear"></i>
+
+            <span>
+
+                Settings
+
+            </span>
+
+        </a>
+
+        <a href="login.html" class="nav-link logout-link">
+
+            <i class="fas fa-right-from-bracket"></i>
+
+            <span>
+
+                Logout
+
+            </span>
+
+        </a>
+
+    </div>
+
+</aside>
+
+        <!-- ===========================
+                MAIN APPLICATION
+        ============================ -->
+
+        <div class="admin-main">
+
+            <!-- Header -->
+
+            <!-- ===========================
+        ADMIN HEADER
+=========================== -->
+
+<header class="admin-header">
+
+    <!-- Sidebar Toggle -->
+
+    <button class="menu-toggle" id="menuToggle">
+
+        <i class="fas fa-bars"></i>
+
+    </button>
+
+    <!-- Search -->
+
+    <div class="header-search">
+
+        <i class="fas fa-search"></i>
+
+        <input
+            type="text"
+            placeholder="Search students, questions, subscriptions...">
+
+    </div>
+
+    <!-- Header Right -->
+
+    <div class="header-right">
+
+        <!-- Notifications -->
+
+        <button class="header-icon">
+
+            <i class="fas fa-bell"></i>
+
+            <span class="notification-badge">
+
+                0
+
+            </span>
+
+        </button>
+
+        <!-- Admin Profile -->
+
+        <div class="admin-profile">
+
+            <img
+                src="../assets/images/avatar-placeholder.png"
+                alt="Administrator">
+
+            <div>
+
+                <h4 id="adminName">
+
+                    Administrator
+
+                </h4>
+
+                <small>
+
+                    Admin
+
+                </small>
+
+            </div>
+
+            <i class="fas fa-chevron-down"></i>
+
+        </div>
+
+    </div>
+
+</header>
+
+            <!-- ===========================
+                    PAGE CONTENT
+            ============================ -->
+
+            <main class="dashboard-content">
+
+                <!-- ===========================
+        DASHBOARD HERO
+=========================== -->
+
+<section class="dashboard-top">
+
+    <div>
+
+        <h1>
+
+            Administrator Dashboard
+
+        </h1>
+
+        <p>
+
+            Welcome back. Manage questions,
+            monitor student activity, and
+            oversee the Nursephere platform
+            from one central location.
+
+        </p>
+
+    </div>
+
+    <a href="question-management.html" class="primary-btn">
+
+        <i class="fas fa-plus"></i>
+
+        Add Question
+
+    </a>
+
+</section>
+
+<!-- ===========================
+        PLATFORM STATISTICS
+=========================== -->
+
+<section class="stats-grid">
+
+    <div class="stat-card">
+
+        <div class="stat-icon">
+
+            <i class="fas fa-user-graduate"></i>
+
+        </div>
+
+        <div class="stat-info">
+
+            <h2 id="totalStudents">
+
+                Loading...
+
+            </h2>
+
+            <p>
+
+                Total Students
+
+            </p>
+
+        </div>
+
+    </div>
+
+    <div class="stat-card">
+
+        <div class="stat-icon">
+
+            <i class="fas fa-circle-question"></i>
+
+        </div>
+
+        <div class="stat-info">
+
+            <h2 id="totalQuestions">
+
+                Loading...
+
+            </h2>
+
+            <p>
+
+                Total Questions
+
+            </p>
+
+        </div>
+
+    </div>
+
+    <div class="stat-card">
+
+        <div class="stat-icon">
+
+            <i class="fas fa-clipboard-check"></i>
+
+        </div>
+
+        <div class="stat-info">
+
+            <h2 id="examAttempts">
+
+                Loading...
+
+            </h2>
+
+            <p>
+
+                Today's Exam Attempts
+
+            </p>
+
+        </div>
+
+    </div>
+
+    <div class="stat-card">
+
+        <div class="stat-icon">
+
+            <i class="fas fa-credit-card"></i>
+
+        </div>
+
+        <div class="stat-info">
+
+            <h2 id="activeSubscriptions">
+
+                Loading...
+
+            </h2>
+
+            <p>
+
+                Active Subscriptions
+
+            </p>
+
+        </div>
+
+    </div>
+
+</section>
+
+<!-- ===========================
+        QUICK ACTIONS
+=========================== -->
+
+<section class="action-grid">
+
+    <!-- Add Questions -->
+
+    <a href="question-management.html"
+        class="action-card action-primary">
+
+        <div class="action-icon">
+
+            <i class="fas fa-circle-question"></i>
+
+        </div>
+
+        <div>
+
+            <h3>
+
+                Add Questions
+
+            </h3>
+
+            <p>
+
+                Create, edit and manage
+                nursing exam questions
+                across all subjects.
+
+            </p>
+
+        </div>
+
+    </a>
+
+    <!-- Manage Students -->
+
+    <a href="students.html"
+        class="action-card">
+
+        <div class="action-icon">
+
+            <i class="fas fa-user-graduate"></i>
+
+        </div>
+
+        <div>
+
+            <h3>
+
+                Manage Students
+
+            </h3>
+
+            <p>
+
+                View student accounts,
+                subscriptions and
+                learning progress.
+
+            </p>
+
+        </div>
+
+    </a>
+
+    <!-- Reports -->
+
+    <a href="reports.html"
+        class="action-card">
+
+        <div class="action-icon">
+
+            <i class="fas fa-chart-pie"></i>
+
+        </div>
+
+        <div>
+
+            <h3>
+
+                View Reports
+
+            </h3>
+
+            <p>
+
+                Review platform activity,
+                subscriptions and
+                performance reports.
+
+            </p>
+
+        </div>
+
+    </a>
+
+</section>
+
+<!-- ===========================
+        RECENT ACTIVITY
+=========================== -->
+
+<section class="dashboard-card">
+
+    <div class="card-header">
+
+        <h2>
+
+            Recent Activity
+
+        </h2>
+
+    </div>
+
+    <div id="recentActivity" class="empty-state">
+
+        <i class="fas fa-clock-rotate-left"></i>
+
+        <h3>
+
+            No Recent Activity
+
+        </h3>
+
+        <p>
+
+            Platform activity will appear here
+            as administrators manage questions,
+            students, subscriptions and referrals.
+
+        </p>
+
+        <a href="question-management.html"
+            class="secondary-btn">
+
+            Manage Questions
+
+        </a>
+
+    </div>
+
+</section>
+
+            </main>
+
+        </div>
+
+    </div>
+
+    <!-- ===========================
+            JAVASCRIPT
+    ============================ -->
+
+    <script src="js/admin-main.js"></script>
+
+    <script src="js/dashboard.js"></script>
+
+</body>
+
+</html>

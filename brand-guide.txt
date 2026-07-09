@@ -1,0 +1,22 @@
+Nursephere
+
+Tagline:
+Learn. Practice. Pass.
+
+Primary Blue:
+#2563EB
+
+Medical Teal:
+#14B8A6
+
+Success Green:
+#22C55E
+
+Deep Navy:
+#0F172A
+
+Background:
+#F8FAFC
+
+Font:
+Poppins
