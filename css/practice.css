@@ -1,244 +1,358 @@
-/*=========================================
-        EXAM GRID
-=========================================*/
+/* ===================================================
+                    PRACTICE PAGE
+=================================================== */
 
-.exam-grid{
+.practice-header{
 
-    display:grid;
-
-    grid-template-columns:repeat(2, minmax(0, 1fr));
-
-    gap:30px;
-
-    margin-top:35px;
-
-    align-items:start;
+    margin-bottom:50px;
 
 }
 
-.exam-card{
+.practice-header h1{
+
+    font-size:2.5rem;
+
+    color:#0F172A;
+
+    margin-bottom:15px;
+
+    font-weight:700;
+
+}
+
+.practice-header p{
+
+    max-width:700px;
+
+    color:#64748B;
+
+    line-height:1.8;
+
+    font-size:1rem;
+
+}
+
+/* ===================================================
+                    SECTION
+=================================================== */
+
+.practice-section{
+
+    margin-bottom:50px;
+
+}
+
+.practice-section h2{
+
+    font-size:1.8rem;
+
+    color:#0F172A;
+
+    margin-bottom:8px;
+
+}
+
+.practice-section>p{
+
+    color:#64748B;
+
+    margin-bottom:25px;
+
+}
+
+/* ===================================================
+                    EXAMS
+=================================================== */
+
+.exam-container{
 
     display:flex;
 
-    align-items:flex-start;
+    flex-wrap:wrap;
 
-    gap:30px;
-
-    padding:35px;
-
-    background:#ffffff;
-
-    border-radius:22px;
-
-    box-shadow:0 10px 25px rgba(15,23,42,.08);
-
-    transition:.3s ease;
+    gap:15px;
 
 }
 
-.exam-card:hover{
-
-    transform:translateY(-6px);
-
-    box-shadow:0 18px 40px rgba(37,99,235,.15);
-
-}
-
-.exam-icon{
-
-    width:90px;
-
-    height:90px;
-
-    border-radius:20px;
-
-    background:linear-gradient(135deg,#2563eb,#7c3aed);
-
-    color:#ffffff;
+.exam-btn{
 
     display:flex;
-
-    justify-content:center;
 
     align-items:center;
 
-    flex-shrink:0;
+    gap:10px;
+
+    padding:14px 26px;
+
+    border-radius:50px;
+
+    border:2px solid #2563EB;
+
+    background:#FFFFFF;
+
+    color:#2563EB;
+
+    cursor:pointer;
+
+    transition:.25s;
+
+    font-weight:600;
 
 }
 
-.exam-icon i{
+.exam-btn:hover{
 
-    font-size:38px;
+    background:#2563EB;
 
-}
-
-.exam-content{
-
-    flex:1;
-
-    display:flex;
-
-    flex-direction:column;
-
-    justify-content:center;
+    color:#FFFFFF;
 
 }
 
-.exam-content h2{
+.exam-btn.active{
+
+    background:#2563EB;
+
+    color:#FFFFFF;
+
+}
+
+.exam-btn i{
+
+    font-size:1rem;
+
+}
+
+/* ===================================================
+                    SUBJECTS
+=================================================== */
+
+.subject-container{
+
+    display:grid;
+
+    grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
+
+    gap:20px;
+
+}
+
+.subject-card{
+
+    background:#FFFFFF;
+
+    border:1px solid #E2E8F0;
+
+    border-radius:18px;
+
+    padding:25px;
+
+    transition:.25s;
+
+    cursor:pointer;
+
+}
+
+.subject-card:hover{
+
+    transform:translateY(-5px);
+
+    border-color:#14B8A6;
+
+    box-shadow:0 15px 30px rgba(0,0,0,.08);
+
+}
+
+.subject-card h3{
+
+    font-size:1.15rem;
+
+    color:#0F172A;
+
+    margin-bottom:12px;
+
+}
+
+.subject-card p{
+
+    color:#64748B;
+
+    line-height:1.6;
 
     margin-bottom:18px;
 
 }
 
-.exam-content p{
-
-    line-height:1.8;
-
-    margin-bottom:25px;
-
-    color:#64748b;
-
-}
-
-.exam-meta{
+.subject-footer{
 
     display:flex;
 
-    gap:40px;
+    justify-content:space-between;
 
-    margin-bottom:25px;
+    align-items:center;
 
-}
+    border-top:1px solid #E2E8F0;
 
-.meta-label{
-
-    display:block;
-
-    color:#94a3b8;
-
-    font-size:.85rem;
-
-    margin-bottom:6px;
+    padding-top:15px;
 
 }
 
-.exam-meta strong{
+.subject-footer span{
 
-    color:#1f2d5c;
+    color:#14B8A6;
 
-    font-size:1.1rem;
-
-}
-
-.exam-stats{
-
-    display:flex;
-
-    gap:50px;
-
-    margin-bottom:25px;
+    font-weight:600;
 
 }
 
-.exam-stat{
+.subject-footer i{
+
+    color:#2563EB;
+
+}
+
+/* ===================================================
+                    EMPTY STATE
+=================================================== */
+
+.empty-state{
+
+    grid-column:1/-1;
+
+    padding:70px 30px;
+
+    border:2px dashed #CBD5E1;
+
+    border-radius:18px;
+
+    text-align:center;
+
+}
+
+.empty-state i{
+
+    font-size:3.2rem;
+
+    color:#14B8A6;
+
+    margin-bottom:20px;
+
+}
+
+.empty-state h3{
+
+    color:#0F172A;
+
+    margin-bottom:12px;
+
+}
+
+.empty-state p{
+
+    color:#64748B;
+
+    max-width:420px;
+
+    margin:auto;
+
+    line-height:1.7;
+
+}
+
+/* ===================================================
+                    RESPONSIVE
+=================================================== */
+
+@media(max-width:768px){
+
+    .practice-header h1{
+
+        font-size:2rem;
+
+    }
+
+    .exam-container{
+
+        flex-direction:column;
+
+    }
+
+    .exam-btn{
+
+        width:100%;
+
+        justify-content:center;
+
+    }
+
+    .subject-container{
+
+        grid-template-columns:1fr;
+
+    }
+
+}
+
+/*========================================================
+    SUBJECT CARDS
+========================================================*/
+
+.subject-container{
+
+    display:grid;
+
+    grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
+
+    gap:24px;
+
+    margin-top:25px;
+
+}
+
+.subject-card{
+
+    background:#ffffff;
+
+    border:1px solid #e5e7eb;
+
+    border-radius:18px;
+
+    padding:24px;
 
     display:flex;
 
     flex-direction:column;
 
-}
-
-.exam-button{
-
-    width:fit-content;
-
-}
-
-/*=========================================
-        PRACTICE GUIDE
-=========================================*/
-
-.practice-guide{
-
-    margin-top:40px;
-
-}
-
-.practice-guide-grid{
-
-    display:grid;
-
-    grid-template-columns:repeat(2,1fr);
-
-    gap:25px;
-
-    margin-top:20px;
-
-}
-
-.guide-step{
-
-    display:flex;
+    justify-content:space-between;
 
     gap:20px;
 
-    align-items:flex-start;
+    box-shadow:0 10px 30px rgba(0,0,0,.05);
 
-    padding:25px;
-
-    border-radius:18px;
-
-    background:#f8fafc;
-
-    transition:.3s ease;
+    transition:.3s;
 
 }
 
-.guide-step:hover{
+.subject-card:hover{
 
-    transform:translateY(-4px);
+    transform:translateY(-5px);
 
-    box-shadow:0 12px 25px rgba(37,99,235,.08);
+    box-shadow:0 18px 40px rgba(0,0,0,.08);
 
 }
 
-.guide-number{
-
-    width:52px;
-
-    height:52px;
-
-    border-radius:50%;
-
-    background:#2563eb;
-
-    color:#ffffff;
-
-    display:flex;
-
-    justify-content:center;
-
-    align-items:center;
+.subject-info h3{
 
     font-size:1.2rem;
 
-    font-weight:700;
-
-    flex-shrink:0;
-
-}
-
-.guide-step h3{
-
-    color:#1f2d5c;
+    color:#1e293b;
 
     margin-bottom:10px;
 
-    font-size:1.05rem;
+    font-weight:600;
 
 }
 
-.guide-step p{
+.subject-info p{
 
     color:#64748b;
 
@@ -248,278 +362,86 @@
 
 }
 
-@media(max-width:992px){
+/*========================================================
+    ACTION BUTTONS
+========================================================*/
 
-    .practice-guide-grid{
-
-        grid-template-columns:1fr;
-
-    }
-
-}
-
-/*=========================================
-        EXAM INFORMATION
-=========================================*/
-
-.exam-info{
-
-    margin-top:40px;
-
-    background:#ffffff;
-
-    padding:40px;
-
-    border-radius:22px;
-
-    box-shadow:0 10px 25px rgba(15,23,42,.08);
-
-}
-
-.exam-info h2{
+.subject-actions{
 
     display:flex;
-
-    align-items:center;
 
     gap:12px;
 
-    font-size:2rem;
-
-    color:#1d3557;
-
-    margin-bottom:25px;
+    margin-top:auto;
 
 }
 
-.exam-info h2 i{
-
-    color:#2563eb;
-
-}
-
-.exam-info p{
-
-    color:#5f6b85;
-
-    font-size:1rem;
-
-    line-height:1.9;
-
-    margin-bottom:22px;
-
-}
-
-.exam-info ul{
-
-    list-style:none;
-
-    padding:0;
-
-    margin-top:25px;
-
-    display:grid;
-
-    grid-template-columns:repeat(2,1fr);
-
-    gap:15px 40px;
-
-}
-
-.exam-info li{
-
-    display:flex;
-
-    align-items:center;
-
-    gap:12px;
-
-    font-weight:600;
-
-    color:#20304f;
-
-}
-
-.exam-info li i{
-
-    color:#22c55e;
-
-    font-size:18px;
-
-}
-
-@media(max-width:768px){
-
-    .exam-info{
-
-        padding:30px;
-
-    }
-
-    .exam-info ul{
-
-        grid-template-columns:1fr;
-
-    }
-
-}
-
-/*=========================================
-        PRACTICE GRID
-=========================================*/
-
-.practice-grid{
-
-    display:grid;
-
-    grid-template-columns:repeat(2,1fr);
-
-    gap:30px;
-
-    margin-top:35px;
-
-    margin-bottom:40px;
-
-}
-
-.practice-card{
-
-    background:#ffffff;
-
-    border-radius:22px;
-
-    padding:35px;
-
-    box-shadow:0 10px 25px rgba(15,23,42,.08);
-
-    transition:.3s ease;
-
-    display:flex;
-
-    gap:25px;
-
-}
-
-.practice-card:hover{
-
-    transform:translateY(-6px);
-
-    box-shadow:0 18px 35px rgba(37,99,235,.15);
-
-}
-
-.practice-icon{
-
-    width:80px;
-
-    height:80px;
-
-    border-radius:20px;
-
-    background:#edf4ff;
-
-    display:flex;
-
-    justify-content:center;
-
-    align-items:center;
-
-    flex-shrink:0;
-
-}
-
-.practice-icon i{
-
-    font-size:34px;
-
-    color:#2563eb;
-
-}
-
-.practice-content{
+.subject-actions button{
 
     flex:1;
 
-}
+    border:none;
 
-.practice-content h2{
+    border-radius:10px;
 
-    font-size:1.35rem;
+    padding:12px 18px;
 
-    color:#1f2d5c;
+    cursor:pointer;
 
-    margin-bottom:15px;
+    font-size:.95rem;
 
-}
-
-.practice-content p{
-
-    color:#64748b;
-
-    line-height:1.8;
-
-    margin-bottom:25px;
-
-}
-
-.practice-stats{
+    font-weight:600;
 
     display:flex;
 
-    justify-content:space-between;
-
-    margin-bottom:25px;
-
-}
-
-.practice-stats span{
-
-    display:block;
-
-    color:#94a3b8;
-
-    font-size:.85rem;
-
-}
-
-.practice-stats strong{
-
-    display:block;
-
-    margin-top:6px;
-
-    font-size:1rem;
-
-    color:#2563eb;
-
-}
-
-.practice-btn{
-
-    display:inline-flex;
-
     align-items:center;
 
-    gap:10px;
+    justify-content:center;
 
-    padding:14px 24px;
-
-    background:#2563eb;
-
-    color:#ffffff;
-
-    border-radius:12px;
-
-    text-decoration:none;
-
-    font-weight:600;
+    gap:8px;
 
     transition:.3s;
 
 }
 
+.practice-btn{
+
+    background:#0d6efd;
+
+    color:#fff;
+
+}
+
 .practice-btn:hover{
 
-    background:#1d4ed8;
+    background:#0b5ed7;
+
+}
+
+.resource-btn{
+
+    background:#f1f5f9;
+
+    color:#0f172a;
+
+}
+
+.resource-btn:hover{
+
+    background:#e2e8f0;
+
+}
+
+/*========================================================
+    MOBILE
+========================================================*/
+
+@media(max-width:768px){
+
+    .subject-actions{
+
+        flex-direction:column;
+
+    }
 
 }

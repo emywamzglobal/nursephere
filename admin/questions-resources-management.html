@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <!-- Character Encoding -->
+
+    <meta charset="UTF-8">
+
+    <!-- Responsive Design -->
+
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0">
+
+    <!-- Page Title -->
+
+    <title>Admin Dashboard | Nursephere</title>
+
+    <!-- Description -->
+
+    <meta name="description"
+        content="Nursephere Administration Dashboard">
+
+    <!-- Favicon -->
+
+    <link rel="icon"
+        type="image/png"
+        sizes="32x32"
+        href="../assets/favicon/favicon-32x32.png">
+
+    <link rel="icon"
+        type="image/png"
+        sizes="16x16"
+        href="../assets/favicon/favicon-16x16.png">
+
+    <!-- Google Fonts -->
+
+    <link rel="preconnect"
+        href="https://fonts.googleapis.com">
+
+    <link rel="preconnect"
+        href="https://fonts.gstatic.com"
+        crossorigin>
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <!-- Font Awesome -->
+
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+
+    <!-- Admin CSS -->
+
+    <link rel="stylesheet"
+        href="css/admin-main.css">
+
+    <link rel="stylesheet"
+        href="css/dashboard.css">
+
+    <link rel="stylesheet"
+        href="css/header.css">
+
+    <link rel="stylesheet"
+        href="css/sidebar.css">
+
+    <link rel="stylesheet"
+        href="css/questions-resources-management.css">
+
+        
+
+
+</head>
+
+<body>
+
+    <!-- ===================================
+            ADMIN APPLICATION LAYOUT
+    ==================================== -->
+
+    <div class="admin-layout">
+
+        <!-- Sidebar -->
+
+        <!-- ===========================
+        ADMIN SIDEBAR
+=========================== -->
+
+<aside class="admin-sidebar" id="adminSidebar">
+
+    <!-- Logo -->
+
+    <div class="sidebar-logo">
+
+        <img src="../assets/logo/logo.jpeg"
+             alt="Nursephere Logo">
+
+        <div class="logo-text">
+
+            <h2>
+
+                Nursephere
+
+            </h2>
+
+            <p>
+
+                Admin Portal
+
+            </p>
+
+        </div>
+
+    </div>
+
+    <!-- Navigation -->
+
+    <nav class="sidebar-nav">
+
+        <span class="nav-title">
+
+            ADMINISTRATION
+
+        </span>
+
+        <a href="dashboard.html" class="nav-link">
+
+            <i class="fas fa-chart-line"></i>
+
+            <span>
+
+                Dashboard
+
+            </span>
+
+        </a>
+
+        <a href="questions-resources-management.html" class="nav-link">
+
+            <i class="fas fa-circle-question"></i>
+
+            <span>
+
+                Question Management
+
+            </span>
+
+        </a>
+
+        <a href="students.html" class="nav-link">
+
+            <i class="fas fa-user-graduate"></i>
+
+            <span>
+
+                Students
+
+            </span>
+
+        </a>
+
+        <a href="subscriptions.html" class="nav-link">
+
+            <i class="fas fa-credit-card"></i>
+
+            <span>
+
+                Subscriptions
+
+            </span>
+
+        </a>
+
+        <a href="referrals.html" class="nav-link">
+
+            <i class="fas fa-user-plus"></i>
+
+            <span>
+
+                Referrals
+
+            </span>
+
+        </a>
+
+        <a href="reports.html" class="nav-link">
+
+            <i class="fas fa-chart-pie"></i>
+
+            <span>
+
+                Reports
+
+            </span>
+
+        </a>
+
+    </nav>
+
+    <!-- Account -->
+
+    <div class="sidebar-bottom">
+
+        <span class="nav-title">
+
+            ACCOUNT
+
+        </span>
+
+        <a href="settings.html" class="nav-link">
+
+            <i class="fas fa-gear"></i>
+
+            <span>
+
+                Settings
+
+            </span>
+
+        </a>
+
+        <a href="login.html" class="nav-link logout-link">
+
+            <i class="fas fa-right-from-bracket"></i>
+
+            <span>
+
+                Logout
+
+            </span>
+
+        </a>
+
+    </div>
+
+</aside>
+
+        <!-- ===========================
+                MAIN APPLICATION
+        ============================ -->
+
+        <div class="admin-main">
+
+            <!-- Header -->
+
+            <!-- ===========================
+        ADMIN HEADER
+=========================== -->
+
+<header class="admin-header">
+
+    <!-- Sidebar Toggle -->
+
+    <button class="menu-toggle" id="menuToggle">
+
+        <i class="fas fa-bars"></i>
+
+    </button>
+
+    <button
+    id="refreshButton"
+    class="btn btn-primary">
+
+    <i class="fas fa-rotate"></i>
+
+    Refresh
+
+</button>
+
+    <!-- Search -->
+
+    <div class="header-search">
+
+        <i class="fas fa-search"></i>
+
+        <input
+            type="text"
+            placeholder="Search students, questions, subscriptions...">
+
+    </div>
+
+    <!-- Header Right -->
+
+    <div class="header-right">
+
+        <!-- Notifications -->
+
+        <button class="header-icon">
+
+            <i class="fas fa-bell"></i>
+
+            <span class="notification-badge" id="notificationCount">
+
+                0
+
+            </span>
+
+        </button>
+
+        <!-- Admin Profile -->
+
+        <div class="admin-profile">
+
+            <img
+                src="../assets/images/avatar-placeholder.png"
+                alt="Administrator">
+
+            <div>
+
+                <h4 id="userName">
+
+
+                </h4>
+
+                <small>
+
+                    Admin
+
+                </small>
+
+            </div>
+
+            <i class="fas fa-chevron-down"></i>
+
+        </div>
+
+    </div>
+
+</header>
+
+            <!-- ===========================
+                    PAGE CONTENT
+            ============================ -->
+
+            <main class="dashboard-content">
+
+                <!-- ==========================
+     CONTENT AREA
+=========================== -->
+<div id="pageLoader" class="page-loader" style="display:none;">
+    <i class="fas fa-spinner fa-spin"></i>
+</div>
+
+<section class="content">
+
+    <!-- Page Header -->
+    <div class="page-header">
+        <div>
+            <h1>Content Management</h1>
+            <p>Manage all learning content from one central location.</p>
+        </div>
+    </div>
+
+    <!-- Content Modules -->
+    <div class="content-grid">
+
+        <!-- Exams -->
+        <a href="exams.html" class="content-card">
+            <div class="card-icon">
+                <i class="fas fa-file-alt"></i>
+            </div>
+
+            <div class="card-body">
+                <h3>Examinations</h3>
+                <p>Create, organize and manage all nursing examinations.</p>
+
+                <div class="card-footer">
+                    <span class="count" id="examCount">0</span>
+                    <span class="label">Total Exams</span>
+                </div>
+            </div>
+
+            <div class="card-arrow">
+                <i class="fas fa-chevron-right"></i>
+            </div>
+        </a>
+
+        <!-- Subjects -->
+        <a href="subjects.html" class="content-card">
+            <div class="card-icon">
+                <i class="fas fa-book-medical"></i>
+            </div>
+
+            <div class="card-body">
+                <h3>Subjects</h3>
+                <p>Organize subjects under examinations and learning paths.</p>
+
+                <div class="card-footer">
+                    <span class="count" id="subjectCount">0</span>
+                    <span class="label">Total Subjects</span>
+                </div>
+            </div>
+
+            <div class="card-arrow">
+                <i class="fas fa-chevron-right"></i>
+            </div>
+        </a>
+
+        <!-- Questions -->
+        <a href="questions.html" class="content-card">
+            <div class="card-icon">
+                <i class="fas fa-question-circle"></i>
+            </div>
+
+            <div class="card-body">
+                <h3>Practice Questions</h3>
+                <p>Build, edit and maintain the complete question bank.</p>
+
+                <div class="card-footer">
+                    <span class="count" id="questionCount">0</span>
+                    <span class="label">Total Questions</span>
+                </div>
+            </div>
+
+            <div class="card-arrow">
+                <i class="fas fa-chevron-right"></i>
+            </div>
+        </a>
+
+        <!-- Resources -->
+        <a href="resources.html" class="content-card">
+            <div class="card-icon">
+                <i class="fas fa-folder-open"></i>
+            </div>
+
+            <div class="card-body">
+                <h3>Study Resources</h3>
+                <p>Upload and manage PDFs, DOCX, PPTX, XLSX and other study materials.</p>
+
+                <div class="card-footer">
+                    <span class="count" id="resourceCount">0</span>
+                    <span class="label">Total Resources</span>
+                </div>
+            </div>
+
+            <div class="card-arrow">
+                <i class="fas fa-chevron-right"></i>
+            </div>
+        </a>
+
+    </div>
+
+    <!-- Quick Overview -->
+    <section class="overview-section">
+
+        <div class="section-header">
+            <h2>Quick Overview</h2>
+        </div>
+
+        <div class="stats-grid">
+
+            <div class="stat-card">
+                <i class="fas fa-file-alt"></i>
+                <h3 id="overviewExams">0</h3>
+                <p>Examinations</p>
+            </div>
+
+            <div class="stat-card">
+                <i class="fas fa-book-medical"></i>
+                <h3 id="overviewSubjects">0</h3>
+                <p>Subjects</p>
+            </div>
+
+            <div class="stat-card">
+                <i class="fas fa-question-circle"></i>
+                <h3 id="overviewQuestions">0</h3>
+                <p>Questions</p>
+            </div>
+
+            <div class="stat-card">
+                <i class="fas fa-folder-open"></i>
+                <h3 id="overviewResources">0</h3>
+                <p>Resources</p>
+            </div>
+
+        </div>
+
+    </section>
+
+    <!-- ==================================================
+CONTENT SUMMARY
+================================================== -->
+
+<section class="summary-section">
+
+    <div class="section-header">
+
+        <h2>Content Summary</h2>
+
+        <small id="lastUpdated">
+
+            Last updated: --
+
+        </small>
+
+    </div>
+
+    <div
+        class="summary-list"
+        id="summaryList">
+
+        <!-- Populated by JavaScript -->
+
+    </div>
+
+</section>
+
+</main>
+
+            </main>
+
+        </div>
+
+    </div>
+
+    <!-- ===========================
+            JAVASCRIPT
+    ============================ -->
+
+    <script src="../shared/api.js"></script>
+<script src="../shared/auth.js"></script>
+<script src="../shared/utils.js"></script>
+
+<script src="js/admin-main.js"></script>
+<script src="js/questions-resources-management.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,347 @@
+/*========================================================
+    PAGE
+========================================================*/
+
+body{
+
+    margin:0;
+
+    background:#f8fafc;
+
+    font-family:Poppins,sans-serif;
+
+}
+
+.resources-container{
+
+    max-width:1200px;
+
+    margin:auto;
+
+    padding:40px 20px;
+
+}
+
+/*========================================================
+    BACK BUTTON
+========================================================*/
+
+.back-link{
+
+    display:inline-flex;
+
+    align-items:center;
+
+    gap:10px;
+
+    margin-bottom:30px;
+
+    color:#0d6efd;
+
+    text-decoration:none;
+
+    font-weight:600;
+
+}
+
+.back-link:hover{
+
+    color:#084298;
+
+}
+
+/*========================================================
+    SUBJECT HEADER
+========================================================*/
+
+.subject-header{
+
+    background:#ffffff;
+
+    border-radius:18px;
+
+    padding:30px;
+
+    display:flex;
+
+    align-items:center;
+
+    gap:25px;
+
+    margin-bottom:35px;
+
+    box-shadow:0 10px 30px rgba(0,0,0,.05);
+
+}
+
+.subject-icon{
+
+    width:80px;
+
+    height:80px;
+
+    border-radius:50%;
+
+    background:#0d6efd;
+
+    color:#fff;
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:center;
+
+    font-size:2rem;
+
+}
+
+.subject-header h1{
+
+    margin:0;
+
+    color:#1e293b;
+
+}
+
+.subject-header p{
+
+    margin-top:8px;
+
+    color:#64748b;
+
+}
+
+/*========================================================
+    RESOURCE GRID
+========================================================*/
+
+.resources-grid{
+
+    display:grid;
+
+    grid-template-columns:repeat(auto-fit,minmax(340px,1fr));
+
+    gap:24px;
+
+}
+
+/*========================================================
+    RESOURCE CARD
+========================================================*/
+
+.resource-card{
+
+    background:#fff;
+
+    border-radius:18px;
+
+    padding:24px;
+
+    box-shadow:0 10px 25px rgba(0,0,0,.05);
+
+    display:flex;
+
+    flex-direction:column;
+
+    gap:16px;
+
+    transition:.3s;
+
+}
+
+.resource-card:hover{
+
+    transform:translateY(-5px);
+
+    box-shadow:0 18px 35px rgba(0,0,0,.08);
+
+}
+
+.resource-icon{
+
+    width:65px;
+
+    height:65px;
+
+    border-radius:15px;
+
+    background:#eef5ff;
+
+    color:#0d6efd;
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:center;
+
+    font-size:1.6rem;
+
+}
+
+.resource-card h3{
+
+    margin:0;
+
+    color:#1e293b;
+
+}
+
+.resource-card p{
+
+    color:#64748b;
+
+    line-height:1.7;
+
+    margin:0;
+
+}
+
+/*========================================================
+    TYPE
+========================================================*/
+
+.resource-type{
+
+    display:inline-block;
+
+    padding:6px 14px;
+
+    background:#eff6ff;
+
+    color:#2563eb;
+
+    border-radius:30px;
+
+    font-size:.85rem;
+
+    font-weight:600;
+
+    width:fit-content;
+
+}
+
+/*========================================================
+    BUTTONS
+========================================================*/
+
+.resource-actions{
+
+    display:flex;
+
+    gap:12px;
+
+    margin-top:auto;
+
+}
+
+.resource-actions a{
+
+    flex:1;
+
+    text-align:center;
+
+    padding:12px;
+
+    border-radius:10px;
+
+    text-decoration:none;
+
+    font-weight:600;
+
+    transition:.3s;
+
+}
+
+.open-btn{
+
+    background:#0d6efd;
+
+    color:#fff;
+
+}
+
+.open-btn:hover{
+
+    background:#0b5ed7;
+
+}
+
+.download-btn{
+
+    background:#f1f5f9;
+
+    color:#0f172a;
+
+}
+
+.download-btn:hover{
+
+    background:#e2e8f0;
+
+}
+
+/*========================================================
+    EMPTY STATE
+========================================================*/
+
+.empty-state{
+
+    grid-column:1/-1;
+
+    background:#fff;
+
+    border-radius:18px;
+
+    padding:60px 30px;
+
+    text-align:center;
+
+    box-shadow:0 10px 25px rgba(0,0,0,.05);
+
+}
+
+.empty-state i{
+
+    font-size:3rem;
+
+    color:#94a3b8;
+
+    margin-bottom:20px;
+
+}
+
+.empty-state h3{
+
+    color:#334155;
+
+}
+
+.empty-state p{
+
+    color:#64748b;
+
+}
+
+/*========================================================
+    MOBILE
+========================================================*/
+
+@media(max-width:768px){
+
+    .subject-header{
+
+        flex-direction:column;
+
+        text-align:center;
+
+    }
+
+    .resource-actions{
+
+        flex-direction:column;
+
+    }
+
+}

@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Favicon -->
+
+    <link rel="icon"
+        type="image/png"
+        sizes="32x32"
+        href="../assets/favicon/favicon-32x32.png">
+
+    <link rel="icon"
+        type="image/png"
+        sizes="16x16"
+        href="../assets/favicon/favicon-16x16.png">
+
+    <title>Practice Questions | Nursephere</title>
+
+    <link rel="stylesheet" href="../css/questions.css">
+
+</head>
+
+<body>
+
+    <div class="questions-container">
+
+        <!-- ===========================
+             Header
+        ============================ -->
+
+        <div class="question-header">
+
+            <a href="practice.html" class="back-link">
+                ← Back to Practice
+            </a>
+
+            <div class="subject-details">
+
+                <h1 id="subjectName">
+                    Loading Subject...
+                </h1>
+
+                <p id="questionProgress">
+                    Question 1 of 1
+                </p>
+
+            </div>
+
+        </div>
+
+        <!-- ===========================
+             Question Card
+        ============================ -->
+
+        <div class="question-card">
+
+            <span class="question-number" id="questionNumber">
+                Question 1
+            </span>
+
+            <h2 id="questionText">
+                Loading question...
+            </h2>
+
+            <!-- Optional Image -->
+
+            <div class="question-image-container" id="imageContainer">
+
+                <img
+                    id="questionImage"
+                    class="question-image"
+                    src=""
+                    alt="Question Image">
+
+            </div>
+
+        </div>
+
+        <!-- ===========================
+             Options
+        ============================ -->
+
+        <div class="options-container">
+
+            <button
+                class="option-btn"
+                data-option="A">
+
+                <strong>A.</strong>
+
+                <span id="optionA"></span>
+
+            </button>
+
+            <button
+                class="option-btn"
+                data-option="B">
+
+                <strong>B.</strong>
+
+                <span id="optionB"></span>
+
+            </button>
+
+            <button
+                class="option-btn"
+                data-option="C">
+
+                <strong>C.</strong>
+
+                <span id="optionC"></span>
+
+            </button>
+
+            <button
+                class="option-btn"
+                data-option="D">
+
+                <strong>D.</strong>
+
+                <span id="optionD"></span>
+
+            </button>
+
+        </div>
+
+        <!-- ===========================
+             Submit Answer
+        ============================ -->
+
+        <div class="submit-container">
+
+            <button
+                id="submitAnswerBtn"
+                class="submit-btn"
+                disabled>
+
+                Submit Answer
+
+            </button>
+
+        </div>
+
+        <!-- ===========================
+             Explanation
+        ============================ -->
+
+        <div
+            class="explanation-card"
+            id="explanationCard">
+
+            <h3 id="resultTitle">
+
+                ✔ Correct!
+
+            </h3>
+
+            <div class="correct-answer-box">
+
+                <strong>
+                    Correct Answer:
+                </strong>
+
+                <span id="correctAnswer">
+                    A
+                </span>
+
+            </div>
+
+            <p id="explanationText">
+
+                Explanation goes here...
+
+            </p>
+
+        </div>
+
+        <!-- ===========================
+             Navigation
+        ============================ -->
+
+        <div class="question-actions">
+
+            <button
+                id="previousBtn"
+                class="secondary-btn">
+
+                ← Previous
+
+            </button>
+
+            <button
+                id="nextBtn"
+                class="primary-btn"
+                disabled>
+
+                Next →
+
+            </button>
+
+            <button
+                id="finishBtn"
+                class="success-btn">
+
+                Finish Practice
+
+            </button>
+
+        </div>
+
+    </div>
+
+    <!-- ===========================
+         Scripts
+    ============================ -->
+
+    <script src="../js/questions.js"></script>
+
+</body>
+
+</html>

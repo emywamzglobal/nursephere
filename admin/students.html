@@ -134,7 +134,7 @@
 
         </a>
 
-        <a href="question-management.html" class="nav-link">
+        <a href="questions-resources-management.html" class="nav-link">
 
             <i class="fas fa-circle-question"></i>
 
@@ -218,7 +218,9 @@
 
         </a>
 
-        <a href="login.html" class="nav-link logout-link">
+        <a href="#"
+   class="nav-link logout-link"
+   onclick="Utils.logout(); return false;">
 
             <i class="fas fa-right-from-bracket"></i>
 
@@ -278,7 +280,7 @@
 
             <i class="fas fa-bell"></i>
 
-            <span class="notification-badge">
+            <span class="notification-badge" id="notificationCount">
 
                 0
 
@@ -351,11 +353,19 @@
 
         </thead>
 
-        <tbody>
+        <tbody id="studentsTableBody">
 
-            <!-- Backend Populates Student Records -->
+    <tr>
 
-        </tbody>
+        <td colspan="6" class="text-center">
+
+            Loading students...
+
+        </td>
+
+    </tr>
+
+</tbody>
 
     </table>
 
@@ -370,9 +380,14 @@
             JAVASCRIPT
     ============================ -->
 
-    <script src="js/admin-main.js"></script>
+    <!-- Shared Libraries -->
+<script src="../shared/api.js"></script>
+<script src="../shared/auth.js"></script>
+<script src="../shared/utils.js"></script>
 
-    <script src="js/dashboard.js"></script>
+<!-- Admin Scripts -->
+<script src="js/admin-main.js"></script>
+<script src="js/students.js"></script>
 
 </body>
 

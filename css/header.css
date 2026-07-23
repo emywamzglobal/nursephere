@@ -437,3 +437,125 @@
 }
 
 }
+
+/*=========================================
+        NOTIFICATION DROPDOWN
+=========================================*/
+
+.notification-btn{
+
+    position:relative;
+
+}
+
+.notification-dropdown{
+
+    position:absolute;
+
+    top:70px;
+
+    right:0;
+
+    width:340px;
+
+    max-height:420px;
+
+    overflow-y:auto;
+
+    background:#ffffff;
+
+    border-radius:18px;
+
+    box-shadow:0 15px 40px rgba(0,0,0,.10);
+
+    border:1px solid #edf2f7;
+
+    display:none;
+
+    z-index:2000;
+
+}
+
+.notification-dropdown.active{
+
+    display:block;
+
+}
+
+.notification-header{
+
+    padding:18px 20px;
+
+    border-bottom:1px solid #edf2f7;
+
+}
+
+.notification-header h3{
+
+    margin:0;
+
+    font-size:16px;
+
+    color:#1d3557;
+
+}
+
+.notification-list{
+
+    max-height:340px;
+
+    overflow-y:auto;
+
+}
+
+.notification-item{
+
+    padding:16px 20px;
+
+    border-bottom:1px solid #f1f5f9;
+
+    cursor:pointer;
+
+    transition:.3s;
+
+}
+
+.notification-item:hover{
+
+    background:#f8fbff;
+
+}
+
+.notification-title{
+
+    font-size:14px;
+
+    font-weight:600;
+
+    color:#1d3557;
+
+    margin-bottom:6px;
+
+}
+
+.notification-message{
+
+    font-size:13px;
+
+    color:#64748b;
+
+    line-height:1.5;
+
+}
+
+.notification-empty{
+
+    padding:40px 20px;
+
+    text-align:center;
+
+    color:#94a3b8;
+
+    font-size:14px;
+
+}

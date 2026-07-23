@@ -1,341 +1,507 @@
 <!DOCTYPE html>
+
 <html lang="en">
 
 <head>
 
     <meta charset="UTF-8">
 
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0">
 
-    <title>Secure Checkout | Nursephere</title>
+    <title>
 
-    <meta name="description"
-        content="Complete your Nursephere subscription securely.">
+        Secure Checkout | NurseSphere
 
+    </title>
+
+    <meta
+        name="description"
+        content="Securely purchase your NurseSphere subscription.">
+
+    <!-- ========================================= -->
     <!-- Favicon -->
+    <!-- ========================================= -->
 
-    <link rel="icon" type="image/png" sizes="32x32"
-        href="assets/favicon/favicon-32x32.png">
+    <link
+        rel="icon"
+        href="assets/favicon/favicon.ico">
 
-    <link rel="icon" type="image/png" sizes="16x16"
-        href="assets/favicon/favicon-16x16.png">
-
+    <!-- ========================================= -->
     <!-- Google Fonts -->
+    <!-- ========================================= -->
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        rel="preconnect"
+        href="https://fonts.googleapis.com">
 
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        rel="preconnect"
+        href="https://fonts.gstatic.com"
+        crossorigin>
 
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+    <link
+        href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
 
+    <!-- ========================================= -->
     <!-- Font Awesome -->
+    <!-- ========================================= -->
 
-    <link rel="stylesheet"
+    <link
+        rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
 
-    <!-- Main CSS -->
+    <!-- ========================================= -->
+    <!-- Global Styles -->
+    <!-- ========================================= -->
 
-    <link rel="stylesheet" href="css/style.css">
+    <link
+        rel="stylesheet"
+        href="css/style.css">
+
+    <!-- ========================================= -->
+    <!-- Checkout Styles -->
+    <!-- ========================================= -->
+
+    <link
+        rel="stylesheet"
+        href="css/checkout.css">
 
 </head>
 
 <body>
 
-<section class="checkout-page">
+    <!-- ========================================= -->
+    <!-- Checkout -->
+    <!-- ========================================= -->
 
-<div class="container">
+    <section class="checkout-section">
 
-<a href="pricing.html" class="back-btn">
+        <div class="container">
 
-<i class="fas fa-arrow-left"></i>
+            <!-- ============================ -->
+            <!-- Header -->
+            <!-- ============================ -->
 
-Back to Pricing
+            <div class="checkout-header">
 
-</a>
+                <a
+                    href="pricing.html"
+                    class="back-link">
 
-<div class="checkout-header">
+                    <i class="fas fa-arrow-left"></i>
 
-<h1>
+                    Back to Pricing
 
-Secure Checkout
+                </a>
 
-</h1>
+                <h1>
 
-<p>
+                    Secure Checkout
 
-Complete your subscription securely and get instant access to your selected nursing exam preparation plan.
+                </h1>
 
-</p>
+                <p>
 
-</div>
+                    Complete your subscription using our secure
+                    encrypted payment system.
 
-<div class="checkout-grid">
+                </p>
 
-<!-- ================= LEFT ================= -->
+            </div>
+
+            <!-- ============================ -->
+            <!-- Main Layout -->
+            <!-- ============================ -->
+
+            <div class="checkout-layout">
+
+                <!-- ========================================= -->
+<!-- LEFT COLUMN -->
+<!-- ========================================= -->
 
 <div class="checkout-card">
 
-<h2>
+    <div class="card-header">
 
-Billing Information
+        <h2>
 
-</h2>
+            Billing Information
 
-<form id="checkoutForm">
+        </h2>
 
-<div class="form-group">
+        <p>
 
-<label>Full Name</label>
+            Please confirm your billing details before completing
+            your secure payment.
 
-<input
-type="text"
-id="fullname"
-required>
+        </p>
+
+    </div>
+
+    <form
+        id="checkoutForm"
+        autocomplete="off">
+
+        <!-- ============================= -->
+        <!-- Full Name -->
+        <!-- ============================= -->
+
+        <div class="form-group">
+
+            <label for="fullName">
+
+                Full Name
+
+            </label>
+
+            <input
+
+                type="text"
+
+                id="fullName"
+
+                readonly>
+
+        </div>
+
+        <!-- ============================= -->
+        <!-- Email -->
+        <!-- ============================= -->
+
+        <div class="form-group">
+
+            <label for="email">
+
+                Email Address
+
+            </label>
+
+            <input
+
+                type="email"
+
+                id="email"
+
+                readonly>
+
+        </div>
+
+        <!-- ============================= -->
+        <!-- Payment -->
+        <!-- ============================= -->
+
+        <div class="payment-section">
+
+            <h2>
+
+                Card Details
+
+            </h2>
+
+            <p>
+
+                Your payment is securely processed using
+                PayPal Advanced Checkout.
+
+            </p>
+
+            <div class="secure-payment">
+
+                <i class="fas fa-lock"></i>
+
+                SSL Encrypted Payment
+
+            </div>
+
+            <!-- ============================= -->
+            <!-- Card Number -->
+            <!-- ============================= -->
+
+            <div class="form-group">
+
+                <label>
+
+                    Card Number
+
+                </label>
+
+                <div
+
+                    id="card-number"
+
+                    class="paypal-field">
+
+                </div>
+
+            </div>
+
+            <!-- ============================= -->
+            <!-- Expiry + CVV -->
+            <!-- ============================= -->
+
+            <div class="payment-row">
+
+                <div class="form-group">
+
+                    <label>
+
+                        Expiration Date
+
+                    </label>
+
+                    <div
+
+                        id="expiration-date"
+
+                        class="paypal-field">
+
+                    </div>
+
+                </div>
+
+                <div class="form-group">
+
+                    <label>
+
+                        Security Code
+
+                    </label>
+
+                    <div
+
+                        id="cvv"
+
+                        class="paypal-field">
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- ============================= -->
+            <!-- Payment Logos -->
+            <!-- ============================= -->
+
+            <div class="accepted-cards">
+
+                <span>
+
+                    Accepted Cards
+
+                </span>
+
+                <div class="card-icons">
+
+                    <i class="fab fa-cc-visa"></i>
+
+                    <i class="fab fa-cc-mastercard"></i>
+
+                    <i class="fab fa-cc-amex"></i>
+
+                    <i class="fab fa-cc-discover"></i>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </form>
 
 </div>
 
-<div class="form-group">
+<!-- ========================================= -->
+<!-- RIGHT COLUMN -->
+<!-- ========================================= -->
 
-<label>Email Address</label>
+<aside class="checkout-summary">
 
-<input
-type="email"
-id="email"
-required>
+    <div class="summary-card">
 
-</div>
+        <h2>
 
-<div class="form-group">
+            Order Summary
 
-<label>Phone Number</label>
+        </h2>
 
-<input
-type="tel"
-id="phone"
-placeholder="+1"
-required>
+        <div class="summary-item">
 
-</div>
+            <span>
 
-<div class="form-group">
+                Plan
 
-<label>Country</label>
+            </span>
 
-<input
-type="text"
-value="United States"
-readonly>
+            <strong id="planName">
 
-</div>
+                Loading...
 
-<div class="form-group">
+            </strong>
 
-<label>State</label>
+        </div>
 
-<input
-type="text"
-id="state"
-required>
+        <div class="summary-item description">
 
-</div>
+            <p id="planDescription">
 
-<h2 class="payment-heading">
+                Loading subscription details...
 
-Secure Payment
+            </p>
 
-</h2>
+        </div>
 
-<div class="payment-box">
+        <div class="summary-item">
 
-<i class="fas fa-lock"></i>
+            <span>
 
-<h3>
+                Duration
 
-Your payment is protected.
+            </span>
 
-</h3>
+            <strong id="planDuration">
 
-<p>
+                --
 
-Accepted payment methods will appear here during secure checkout.
+            </strong>
 
-</p>
+        </div>
 
-<div class="card-icons">
+        <div class="summary-item">
 
-<i class="fab fa-cc-visa"></i>
+            <span>
 
-<i class="fab fa-cc-mastercard"></i>
+                Subscription Price
 
-<i class="fab fa-cc-amex"></i>
+            </span>
 
-<i class="fab fa-cc-discover"></i>
+            <strong id="planPrice">
 
-</div>
+                $0.00
 
-</div>
+            </strong>
 
-</form>
+        </div>
 
-</div>
+        <div class="summary-item">
 
-<!-- ================= RIGHT ================= -->
+    <span>
 
-<div class="summary-card">
+        VAT
 
-<h2>
+    </span>
 
-Order Summary
+    <strong>
 
-</h2>
+        Included
 
-<div class="summary-row">
-
-<span>
-
-Selected Plan
-
-</span>
-
-<strong id="planName">
-
-Loading...
-
-</strong>
+    </strong>
 
 </div>
 
-<div class="summary-row">
+        </div>
 
-<span>
+        <hr>
 
-Subscription
+        <div class="summary-total">
 
-</span>
+            <span>
 
-<strong id="planDuration">
+                Total Due Today
 
-Loading...
+            </span>
 
-</strong>
+            <strong id="totalPrice">
 
-</div>
+                $0.00
 
-<div class="summary-row">
+            </strong>
 
-<span>
+        </div>
 
-Price
+        <button
 
-</span>
+            id="payButton"
 
-<strong id="planPrice">
+            type="button"
 
-Loading...
+            class="checkout-btn">
 
-</strong>
+            <i class="fas fa-lock"></i>
 
-</div>
+            Pay Now
 
-<div class="summary-row">
+        </button>
 
-<span>
+        <div class="checkout-security">
 
-Tax
+            <div class="security-item">
 
-</span>
+                <i class="fas fa-shield-alt"></i>
 
-<strong>
+                <span>
 
-$0.00
+                    SSL Encrypted Checkout
 
-</strong>
+                </span>
 
-</div>
+            </div>
 
-<hr>
+            <div class="security-item">
 
-<div class="summary-total">
+                <i class="fas fa-credit-card"></i>
 
-<span>
+                <span>
 
-Total
+                    Secure Card Processing by PayPal
 
-</span>
+                </span>
 
-<strong id="totalPrice">
+            </div>
 
-Loading...
+            <div class="security-item">
 
-</strong>
+                <i class="fas fa-check-circle"></i>
 
-</div>
+                <span>
 
-<div class="summary-benefits">
+                    Instant Subscription Activation
 
-<p>
+                </span>
 
-<i class="fas fa-check-circle"></i>
+            </div>
 
-Instant account access
+        </div>
 
-</p>
+    </div>
 
-<p>
-
-<i class="fas fa-check-circle"></i>
-
-Unlimited practice questions
-
-</p>
-
-<p>
-
-<i class="fas fa-check-circle"></i>
-
-Study on mobile & desktop
-
-</p>
-
-<p>
-
-<i class="fas fa-check-circle"></i>
-
-Secure encrypted checkout
-
-</p>
-
-</div>
-
-<button
-type="submit"
-form="checkoutForm"
-class="btn btn-primary checkout-btn">
-
-Continue
-
-</button>
-
-<div class="checkout-support">
-
-Need assistance?
-
-<a href="contact.html">
-
-Contact Support
-
-</a>
-
-</div>
-
-</div>
+</aside>
 
 </div>
 
 </div>
 
 </section>
+
+<!-- ========================================= -->
+<!-- PayPal Advanced Checkout SDK -->
+<!-- Replace YOUR_PAYPAL_CLIENT_ID -->
+<!-- ========================================= -->
+
+<!-- ========================================= -->
+<!-- PayPal Advanced Checkout SDK -->
+<!-- ========================================= -->
+
+<script
+src="https://www.paypal.com/sdk/js?client-id=BAACjWRx8gFyZz7M2i62fuHReeJZ3AW7asLeCtl6bCNiI4JOU-IuPNv83CZoaD1r2QeIA0vNme4fR5xAsg&components=hosted-fields&currency=USD">
+</script>
+
+<!-- ========================================= -->
+<!-- Checkout Script -->
+<!-- ========================================= -->
 
 <script src="js/checkout.js"></script>
 

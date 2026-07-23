@@ -235,15 +235,15 @@
 
     <div class="header-right">
 
-        <button class="header-icon notification-btn">
+        <button class="header-icon notification-btn" id="notificationBtn">
 
             <i class="fas fa-bell"></i>
 
-            <span class="notification-badge">
+            <span class="notification-badge" id="notificationCount">
 
-                3
+    0
 
-            </span>
+</span>
 
         </button>
 
@@ -267,7 +267,7 @@
 
                 <div class="profile-info">
 
-                    <h4 id="studentName">
+                    <h4 id="headerStudentName"></h4>
 
                         Student
 
@@ -353,7 +353,7 @@
 
                         <h1>
                             Welcome Back,
-                            <span id="studentName">Student</span>
+                            <span id="welcomeStudentName">Student</span>
                             👋
                         </h1>
 
@@ -443,6 +443,36 @@
 
                 </section>
 
+                <section class="trial-card trial-expired-card" id="trialExpiredCard" style="display:none;">
+
+    <div class="trial-left">
+
+        <h2>⚠️ Your Free Trial Has Ended</h2>
+
+        <p>
+
+            Your 3-day trial has expired.
+
+            Upgrade now to continue practicing,
+            access unlimited questions,
+            mock exams and detailed analytics.
+
+        </p>
+
+    </div>
+
+    <div class="trial-right">
+
+        <a href="subscription.html" class="primary-btn">
+
+            Upgrade Now
+
+        </a>
+
+    </div>
+
+</section>
+
                 <!-- ===========================
                         QUICK STATS
                 ============================ -->
@@ -492,22 +522,6 @@
                         <p>
 
                             Success Rate
-
-                        </p>
-
-                    </div>
-
-                    <div class="stat-card">
-
-                        <h2 id="dayStreak">
-
-                            0
-
-                        </h2>
-
-                        <p>
-
-                            Day Streak
 
                         </p>
 
@@ -642,6 +656,8 @@
     <script src="../js/student-main.js"></script>
 
     <script src="../js/dashboard-student.js"></script>
+
+    <script src="../js/notifications.js"></script>
 
 </body>
 

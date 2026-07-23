@@ -1,0 +1,471 @@
+/* ==========================================
+   CONTENT MANAGEMENT
+========================================== */
+
+.content{
+    padding:30px;
+    background:#f8fafc;
+    min-height:100vh;
+}
+
+/* ==========================================
+   PAGE HEADER
+========================================== */
+
+.page-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:35px;
+}
+
+.page-header h1{
+    font-size:30px;
+    color:#1e293b;
+    margin-bottom:8px;
+    font-weight:700;
+}
+
+.page-header p{
+    color:#64748b;
+    font-size:15px;
+}
+
+/* ==========================================
+   CONTENT GRID
+========================================== */
+
+.content-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
+    gap:25px;
+    margin-bottom:40px;
+}
+
+/* ==========================================
+   CONTENT CARD
+========================================== */
+
+.content-card{
+    display:flex;
+    align-items:center;
+    gap:20px;
+
+    background:#fff;
+    border-radius:18px;
+
+    padding:25px;
+
+    text-decoration:none;
+
+    border:1px solid #e2e8f0;
+
+    transition:.25s;
+}
+
+.content-card:hover{
+
+    transform:translateY(-6px);
+
+    box-shadow:0 15px 35px rgba(0,0,0,.08);
+
+    border-color:#2563eb;
+}
+
+/* ==========================================
+   ICON
+========================================== */
+
+.card-icon{
+
+    width:70px;
+    height:70px;
+
+    border-radius:18px;
+
+    display:flex;
+    justify-content:center;
+    align-items:center;
+
+    background:#eff6ff;
+    color:#2563eb;
+
+    font-size:28px;
+
+    flex-shrink:0;
+}
+
+/* ==========================================
+   BODY
+========================================== */
+
+.card-body{
+
+    flex:1;
+
+}
+
+.card-body h3{
+
+    color:#1e293b;
+
+    margin-bottom:8px;
+
+    font-size:21px;
+
+    font-weight:600;
+
+}
+
+.card-body p{
+
+    color:#64748b;
+
+    line-height:1.6;
+
+    margin-bottom:18px;
+
+    font-size:14px;
+
+}
+
+.card-footer{
+
+    display:flex;
+
+    align-items:baseline;
+
+    gap:8px;
+
+}
+
+.count{
+
+    color:#2563eb;
+
+    font-size:28px;
+
+    font-weight:700;
+
+}
+
+.label{
+
+    color:#94a3b8;
+
+    font-size:13px;
+
+}
+
+/* ==========================================
+   ARROW
+========================================== */
+
+.card-arrow{
+
+    font-size:22px;
+
+    color:#94a3b8;
+
+    transition:.3s;
+
+}
+
+.content-card:hover .card-arrow{
+
+    transform:translateX(6px);
+
+    color:#2563eb;
+
+}
+
+/* ==========================================
+   SECTION
+========================================== */
+
+.overview-section,
+.activity-section{
+
+    background:#fff;
+
+    border-radius:18px;
+
+    padding:25px;
+
+    margin-bottom:30px;
+
+    border:1px solid #e2e8f0;
+
+}
+
+/* ==========================================
+   SECTION HEADER
+========================================== */
+
+.section-header{
+
+    margin-bottom:25px;
+
+}
+
+.section-header h2{
+
+    color:#1e293b;
+
+    font-size:22px;
+
+    font-weight:600;
+
+}
+
+/* ==========================================
+   STATS GRID
+========================================== */
+
+.stats-grid{
+
+    display:grid;
+
+    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+
+    gap:20px;
+
+}
+
+/* ==========================================
+   STAT CARD
+========================================== */
+
+.stat-card{
+
+    text-align:center;
+
+    padding:25px;
+
+    border-radius:15px;
+
+    background:#f8fafc;
+
+    border:1px solid #e2e8f0;
+
+    transition:.25s;
+
+}
+
+.stat-card:hover{
+
+    transform:translateY(-4px);
+
+    border-color:#2563eb;
+
+}
+
+.stat-card i{
+
+    font-size:30px;
+
+    color:#2563eb;
+
+    margin-bottom:15px;
+
+}
+
+.stat-card h3{
+
+    font-size:32px;
+
+    color:#1e293b;
+
+    margin-bottom:10px;
+
+}
+
+.stat-card p{
+
+    color:#64748b;
+
+    font-size:14px;
+
+}
+
+/* ==========================================
+   EMPTY STATE
+========================================== */
+
+.empty-state{
+
+    text-align:center;
+
+    padding:60px 20px;
+
+    color:#94a3b8;
+
+}
+
+.empty-state i{
+
+    font-size:45px;
+
+    margin-bottom:15px;
+
+}
+
+.empty-state p{
+
+    font-size:15px;
+
+}
+
+/* ==========================================
+   RESPONSIVE
+========================================== */
+
+@media(max-width:768px){
+
+    .content{
+
+        padding:20px;
+
+    }
+
+    .content-card{
+
+        flex-direction:column;
+
+        text-align:center;
+
+    }
+
+    .card-arrow{
+
+        display:none;
+
+    }
+
+    .page-header{
+
+        flex-direction:column;
+
+        align-items:flex-start;
+
+        gap:10px;
+
+    }
+
+}
+
+/*=========================================================
+CONTENT SUMMARY
+=========================================================*/
+
+.summary-section{
+
+    margin-top:40px;
+
+}
+
+.summary-list{
+
+    display:grid;
+
+    gap:16px;
+
+}
+
+.summary-card{
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:space-between;
+
+    padding:18px 24px;
+
+    background:#ffffff;
+
+    border-radius:12px;
+
+    border:1px solid #e5e7eb;
+
+    transition:.3s ease;
+
+}
+
+.summary-card:hover{
+
+    transform:translateY(-2px);
+
+    box-shadow:0 8px 20px rgba(0,0,0,.06);
+
+}
+
+.summary-left{
+
+    display:flex;
+
+    align-items:center;
+
+    gap:16px;
+
+}
+
+.summary-icon{
+
+    width:50px;
+
+    height:50px;
+
+    border-radius:12px;
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:center;
+
+    background:#eef7ff;
+
+    color:#0077b6;
+
+    font-size:20px;
+
+}
+
+.summary-info h4{
+
+    margin:0;
+
+    font-size:16px;
+
+    font-weight:600;
+
+}
+
+.summary-info p{
+
+    margin:4px 0 0;
+
+    color:#6b7280;
+
+    font-size:14px;
+
+}
+
+.summary-value{
+
+    font-size:26px;
+
+    font-weight:700;
+
+    color:#0f172a;
+
+}
+
+#lastUpdated{
+
+    color:#6b7280;
+
+    font-size:13px;
+
+}

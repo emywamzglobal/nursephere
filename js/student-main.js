@@ -50,7 +50,7 @@ function initialiseStudentHeader() {
 
     studentLogout();
 
-    studentSidebarToggle();
+    initializeSidebarToggle();;
 
 }
 

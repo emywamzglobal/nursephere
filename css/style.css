@@ -287,9 +287,9 @@ ul{
 
 }
 
-/*================ SIGN IN ================*/
+/*================ Log In ================*/
 
-.signin{
+.LogIn{
 
     font-size:15px;
 
@@ -299,7 +299,7 @@ ul{
 
 }
 
-.signin:hover{
+.LogIn:hover{
 
     color:var(--primary);
 
@@ -3973,5 +3973,117 @@ font-size:34px;
 padding:25px;
 
 }
+
+}
+
+/*=========================================
+        REGISTER TRIAL NOTICE
+=========================================*/
+
+.trial-notice {
+
+    display: flex;
+
+    align-items: flex-start;
+
+    gap: 12px;
+
+    margin: 20px 0;
+
+    padding: 16px 18px;
+
+    background: #EFFCF6;
+
+    border: 1px solid #22C55E;
+
+    border-left: 5px solid #22C55E;
+
+    border-radius: 10px;
+
+}
+
+.trial-notice i {
+
+    font-size: 1.4rem;
+
+    color: #22C55E;
+
+    margin-top: 3px;
+
+}
+
+.trial-notice p {
+
+    margin: 0;
+
+    color: #0F172A;
+
+    font-size: 0.95rem;
+
+    line-height: 1.6;
+
+}
+
+.trial-notice strong {
+
+    color: #15803D;
+
+}
+
+/*=========================================
+        REGISTER MESSAGES
+=========================================*/
+
+#registerMessage{
+
+    display:none;
+
+    margin:20px 0;
+
+    padding:15px 18px;
+
+    border-radius:10px;
+
+    font-size:15px;
+
+    font-weight:500;
+
+    line-height:1.6;
+
+}
+
+#registerMessage.success{
+
+    display:block;
+
+    background:#ECFDF5;
+
+    border:1px solid #22C55E;
+
+    color:#166534;
+
+}
+
+#registerMessage.error{
+
+    display:block;
+
+    background:#FEF2F2;
+
+    border:1px solid #EF4444;
+
+    color:#991B1B;
+
+}
+
+#registerMessage.info{
+
+    display:block;
+
+    background:#EFF6FF;
+
+    border:1px solid #3B82F6;
+
+    color:#1D4ED8;
 
 }

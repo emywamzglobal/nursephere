@@ -1,3 +1,20 @@
+/*
+=========================================================
+    Nursephere Student Dashboard Controller
+    File: js/dashboard-student.js
+=========================================================
+*/
+
+"use strict";
+
+/*=========================================================
+    Configuration
+=========================================================*/
+
+const DashboardAPI = {
+    dashboard: "http://127.0.0.1:8787/api/dashboard"
+};
+
 /*=========================================
         DASHBOARD PAGE
 =========================================*/
@@ -24,37 +41,59 @@ function initialiseDashboard(){
         STUDENT INFORMATION
 =========================================*/
 
-function loadStudentInformation(){
+async function loadStudentInformation() {
 
-    /*
-        Backend will replace these values
-        after successful login.
-    */
+    try {
 
-    const student={
+        const studentId = localStorage.getItem("studentId");
 
-        name:"Student",
+        const response = await fetch(
 
-        plan:"Free Trial",
+            `${DashboardAPI.dashboard}?studentId=${studentId}`
 
-        trialDays:3,
+        );
 
-        questionsRemaining:30,
+        const result = await response.json();
+        console.log(result);
 
-        questionsAnswered:0,
+        if (!result.success) {
 
-        subjectsStarted:0,
+            throw new Error(result.message);
 
-        successRate:"0%",
+        }
 
-        streak:0
+        const student = {
 
-    };
+            name: result.student.full_name,
 
-    updateDashboard(student);
+            plan: result.student.subscription_status,
+
+            trialDays: result.trial.daysLeft,
+
+            questionsRemaining: result.progress.questions_remaining,
+
+            questionsAnswered: result.progress.questions_answered,
+
+            subjectsStarted: result.progress.subjects_started,
+
+            successRate: result.progress.success_rate + "%",
+
+            streak: result.progress.day_streak
+
+        };
+
+        updateDashboard(student);
+        updateTrialCard(result.trial);
+
+    }
+
+    catch (error) {
+
+        console.error(error);
+
+    }
 
 }
-
 
 /*=========================================
         UPDATE DASHBOARD
@@ -62,15 +101,15 @@ function loadStudentInformation(){
 
 function updateDashboard(student){
 
-    setText("welcomeName",student.name);
+    setText("welcomeStudentName", student.name);
 
-    setText("studentName",student.name);
+    setText("headerStudentName", student.name);
 
     setText("studentPlan",student.plan);
 
-    setText("trialDays",student.trialDays);
+    setText("daysLeft", student.trialDays);
 
-    setText("questionsRemaining",student.questionsRemaining);
+    setText("questionsLeft",student.questionsRemaining);
 
     setText("subjectsStarted",student.subjectsStarted);
 
@@ -78,28 +117,57 @@ function updateDashboard(student){
 
     setText("successRate",student.successRate);
 
-    setText("studyStreak",student.streak);
+    setText("dayStreak", student.streak);
 
 }
-
 
 /*=========================================
         TRIAL CARD
 =========================================*/
 
-function updateTrialCard(){
+function updateTrialCard(trial) {
 
-    /*
-        Backend will calculate:
+    const trialCard = document.querySelector(".trial-card");
 
-        Trial Expiry
+    const expiredCard = document.getElementById("trialExpiredCard");
 
-        Questions Remaining
+    const planBadge = document.getElementById("studentPlan");
 
-        Subscription Status
+    if (!trialCard || !expiredCard || !planBadge) return;
 
-        Daily Limits
-    */
+    if (trial.active) {
+
+        trialCard.style.display = "flex";
+
+        expiredCard.style.display = "none";
+
+        planBadge.textContent = "Free Trial";
+
+    }
+
+    else if (
+
+    localStorage.getItem("subscriptionStatus") === "premium"
+
+) {
+
+        trialCard.style.display = "none";
+
+        expiredCard.style.display = "none";
+
+        planBadge.textContent = "Premium";
+
+    }
+
+    else {
+
+        trialCard.style.display = "none";
+
+        expiredCard.style.display = "flex";
+
+        planBadge.textContent = "Trial Expired";
+
+    }
 
 }
 

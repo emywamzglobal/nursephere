@@ -235,11 +235,11 @@
 
     <div class="header-right">
 
-        <button class="header-icon notification-btn">
+        <button class="header-icon notification-btn" id="notificationBtn">
 
             <i class="fas fa-bell"></i>
 
-            <span class="notification-badge">
+            <span class="notification-badge" id="notificationCount">
 
                 3
 
@@ -267,7 +267,7 @@
 
                 <div class="profile-info">
 
-                    <h4 id="studentName">
+                    <h4 id="headerStudentName">
 
                         Student
 
@@ -343,462 +343,89 @@
 
             <main class="dashboard-content">
 
-                <!-- ===========================
-        PRACTICE HEADER
-=========================== -->
+                <!-- =====================================================
+                    PAGE HEADER
+====================================================== -->
 
-<section class="dashboard-top">
+<section class="practice-header">
 
-    <div>
+    <h1>
 
-        <h1>
+        Practice Questions
 
-            Practice
+    </h1>
 
-        </h1>
+    <p>
 
-        <p>
+        Select your examination, choose a subject and begin
+        practicing real nursing examination questions.
 
-            Choose the nursing examination you are preparing for.
+    </p>
 
-        </p>
+</section>
+
+<!-- =====================================================
+                    EXAMINATION
+====================================================== -->
+
+<section class="practice-section">
+
+    <h2>
+
+        Select Examination
+
+    </h2>
+
+    <p>
+
+        Available examinations managed by the administrator.
+
+    </p>
+
+    <div id="examContainer" class="exam-container">
+
+        <!-- Dynamic exam buttons appear here -->
 
     </div>
 
 </section>
-  
-              <!-- ===================================
-        EXAM CATEGORIES
-=================================== -->
 
-<section class="exam-grid">
+<!-- =====================================================
+                    SUBJECTS
+====================================================== -->
 
-    <!-- ===========================
-            NCLEX
-    ============================ -->
+<section class="practice-section">
 
-    <div class="exam-card">
+    <h2>
 
-        <div class="exam-icon">
+        Available Subjects
 
-            <i class="fas fa-user-nurse"></i>
+    </h2>
 
-        </div>
+    <p id="selectedExamText">
 
-        <div class="exam-content">
+        Select an examination above to display its subjects.
 
-            <h2>NCLEX</h2>
+    </p>
 
-            <p>
+    <div id="subjectContainer" class="subject-container">
 
-                Prepare for the National Council Licensure Examination
-                for Registered Nurses (RN) and Practical Nurses (PN).
-
-            </p>
-
-            <div class="exam-stats">
-
-                <div class="exam-stat">
-
-                    <span class="meta-label">
-
-                        Questions
-
-                    </span>
-
-                    <strong id="nclexQuestions">
-
-                        Loading...
-
-                    </strong>
-
-                </div>
-
-                <div class="exam-stat">
-
-                    <span class="meta-label">
-
-                        Progress
-
-                    </span>
-
-                    <strong id="nclexProgress">
-
-                        0%
-
-                    </strong>
-
-                </div>
-
-            </div>
-
-            <a href="nclex.html"
-               class="primary-btn exam-button">
-
-                Explore NCLEX
-
-                <i class="fas fa-arrow-right"></i>
-
-            </a>
-
-        </div>
-
-    </div>
-
-    <!-- ===========================
-            ATI TEAS 7
-    ============================ -->
-
-    <div class="exam-card">
-
-        <div class="exam-icon">
+        <div class="empty-state">
 
             <i class="fas fa-book-medical"></i>
 
-        </div>
+            <h3>
 
-        <div class="exam-content">
+                No Examination Selected
 
-            <h2>ATI TEAS 7</h2>
-
-            <p>
-
-                Prepare for the Test of Essential Academic Skills
-                including Reading, Mathematics,
-                Science and English & Language Usage.
-
-            </p>
-
-            <div class="exam-stats">
-
-                <div class="exam-stat">
-
-                    <span class="meta-label">
-
-                        Questions
-
-                    </span>
-
-                    <strong id="teasQuestions">
-
-                        Loading...
-
-                    </strong>
-
-                </div>
-
-                <div class="exam-stat">
-
-                    <span class="meta-label">
-
-                        Progress
-
-                    </span>
-
-                    <strong id="teasProgress">
-
-                        0%
-
-                    </strong>
-
-                </div>
-
-            </div>
-
-            <a href="ati-teas.html"
-               class="primary-btn exam-button">
-
-                Explore ATI TEAS
-
-                <i class="fas fa-arrow-right"></i>
-
-            </a>
-
-        </div>
-
-    </div>
-
-    <!-- ===========================
-            HESI A2
-    ============================ -->
-
-    <div class="exam-card">
-
-        <div class="exam-icon">
-
-            <i class="fas fa-notes-medical"></i>
-
-        </div>
-
-        <div class="exam-content">
-
-            <h2>HESI A2</h2>
+            </h3>
 
             <p>
 
-                Practice for the HESI Admission Assessment
-                covering Math, Reading, Grammar,
-                Vocabulary, Biology, Chemistry
-                and Anatomy & Physiology.
+                Your nursing subjects will appear here
+                after selecting an examination.
 
             </p>
-
-            <div class="exam-stats">
-
-                <div class="exam-stat">
-
-                    <span class="meta-label">
-
-                        Questions
-
-                    </span>
-
-                    <strong id="hesiA2Questions">
-
-                        Loading...
-
-                    </strong>
-
-                </div>
-
-                <div class="exam-stat">
-
-                    <span class="meta-label">
-
-                        Progress
-
-                    </span>
-
-                    <strong id="hesiA2Progress">
-
-                        0%
-
-                    </strong>
-
-                </div>
-
-            </div>
-
-            <a href="hesi-a2.html"
-               class="primary-btn exam-button">
-
-                Explore HESI A2
-
-                <i class="fas fa-arrow-right"></i>
-
-            </a>
-
-        </div>
-
-    </div>
-
-    <!-- ===========================
-            EXIT EXAMS
-    ============================ -->
-
-    <div class="exam-card">
-
-        <div class="exam-icon">
-
-            <i class="fas fa-user-graduate"></i>
-
-        </div>
-
-        <div class="exam-content">
-
-            <h2>Exit Exams</h2>
-
-            <p>
-
-                Prepare for specialty nursing examinations
-                including Fundamentals,
-                Pharmacology,
-                Medical-Surgical,
-                Pediatrics,
-                Psychiatric,
-                and Maternity.
-
-            </p>
-
-            <div class="exam-stats">
-
-                <div class="exam-stat">
-
-                    <span class="meta-label">
-
-                        Questions
-
-                    </span>
-
-                    <strong id="hesiExitQuestions">
-
-                        Loading...
-
-                    </strong>
-
-                </div>
-
-                <div class="exam-stat">
-
-                    <span class="meta-label">
-
-                        Progress
-
-                    </span>
-
-                    <strong id="hesiExitProgress">
-
-                        0%
-
-                    </strong>
-
-                </div>
-
-            </div>
-
-            <a href="hesi-exit.html"
-               class="primary-btn exam-button">
-
-                Explore Exit Exams
-
-                <i class="fas fa-arrow-right"></i>
-
-            </a>
-
-        </div>
-
-    </div>
-
-</section>
-                              
-<!-- ===========================
-        HOW PRACTICE WORKS
-=========================== -->
-
-<section class="dashboard-card practice-guide">
-
-    <div class="card-header">
-
-        <h2>
-
-            <i class="fas fa-circle-info"></i>
-
-            How Practice Works
-
-        </h2>
-
-    </div>
-
-    <div class="practice-guide-grid">
-
-        <div class="guide-step">
-
-            <div class="guide-number">
-
-                1
-
-            </div>
-
-            <div>
-
-                <h3>
-
-                    Choose an Examination
-
-                </h3>
-
-                <p>
-
-                    Select one of the four major examination categories
-                    to begin your preparation journey.
-
-                </p>
-
-            </div>
-
-        </div>
-
-        <div class="guide-step">
-
-            <div class="guide-number">
-
-                2
-
-            </div>
-
-            <div>
-
-                <h3>
-
-                    Select a Subject
-
-                </h3>
-
-                <p>
-
-                    Choose the exact nursing examination
-                    you want to practice.
-
-                </p>
-
-            </div>
-
-        </div>
-
-        <div class="guide-step">
-
-            <div class="guide-number">
-
-                3
-
-            </div>
-
-            <div>
-
-                <h3>
-
-                    Answer Questions
-
-                </h3>
-
-                <p>
-
-                    During the free trial,
-                    every subject allows
-                    up to 10 practice questions.
-
-                </p>
-
-            </div>
-
-        </div>
-
-        <div class="guide-step">
-
-            <div class="guide-number">
-
-                4
-
-            </div>
-
-            <div>
-
-                <h3>
-
-                    Review & Improve
-
-                </h3>
-
-                <p>
-
-                    Review explanations,
-                    identify weak areas,
-                    and monitor your progress
-                    as you continue learning.
-
-                </p>
-
-            </div>
 
         </div>
 
@@ -816,6 +443,10 @@
     <script src="../js/student-main.js"></script>
 
     <script src="../js/dashboard-student.js"></script>
+
+    <script src="../js/notifications.js"></script>
+
+    <script src="../js/practice.js"></script>
 
 </body>
 

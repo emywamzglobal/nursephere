@@ -1,0 +1,356 @@
+// ======================================================
+// Nursephere Cloudflare Worker
+// Main API Router
+// Domain: https://www.nursephere.com
+// ======================================================
+import registerHandler from "./workers/register.js";
+import notificationsHandler from "./workers/notifications.js";
+import loginHandler from "./workers/login.js";
+import dashboardHandler from "./workers/dashboard.js";
+import subscriptionHandler from "./workers/subscription.js";
+import practiceHandler from "./workers/practice.js";
+import adminHandler from "./workers/admin.js";
+import { handleGetExams } from "./workers/exams.js";
+import jwt from "@tsndr/cloudflare-worker-jwt";
+import paymentHandler from "./workers/payment.js";
+export default {
+
+    async fetch(request, env, ctx) {
+
+        console.log("ENV JWT_SECRET:", env.JWT_SECRET);
+
+        const url = new URL(request.url);
+
+        const corsHeaders = {
+
+    "Access-Control-Allow-Origin": "*",
+
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+
+    "Access-Control-Allow-Headers": "Content-Type, Authorization"
+
+};
+
+if (request.method === "OPTIONS") {
+
+    return new Response(null, {
+
+        headers: corsHeaders
+
+    });
+
+}
+
+        // -----------------------------
+        // Health Check
+        // -----------------------------
+        if (url.pathname === "/") {
+
+            return new Response("Nursephere API is running.", {
+
+                headers: {
+
+                    "Content-Type": "text/plain"
+
+                }
+
+            });
+
+        }
+
+        // -----------------------------
+        // Register Student
+        // -----------------------------
+        if (
+
+    url.pathname === "/api/register" &&
+
+    request.method === "POST"
+
+) {
+
+    const response = await registerHandler(request, env);
+
+Object.entries(corsHeaders).forEach(([key, value]) => {
+
+    response.headers.set(key, value);
+
+});
+
+return response;
+
+}
+
+// -----------------------------
+// Student Notifications
+// -----------------------------
+if (
+
+    url.pathname === "/api/notifications"
+
+) {
+
+    const response = await notificationsHandler(request, env);
+
+    Object.entries(corsHeaders).forEach(([key, value]) => {
+
+        response.headers.set(key, value);
+
+    });
+
+    return response;
+
+}
+
+        // -----------------------------
+        // Login Student
+        // -----------------------------
+        if (
+
+    url.pathname === "/api/login" &&
+
+    request.method === "POST"
+
+) {
+
+    const response = await loginHandler(request, env);
+
+    Object.entries(corsHeaders).forEach(([key, value]) => {
+
+        response.headers.set(key, value);
+
+    });
+
+    return response;
+
+}
+
+// -----------------------------
+// Student Dashboard
+// -----------------------------
+if (
+
+    url.pathname === "/api/dashboard"
+
+) {
+
+    const response = await dashboardHandler(request, env);
+
+    Object.entries(corsHeaders).forEach(([key, value]) => {
+
+        response.headers.set(key, value);
+
+    });
+
+    return response;
+
+}
+
+// -----------------------------
+// Subscription
+// -----------------------------
+if (
+
+    url.pathname === "/api/subscription" ||
+    url.pathname === "/api/subscription-plans" ||
+    url.pathname.startsWith("/api/subscription-plans/")
+
+) {
+
+    const response = await subscriptionHandler(request, env);
+
+    Object.entries(corsHeaders).forEach(([key, value]) => {
+
+        response.headers.set(key, value);
+
+    });
+
+    return response;
+
+}
+
+// -----------------------------
+// Practice Questions & Study Resources
+// -----------------------------
+if (
+
+    url.pathname === "/api/practice" ||
+
+    (
+        url.pathname.startsWith("/api/subjects/") &&
+        url.pathname.endsWith("/resources")
+    ) ||
+
+    (
+        url.pathname.startsWith("/api/resources/") &&
+        url.pathname.endsWith("/download")
+    )
+
+) {
+
+    const response = await practiceHandler(request, env);
+
+    Object.entries(corsHeaders).forEach(([key, value]) => {
+
+        response.headers.set(key, value);
+
+    });
+
+    return response;
+
+}
+
+// -----------------------------
+// Student Exams
+// -----------------------------
+if (
+
+    url.pathname === "/api/exams"
+
+) {
+
+    const response = await handleGetExams(request, env);
+
+    Object.entries(corsHeaders).forEach(([key, value]) => {
+
+        response.headers.set(key, value);
+
+    });
+
+    return response;
+
+}
+
+        // -----------------------------
+// Student Payments
+// -----------------------------
+if (
+
+    url.pathname.startsWith("/api/payments")
+
+) {
+
+    const response = await paymentHandler(request, env);
+
+    Object.entries(corsHeaders).forEach(([key, value]) => {
+
+        response.headers.set(key, value);
+
+    });
+
+    return response;
+
+}
+
+// -----------------------------
+// Payment Management
+// -----------------------------
+if (
+
+    url.pathname.startsWith("/api/admin/payments")
+
+) {
+
+    const response = await adminHandler(request, env);
+
+    Object.entries(corsHeaders).forEach(([key, value]) => {
+
+        response.headers.set(key, value);
+
+    });
+
+    return response;
+
+}
+
+// -----------------------------
+// Admin
+// -----------------------------
+if (
+
+    url.pathname.startsWith("/api/admin")
+
+) {
+
+    const response = await adminHandler(request, env);
+
+    Object.entries(corsHeaders).forEach(([key, value]) => {
+
+        response.headers.set(key, value);
+
+    });
+
+    return response;
+
+}
+
+        // -----------------------------
+        // Uploads
+        // -----------------------------
+        if (
+
+            url.pathname === "/api/upload"
+
+        ) {
+
+            return handleUpload(request, env);
+
+        }
+
+        return new Response(
+
+            JSON.stringify({
+
+                success: false,
+
+                message: "API route not found."
+
+            }),
+
+            {
+
+                status: 404,
+
+                headers: {
+
+                    "Content-Type": "application/json"
+
+                }
+
+            }
+
+        );
+
+    }
+
+};
+
+
+// ======================================================
+// Temporary handlers
+// (Real code comes next.)
+// ======================================================
+
+async function handlePayment(request, env) {
+
+    return Response.json({
+
+        success: true,
+
+        message: "Payment Worker Connected"
+
+    });
+
+}
+
+async function handleUpload(request, env) {
+
+    return Response.json({
+
+        success: true,
+
+        message: "Upload Worker Connected"
+
+    });
+
+}
