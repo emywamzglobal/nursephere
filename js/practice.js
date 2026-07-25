@@ -1,6 +1,6 @@
 /*
 ========================================================
-    Nursephere Student Practice Controller
+    NurseSphere Student Practice Controller
     File: js/practice.js
 ========================================================
 */
@@ -8,7 +8,7 @@
 "use strict";
 
 /*========================================================
-    API
+    API ENDPOINTS
 ========================================================*/
 
 const PracticeAPI = {
@@ -23,11 +23,14 @@ const PracticeAPI = {
     DOM ELEMENTS
 ========================================================*/
 
-const examContainer = document.getElementById("examContainer");
+const examContainer =
+    document.getElementById("examContainer");
 
-const subjectContainer = document.getElementById("subjectContainer");
+const subjectContainer =
+    document.getElementById("subjectContainer");
 
-const selectedExamText = document.getElementById("selectedExamText");
+const selectedExamText =
+    document.getElementById("selectedExamText");
 
 /*========================================================
     STATE
@@ -39,11 +42,17 @@ let selectedExamId = null;
     INITIALIZE
 ========================================================*/
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener(
 
-    loadExams();
+    "DOMContentLoaded",
 
-});
+    () => {
+
+        loadExams();
+
+    }
+
+);
 
 /*========================================================
     LOAD EXAMS
@@ -63,31 +72,46 @@ async function loadExams() {
 
     try {
 
-        const response = await fetch(PracticeAPI.exams);
+        const response =
+            await fetch(PracticeAPI.exams);
 
-        const data = await response.json();
+        const result =
+            await response.json();
 
-        if (!data.success) {
+        if (!result.success) {
 
-            throw new Error(data.message);
+            throw new Error(
+                result.message
+            );
 
         }
 
-        renderExams(data.exams);
+        renderExams(result.exams);
 
     }
 
     catch (error) {
 
-        console.error("Load Exams Error:", error);
+        console.error(
+            "Load Exams:",
+            error
+        );
 
         examContainer.innerHTML = `
 
             <div class="empty-state">
 
-                <h3>Unable to load examinations.</h3>
+                <h3>
 
-                <p>Please try again later.</p>
+                    Unable to load examinations.
+
+                </h3>
+
+                <p>
+
+                    Please try again later.
+
+                </p>
 
             </div>
 
@@ -98,26 +122,30 @@ async function loadExams() {
 }
 
 /*========================================================
-    RENDER SUBJECTS
+    RENDER EXAMS
 ========================================================*/
 
-function renderSubjects(subjects) {
+function renderExams(exams) {
 
-    subjectContainer.innerHTML = "";
+    examContainer.innerHTML = "";
 
-    if (!subjects.length) {
+    if (!exams.length) {
 
-        subjectContainer.innerHTML = `
+        examContainer.innerHTML = `
 
             <div class="empty-state">
 
-                <i class="fas fa-book-medical"></i>
+                <i class="fas fa-file-circle-xmark"></i>
 
-                <h3>No subjects available.</h3>
+                <h3>
+
+                    No examinations available.
+
+                </h3>
 
                 <p>
 
-                    No subjects have been added to this examination.
+                    The administrator has not added any examinations yet.
 
                 </p>
 
@@ -129,63 +157,55 @@ function renderSubjects(subjects) {
 
     }
 
-    subjects.forEach(subject => {
+    exams.forEach(exam => {
 
-        const card = document.createElement("div");
+        const button = document.createElement("button");
 
-        card.className = "subject-card";
+        button.className = "exam-card";
 
-        card.innerHTML = `
+        button.innerHTML = `
 
-            <div class="subject-info">
+            <i class="fas fa-file-medical"></i>
 
-                <h3>${subject.name}</h3>
+            <span>
 
-                <p>${subject.description || "Start practicing and access study resources for this subject."}</p>
+                ${exam.name}
 
-            </div>
-
-            <div class="subject-actions">
-
-                <button class="practice-btn">
-
-                    <i class="fas fa-clipboard-question"></i>
-
-                    Start Practice
-
-                </button>
-
-                <button class="resource-btn">
-
-                    <i class="fas fa-book-open"></i>
-
-                    Study Resources
-
-                </button>
-
-            </div>
+            </span>
 
         `;
 
-        const practiceBtn = card.querySelector(".practice-btn");
+        button.addEventListener(
 
-        const resourceBtn = card.querySelector(".resource-btn");
+            "click",
 
-        practiceBtn.addEventListener("click", () => {
+            () => {
 
-            window.location.href =
-                `questions.html?subject_id=${subject.id}`;
+                document
 
-        });
+                    .querySelectorAll(".exam-card")
 
-        resourceBtn.addEventListener("click", () => {
+                    .forEach(card => {
 
-            window.location.href =
-                `resources.html?subject_id=${subject.id}`;
+                        card.classList.remove("active");
 
-        });
+                    });
 
-        subjectContainer.appendChild(card);
+                button.classList.add("active");
+
+                selectedExamId = exam.id;
+
+                selectedExamText.textContent =
+
+                    `Subjects for ${exam.name}`;
+
+                loadSubjects(exam.id);
+
+            }
+
+        );
+
+        examContainer.appendChild(button);
 
     });
 
@@ -215,27 +235,49 @@ async function loadSubjects(examId) {
 
         );
 
-        const data = await response.json();
+        const result = await response.json();
 
-        if (!data.success) {
+        if (!result.success) {
 
-            throw new Error(data.message);
+            throw new Error(
+
+                result.message
+
+            );
 
         }
 
-        renderSubjects(data.subjects);
+        renderSubjects(result.subjects);
 
     }
 
     catch (error) {
 
-        console.error("Load Subjects Error:", error);
+        console.error(
+
+            "Load Subjects:",
+
+            error
+
+        );
 
         subjectContainer.innerHTML = `
 
             <div class="empty-state">
 
-                <h3>Unable to load subjects.</h3>
+                <i class="fas fa-circle-exclamation"></i>
+
+                <h3>
+
+                    Unable to load subjects.
+
+                </h3>
+
+                <p>
+
+                    Please try again later.
+
+                </p>
 
             </div>
 
@@ -261,11 +303,15 @@ function renderSubjects(subjects) {
 
                 <i class="fas fa-book-medical"></i>
 
-                <h3>No subjects available.</h3>
+                <h3>
+
+                    No subjects available.
+
+                </h3>
 
                 <p>
 
-                    No subjects have been added to this examination.
+                    This examination does not have any subjects yet.
 
                 </p>
 
@@ -285,21 +331,88 @@ function renderSubjects(subjects) {
 
         card.innerHTML = `
 
-            <h3>${subject_name}</h3>
+            <div class="subject-info">
 
-            <p>${subject.description || ""}</p>
+                <h3>
+
+                    ${subject.name}
+
+                </h3>
+
+                <p>
+
+                    ${subject.description || "Begin practicing questions or open study resources."}
+
+                </p>
+
+            </div>
+
+            <div class="subject-actions">
+
+                <button
+                    class="practice-btn"
+                    data-id="${subject.id}">
+
+                    <i class="fas fa-clipboard-question"></i>
+
+                    Start Practice
+
+                </button>
+
+                <button
+                    class="resource-btn"
+                    data-id="${subject.id}">
+
+                    <i class="fas fa-book-open"></i>
+
+                    Study Resources
+
+                </button>
+
+            </div>
 
         `;
 
-        card.addEventListener("click", () => {
+        card
 
-            window.location.href =
-                `subject.html?exam_id=${selectedExamId}&subject_id=${subject.id}`;
+            .querySelector(".practice-btn")
 
-        });
+            .addEventListener(
+
+                "click",
+
+                () => {
+
+                    window.location.href =
+
+                        `questions.html?subject_id=${subject.id}`;
+
+                }
+
+            );
+
+        card
+
+            .querySelector(".resource-btn")
+
+            .addEventListener(
+
+                "click",
+
+                () => {
+
+                    window.location.href =
+
+                        `resources.html?subject_id=${subject.id}`;
+
+                }
+
+            );
 
         subjectContainer.appendChild(card);
 
     });
 
 }
+
+

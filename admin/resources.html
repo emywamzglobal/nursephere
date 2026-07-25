@@ -65,7 +65,10 @@
         href="css/sidebar.css">
 
     <link rel="stylesheet"
-        href="css/subscriptions.css">
+        href="css/exams.css">
+
+    <link rel="stylesheet"
+        href="css/resources.css">
         
 
 
@@ -218,7 +221,9 @@
 
         </a>
 
-        <a href="login.html" class="nav-link logout-link">
+        <a href="#"
+   class="nav-link logout-link"
+   onclick="Utils.logout(); return false;">
 
             <i class="fas fa-right-from-bracket"></i>
 
@@ -322,42 +327,200 @@
                     PAGE CONTENT
             ============================ -->
 
-            <main class="dashboard-content">
-
-        <!-- ==========================================
-     Student Management
+            <!-- ==========================================
+        EXAMINATION MANAGEMENT
 ========================================== -->
-<section class="table-section">
+<main class="dashboard-content">
+    <section class="content-section">
 
-    <table class="data-table">
+    <!-- =====================================
+         PAGE HEADER
+    ====================================== -->
 
-        <thead>
+    <div class="section-header">
 
-            <tr>
+        <div>
 
-                <th>Student</th>
+            <h2>Study Resources</h2>
 
-                <th>Email</th>
+            <p>
+                Upload and manage nursing books for students.
+            </p>
 
-                <th>Exam</th>
+        </div>
 
-                <th>Subscription</th>
+        <button
+            class="btn btn-primary"
+            id="addResourceBtn">
 
-                <th>Status</th>
+            <i class="fas fa-plus"></i>
 
-                <th>Actions</th>
+            Add New Book
 
-            </tr>
+        </button>
 
-        </thead>
+    </div>
 
-        <tbody id="subscriptionsTableBody">
+    <!-- =====================================
+         BOOK INFORMATION
+    ====================================== -->
 
-            <!-- Backend Populates Student Records -->
+    <div class="content-card">
 
-        </tbody>
+        <h3>Book Details</h3>
 
-    </table>
+        <div class="form-row">
+
+            <div class="form-group">
+
+                <label>Exam</label>
+
+                <select id="examSelect">
+
+                    <option value="">Select Exam</option>
+
+                </select>
+
+            </div>
+
+            <div class="form-group">
+
+                <label>Subject</label>
+
+                <select id="subjectSelect">
+
+                    <option value="">Select Subject</option>
+
+                </select>
+
+            </div>
+
+        </div>
+
+        <div class="form-group">
+
+            <label>Book Title</label>
+
+            <input
+                type="text"
+                id="bookTitle"
+                placeholder="Enter book title">
+
+        </div>
+
+        <div class="form-group">
+
+            <label>Author</label>
+
+            <input
+                type="text"
+                id="author"
+                placeholder="Enter author name">
+
+        </div>
+
+        <div class="form-group">
+
+            <label>Description</label>
+
+            <textarea
+                id="description"
+                rows="4"
+                placeholder="Brief description of the book"></textarea>
+
+        </div>
+
+        <div class="form-row">
+
+            <div class="form-group">
+
+                <label>Book Cover</label>
+
+                <input
+                    type="file"
+                    id="coverImage"
+                    accept="image/*">
+
+            </div>
+
+            <div class="form-group">
+
+                <label>PDF Book</label>
+
+                <input
+                    type="file"
+                    id="bookFile"
+                    accept=".pdf">
+
+            </div>
+
+        </div>
+
+        <div class="form-actions">
+
+            <button
+                class="btn btn-success"
+                type="submit">
+
+                Save Book
+
+            </button>
+
+            <button
+                class="btn btn-secondary"
+                type="reset">
+
+                Clear
+
+            </button>
+
+        </div>
+
+    </div>
+
+    <!-- =====================================
+         RESOURCE LIBRARY
+    ====================================== -->
+
+    <div class="content-card">
+
+        <div class="table-header">
+
+            <h3>Resource Library</h3>
+
+        </div>
+
+        <table class="data-table">
+
+            <thead>
+
+                <tr>
+
+                    <th>Cover</th>
+
+                    <th>Title</th>
+
+                    <th>Exam</th>
+
+                    <th>Subject</th>
+
+                    <th>Author</th>
+
+                    <th>Actions</th>
+
+                </tr>
+
+            </thead>
+
+            <tbody id="resourcesTableBody">
+
+                <!-- Loaded dynamically -->
+
+            </tbody>
+
+        </table>
+
+    </div>
 
 </section>
             </main>
@@ -370,11 +533,14 @@
             JAVASCRIPT
     ============================ -->
 
-    <script src="../shared/api.js"></script>
+    <!-- Shared Libraries -->
+<script src="../shared/api.js"></script>
 <script src="../shared/auth.js"></script>
 <script src="../shared/utils.js"></script>
+
+<!-- Admin Scripts -->
 <script src="js/admin-main.js"></script>
-<script src="js/subscriptions.js"></script>
+<script src="js/students.js"></script>
 
 </body>
 

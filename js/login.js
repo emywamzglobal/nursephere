@@ -138,48 +138,38 @@ loginForm.addEventListener("submit", async function (event) {
         }
 
         /*-----------------------------------------
-            Save Student Session
-        -----------------------------------------*/
+    Save Student Session
+-----------------------------------------*/
 
-        localStorage.setItem(
+localStorage.setItem(
+    "studentToken",
+    result.token
+);
 
-            "studentId",
+localStorage.setItem(
+    "studentId",
+    result.student.id
+);
 
-            result.student.id
+localStorage.setItem(
+    "studentName",
+    result.student.fullName
+);
 
-        );
+localStorage.setItem(
+    "studentEmail",
+    result.student.email
+);
 
-        localStorage.setItem(
+localStorage.setItem(
+    "subscriptionStatus",
+    result.student.subscriptionStatus
+);
 
-            "studentName",
-
-            result.student.fullName
-
-        );
-
-        localStorage.setItem(
-
-            "studentEmail",
-
-            result.student.email
-
-        );
-
-        localStorage.setItem(
-
-            "subscriptionStatus",
-
-            result.student.subscriptionStatus
-
-        );
-
-        localStorage.setItem(
-
-            "trialActive",
-
-            result.student.trialActive
-
-        );
+localStorage.setItem(
+    "trialActive",
+    result.student.trialActive
+);
 
         showMessage(
 

@@ -110,10 +110,10 @@ function renderStudents(students) {
 
     tbody.innerHTML = students.map(student => {
 
-        const fullName = `${student.first_name || ""} ${student.last_name || ""}`.trim();
+        const fullName = student.full_name || "-";
 
-        const status = (student.status || "inactive").toLowerCase();
-
+const status =
+    (student.account_status || "inactive").toLowerCase();
         return `
 
             <tr>
@@ -156,7 +156,7 @@ function renderStudents(students) {
 
                     <button
                         class="action-btn"
-                        onclick="viewStudent(${student.id})">
+                        onclick="viewStudent('${student.id}')">
 
                         View
 
@@ -206,11 +206,7 @@ window.viewStudent = async function (studentId) {
 
             "Student:\n\n" +
 
-            result.data.first_name +
-
-            " " +
-
-            result.data.last_name +
+            result.data.full_name +
 
             "\n\nEmail: " +
 

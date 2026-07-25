@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <!-- Character Encoding -->
+
+    <meta charset="UTF-8">
+
+    <!-- Responsive Design -->
+
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0">
+
+    <!-- Page Title -->
+
+    <title>Admin Dashboard | Nursephere</title>
+
+    <!-- Description -->
+
+    <meta name="description"
+        content="Nursephere Administration Dashboard">
+
+    <!-- Favicon -->
+
+    <link rel="icon"
+        type="image/png"
+        sizes="32x32"
+        href="../assets/favicon/favicon-32x32.png">
+
+    <link rel="icon"
+        type="image/png"
+        sizes="16x16"
+        href="../assets/favicon/favicon-16x16.png">
+
+    <!-- Google Fonts -->
+
+    <link rel="preconnect"
+        href="https://fonts.googleapis.com">
+
+    <link rel="preconnect"
+        href="https://fonts.gstatic.com"
+        crossorigin>
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <!-- Font Awesome -->
+
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+
+    <!-- Admin CSS -->
+
+    <link rel="stylesheet"
+        href="css/admin-main.css">
+
+    <link rel="stylesheet"
+        href="css/dashboard.css">
+
+    <link rel="stylesheet"
+        href="css/header.css">
+
+    <link rel="stylesheet"
+        href="css/sidebar.css">
+
+    <link rel="stylesheet"
+        href="css/questions.css">
+        
+
+
+</head>
+
+<body>
+
+    <!-- ===================================
+            ADMIN APPLICATION LAYOUT
+    ==================================== -->
+
+    <div class="admin-layout">
+
+        <!-- Sidebar -->
+
+        <!-- ===========================
+        ADMIN SIDEBAR
+=========================== -->
+
+<aside class="admin-sidebar" id="adminSidebar">
+
+    <!-- Logo -->
+
+    <div class="sidebar-logo">
+
+        <img src="../assets/logo/logo.jpeg"
+             alt="Nursephere Logo">
+
+        <div class="logo-text">
+
+            <h2>
+
+                Nursephere
+
+            </h2>
+
+            <p>
+
+                Admin Portal
+
+            </p>
+
+        </div>
+
+    </div>
+
+    <!-- Navigation -->
+
+    <nav class="sidebar-nav">
+
+        <span class="nav-title">
+
+            ADMINISTRATION
+
+        </span>
+
+        <a href="dashboard.html" class="nav-link">
+
+            <i class="fas fa-chart-line"></i>
+
+            <span>
+
+                Dashboard
+
+            </span>
+
+        </a>
+
+        <a href="questions-resources-management.html" class="nav-link">
+
+            <i class="fas fa-circle-question"></i>
+
+            <span>
+
+                Question Management
+
+            </span>
+
+        </a>
+
+        <a href="students.html" class="nav-link">
+
+            <i class="fas fa-user-graduate"></i>
+
+            <span>
+
+                Students
+
+            </span>
+
+        </a>
+
+        <a href="subscriptions.html" class="nav-link">
+
+            <i class="fas fa-credit-card"></i>
+
+            <span>
+
+                Subscriptions
+
+            </span>
+
+        </a>
+
+        <a href="referrals.html" class="nav-link">
+
+            <i class="fas fa-user-plus"></i>
+
+            <span>
+
+                Referrals
+
+            </span>
+
+        </a>
+
+        <a href="reports.html" class="nav-link">
+
+            <i class="fas fa-chart-pie"></i>
+
+            <span>
+
+                Reports
+
+            </span>
+
+        </a>
+
+    </nav>
+
+    <!-- Account -->
+
+    <div class="sidebar-bottom">
+
+        <span class="nav-title">
+
+            ACCOUNT
+
+        </span>
+
+        <a href="settings.html" class="nav-link">
+
+            <i class="fas fa-gear"></i>
+
+            <span>
+
+                Settings
+
+            </span>
+
+        </a>
+
+        <a href="#"
+   class="nav-link logout-link"
+   onclick="Utils.logout(); return false;">
+
+            <i class="fas fa-right-from-bracket"></i>
+
+            <span>
+
+                Logout
+
+            </span>
+
+        </a>
+
+    </div>
+
+</aside>
+
+        <!-- ===========================
+                MAIN APPLICATION
+        ============================ -->
+
+        <div class="admin-main">
+
+            <!-- Header -->
+
+            <!-- ===========================
+        ADMIN HEADER
+=========================== -->
+
+<header class="admin-header">
+
+    <!-- Sidebar Toggle -->
+
+    <button class="menu-toggle" id="menuToggle">
+
+        <i class="fas fa-bars"></i>
+
+    </button>
+
+    <!-- Search -->
+
+    <div class="header-search">
+
+        <i class="fas fa-search"></i>
+
+        <input
+            type="text"
+            placeholder="Search students, questions, subscriptions...">
+
+    </div>
+
+    <!-- Header Right -->
+
+    <div class="header-right">
+
+        <!-- Notifications -->
+
+        <button class="header-icon">
+
+            <i class="fas fa-bell"></i>
+
+            <span class="notification-badge" id="notificationCount">
+
+                0
+
+            </span>
+
+        </button>
+
+        <!-- Admin Profile -->
+
+        <div class="admin-profile">
+
+            <img
+                src="../assets/images/avatar-placeholder.png"
+                alt="Administrator">
+
+            <div>
+
+                <h4 id="adminName">
+
+                    Administrator
+
+                </h4>
+
+                <small>
+
+                    Admin
+
+                </small>
+
+            </div>
+
+            <i class="fas fa-chevron-down"></i>
+
+        </div>
+
+    </div>
+
+</header>
+
+            <!-- ===========================
+                    PAGE CONTENT
+            ============================ -->
+
+            <!-- ==========================================
+        EXAMINATION MANAGEMENT
+========================================== -->
+<main class="dashboard-content">
+    <section class="content-section">
+
+    <section class="content-section">
+
+    <!-- ===========================
+         Page Header
+    ============================ -->
+
+    <div class="section-header">
+
+        <div>
+
+            <h2>Question Management</h2>
+
+            <p>Create and manage practice questions.</p>
+
+        </div>
+
+    </div>
+
+    <!-- ===========================
+         Question Form
+    ============================ -->
+
+    <div class="content-card">
+
+        <form id="questionForm">
+
+            <div class="form-row">
+
+                <div class="form-group">
+
+                    <label for="examSelect">Exam</label>
+
+                    <select id="examSelect">
+
+                        <option value="">Select Exam</option>
+
+                    </select>
+
+                </div>
+
+                <div class="form-group">
+
+                    <label for="subjectSelect">Subject</label>
+
+                    <select id="subjectSelect">
+
+                        <option value="">Select Subject</option>
+
+                    </select>
+
+                </div>
+
+            </div>
+
+            <div class="form-group">
+
+                <label for="questionText">Question</label>
+
+                <textarea
+                    id="questionText"
+                    rows="5"
+                    placeholder="Enter question here..."
+                    required></textarea>
+
+            </div>
+
+            <div class="form-group">
+
+                <label for="questionImage">
+
+                    Question Image (Optional)
+
+                </label>
+
+                <input
+                    type="file"
+                    id="questionImage"
+                    accept="image/*">
+
+            </div>
+
+            <div class="form-row">
+
+                <div class="form-group">
+
+                    <label for="optionA">Option A</label>
+
+                    <input
+                        type="text"
+                        id="optionA"
+                        required>
+
+                </div>
+
+                <div class="form-group">
+
+                    <label for="optionB">Option B</label>
+
+                    <input
+                        type="text"
+                        id="optionB"
+                        required>
+
+                </div>
+
+            </div>
+
+            <div class="form-row">
+
+                <div class="form-group">
+
+                    <label for="optionC">Option C</label>
+
+                    <input
+                        type="text"
+                        id="optionC"
+                        required>
+
+                </div>
+
+                <div class="form-group">
+
+                    <label for="optionD">Option D</label>
+
+                    <input
+                        type="text"
+                        id="optionD"
+                        required>
+
+                </div>
+
+            </div>
+
+            <div class="form-row">
+
+                <div class="form-group">
+
+                    <label for="correctAnswer">
+
+                        Correct Answer
+
+                    </label>
+
+                    <select
+                        id="correctAnswer"
+                        required>
+
+                        <option value="">
+
+                            Select Answer
+
+                        </option>
+
+                        <option value="A">A</option>
+
+                        <option value="B">B</option>
+
+                        <option value="C">C</option>
+
+                        <option value="D">D</option>
+
+                    </select>
+
+                </div>
+
+            </div>
+
+            <div class="form-group">
+
+                <label for="explanation">
+
+                    Explanation
+
+                </label>
+
+                <textarea
+                    id="explanation"
+                    rows="4"
+                    placeholder="Enter explanation..."
+                    required></textarea>
+
+            </div>
+
+            <div class="form-actions">
+
+                <button
+                    type="submit"
+                    class="btn btn-primary">
+
+                    Save Question
+
+                </button>
+
+                <button
+                    type="reset"
+                    class="btn btn-secondary">
+
+                    Clear
+
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+    <!-- =====================================================
+     IMPORT QUESTIONS
+====================================================== -->
+
+<div class="card import-card">
+
+    <div class="card-header">
+
+        <h3>Import Practice Questions</h3>
+
+        <p>
+            Upload a DOCX or XLSX file to automatically
+            extract practice questions.
+        </p>
+
+    </div>
+
+    <form id="importForm">
+
+        <div class="form-group">
+
+            <label for="importSubject">
+
+                Subject
+
+            </label>
+
+            <select
+                id="importSubject"
+                name="subject_id"
+                required>
+
+                <option value="">
+                    Select Subject
+                </option>
+
+            </select>
+
+        </div>
+
+        <div class="form-group">
+
+            <label for="questionFile">
+
+                Question File
+
+            </label>
+
+            <input
+                type="file"
+                id="questionFile"
+                name="file"
+                accept=".docx,.xlsx"
+                required>
+
+            <small>
+
+                Supported formats:
+                DOCX, XLSX
+
+            </small>
+
+        </div>
+
+        <button
+            type="submit"
+            class="btn btn-primary">
+
+            Import Questions
+
+        </button>
+
+    </form>
+
+</div>
+
+    <!-- ===========================
+         Question Bank
+    ============================ -->
+
+    <div class="content-card">
+
+        <h3>Question Bank</h3>
+
+        <div class="table-responsive">
+
+            <table class="data-table">
+
+                <thead>
+
+                    <tr>
+
+                        <th>#</th>
+
+                        <th>Question</th>
+
+                        <th>Exam</th>
+
+                        <th>Subject</th>
+
+                        <th>Answer</th>
+
+                        <th>Actions</th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody id="questionsTableBody">
+
+                    <!-- Questions loaded here -->
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+</section>
+            </main>
+
+        </div>
+
+    </div>
+
+    <!-- ===========================
+            JAVASCRIPT
+    ============================ -->
+
+    <!-- Shared Libraries -->
+<script src="../shared/api.js"></script>
+<script src="../shared/auth.js"></script>
+<script src="../shared/utils.js"></script>
+
+<!-- Admin Scripts -->
+<script src="js/admin-main.js"></script>
+<script src="js/students.js"></script>
+<script src="js/questions-import.js"></script>
+
+</body>
+
+</html>

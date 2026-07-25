@@ -1,0 +1,384 @@
+/*=========================================================
+    Examination Management
+=========================================================*/
+
+.page-section {
+
+    margin-bottom: 2rem;
+
+}
+
+.page-section h1 {
+
+    font-size: 2rem;
+
+    font-weight: 700;
+
+    color: #1f2937;
+
+    margin-bottom: .5rem;
+
+}
+
+.page-section p {
+
+    color: #6b7280;
+
+    font-size: .95rem;
+
+}
+
+
+/*=========================================================
+    Form Section
+=========================================================*/
+
+.form-section {
+
+    background: #ffffff;
+
+    border-radius: 16px;
+
+    padding: 2rem;
+
+    margin-bottom: 2rem;
+
+    border: 1px solid #e5e7eb;
+
+    box-shadow: 0 6px 18px rgba(15,23,42,.05);
+
+}
+
+#examForm {
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 1.5rem;
+
+}
+
+
+/*=========================================================
+    Form Groups
+=========================================================*/
+
+.form-group {
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: .55rem;
+
+}
+
+.form-group label {
+
+    font-weight: 600;
+
+    color: #1f2937;
+
+    font-size: .95rem;
+
+}
+
+.form-group input,
+
+.form-group textarea,
+
+.form-group select {
+
+    width: 100%;
+
+    padding: .9rem 1rem;
+
+    border: 1px solid #d1d5db;
+
+    border-radius: 10px;
+
+    font-size: .95rem;
+
+    font-family: inherit;
+
+    transition: .25s;
+
+    background: #fff;
+
+}
+
+.form-group textarea {
+
+    resize: vertical;
+
+    min-height: 120px;
+
+}
+
+.form-group input:focus,
+
+.form-group textarea:focus,
+
+.form-group select:focus {
+
+    outline: none;
+
+    border-color: #4f46e5;
+
+    box-shadow: 0 0 0 4px rgba(79,70,229,.12);
+
+}
+
+
+/*=========================================================
+    Buttons
+=========================================================*/
+
+.form-actions {
+
+    display: flex;
+
+    justify-content: flex-end;
+
+    gap: 1rem;
+
+    margin-top: .5rem;
+
+}
+
+.primary-btn,
+
+.secondary-btn {
+
+    border: none;
+
+    border-radius: 10px;
+
+    padding: .85rem 1.6rem;
+
+    cursor: pointer;
+
+    font-size: .95rem;
+
+    font-weight: 600;
+
+    transition: .25s;
+
+}
+
+.primary-btn {
+
+    background: #4f46e5;
+
+    color: #ffffff;
+
+}
+
+.primary-btn:hover {
+
+    background: #4338ca;
+
+}
+
+.secondary-btn {
+
+    background: #f3f4f6;
+
+    color: #374151;
+
+}
+
+.secondary-btn:hover {
+
+    background: #e5e7eb;
+
+}
+
+
+/*=========================================================
+    Table
+=========================================================*/
+
+.table-section {
+
+    background: #ffffff;
+
+    border-radius: 16px;
+
+    border: 1px solid #e5e7eb;
+
+    overflow: hidden;
+
+    box-shadow: 0 6px 18px rgba(15,23,42,.05);
+
+}
+
+.data-table {
+
+    width: 100%;
+
+    border-collapse: collapse;
+
+}
+
+.data-table thead {
+
+    background: #f9fafb;
+
+}
+
+.data-table th {
+
+    padding: 1rem;
+
+    text-align: left;
+
+    font-size: .9rem;
+
+    font-weight: 600;
+
+    color: #374151;
+
+    border-bottom: 1px solid #e5e7eb;
+
+}
+
+.data-table td {
+
+    padding: 1rem;
+
+    border-bottom: 1px solid #f1f5f9;
+
+    color: #374151;
+
+}
+
+.data-table tbody tr:hover {
+
+    background: #fafafa;
+
+}
+
+
+/*=========================================================
+    Status Badge
+=========================================================*/
+
+.status-badge {
+
+    display: inline-block;
+
+    padding: .35rem .8rem;
+
+    border-radius: 999px;
+
+    font-size: .8rem;
+
+    font-weight: 600;
+
+    text-transform: capitalize;
+
+}
+
+.status-badge.draft {
+
+    background: #fef3c7;
+
+    color: #92400e;
+
+}
+
+.status-badge.published {
+
+    background: #dcfce7;
+
+    color: #166534;
+
+}
+
+
+/*=========================================================
+    Actions
+=========================================================*/
+
+.actions {
+
+    display: flex;
+
+    gap: .5rem;
+
+}
+
+.actions button {
+
+    width: 38px;
+
+    height: 38px;
+
+    border: none;
+
+    border-radius: 8px;
+
+    cursor: pointer;
+
+    transition: .25s;
+
+}
+
+.btn-edit {
+
+    background: #dbeafe;
+
+    color: #1d4ed8;
+
+}
+
+.btn-edit:hover {
+
+    background: #bfdbfe;
+
+}
+
+.btn-delete {
+
+    background: #fee2e2;
+
+    color: #dc2626;
+
+}
+
+.btn-delete:hover {
+
+    background: #fecaca;
+
+}
+
+
+/*=========================================================
+    Responsive
+=========================================================*/
+
+@media (max-width:768px){
+
+    .form-actions{
+
+        flex-direction: column;
+
+    }
+
+    .primary-btn,
+
+    .secondary-btn{
+
+        width:100%;
+
+    }
+
+    .table-section{
+
+        overflow-x:auto;
+
+    }
+
+}

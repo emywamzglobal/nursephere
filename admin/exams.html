@@ -65,7 +65,7 @@
         href="css/sidebar.css">
 
     <link rel="stylesheet"
-        href="css/reports.css">
+        href="css/exams.css">
         
 
 
@@ -218,7 +218,9 @@
 
         </a>
 
-        <a href="login.html" class="nav-link logout-link">
+        <a href="#"
+   class="nav-link logout-link"
+   onclick="Utils.logout(); return false;">
 
             <i class="fas fa-right-from-bracket"></i>
 
@@ -322,92 +324,165 @@
                     PAGE CONTENT
             ============================ -->
 
-            <main class="dashboard-content">
-
-        <!-- ==========================================
-     Reports
+            <!-- ==========================================
+        EXAMINATION MANAGEMENT
 ========================================== -->
-<section class="reports-grid">
+<main class="dashboard-content">
+<section class="page-section">
 
-    <!-- Question Reports -->
-    <div class="report-card">
+    <h1>
 
-        <div class="report-icon">
+        Examination Management
 
-            📚
+    </h1>
 
-        </div>
+    <p>
 
-        <h3>
-            Question Reports
-        </h3>
+        Create nursing examinations that students can access from the Practice page.
 
-        <p>
-            View question statistics, exam coverage, and subject summaries.
-        </p>
-
-        <button
-            class="btn btn-primary">
-
-            View Report
-
-        </button>
-
-    </div>
-
-    <!-- Subscription Reports -->
-    <div class="report-card">
-
-        <div class="report-icon">
-
-            💳
-
-        </div>
-
-        <h3>
-            Subscription Reports
-        </h3>
-
-        <p>
-            Monitor active, expired, and upcoming subscription renewals.
-        </p>
-
-        <button
-            class="btn btn-primary">
-
-            View Report
-
-        </button>
-
-    </div>
-
-    <!-- Referral Reports -->
-    <div class="report-card">
-
-        <div class="report-icon">
-
-            🤝
-
-        </div>
-
-        <h3>
-            Referral Reports
-        </h3>
-
-        <p>
-            Review referrals, rewards, and referral program performance.
-        </p>
-
-        <button
-            class="btn btn-primary">
-
-            View Report
-
-        </button>
-
-    </div>
+    </p>
 
 </section>
+
+<!-- ==========================================
+        CREATE EXAMINATION
+========================================== -->
+
+<section class="form-section">
+
+    <form id="examForm">
+
+        <input
+            type="hidden"
+            id="examId">
+
+        <div class="form-group">
+
+            <label for="examName">
+
+                Examination Name
+
+            </label>
+
+            <input
+                type="text"
+                id="examName"
+                placeholder="e.g. NCLEX"
+                required>
+
+        </div>
+
+        <div class="form-group">
+
+            <label for="examDescription">
+
+                Description
+
+            </label>
+
+            <textarea
+                id="examDescription"
+                rows="4"
+                placeholder="Brief description of this examination..."></textarea>
+
+        </div>
+
+        <div class="form-group">
+
+            <label for="examStatus">
+
+                Status
+
+            </label>
+
+            <select id="examStatus">
+
+                <option value="draft">
+
+                    Draft
+
+                </option>
+
+                <option value="published">
+
+                    Published
+
+                </option>
+
+            </select>
+
+        </div>
+
+        <div class="form-actions">
+
+            <button
+                type="button"
+                id="saveDraftBtn"
+                class="secondary-btn">
+
+                Save Draft
+
+            </button>
+
+            <button
+                type="submit"
+                id="publishBtn"
+                class="primary-btn">
+
+                Publish
+
+            </button>
+
+        </div>
+
+    </form>
+
+</section>
+
+<!-- ==========================================
+        EXAMINATIONS
+========================================== -->
+
+<section class="table-section">
+
+    <table class="data-table">
+
+        <thead>
+
+            <tr>
+
+                <th>
+
+                    Examination
+
+                </th>
+
+                <th>
+
+                    Status
+
+                </th>
+
+                <th>
+
+                    Actions
+
+                </th>
+
+            </tr>
+
+        </thead>
+
+        <tbody id="examsTableBody">
+
+            <!-- Backend Populates Examination Records -->
+
+        </tbody>
+
+    </table>
+
+</section>
+
             </main>
 
         </div>
@@ -418,9 +493,14 @@
             JAVASCRIPT
     ============================ -->
 
-    <script src="js/admin-main.js"></script>
+    <!-- Shared Libraries -->
+<script src="../shared/api.js"></script>
+<script src="../shared/auth.js"></script>
+<script src="../shared/utils.js"></script>
 
-    <script src="js/dashboard.js"></script>
+<!-- Admin Scripts -->
+<script src="js/admin-main.js"></script>
+<script src="js/students.js"></script>
 
 </body>
 

@@ -6716,8 +6716,8 @@ if (
             s.created_at,
             s.updated_at,
 
-            st.first_name,
-            st.last_name,
+            st.full_name AS first_name,
+            '' AS last_name,
             st.email,
 
             sp.name AS plan_name,
@@ -6781,9 +6781,10 @@ if (
             s.created_at,
             s.updated_at,
 
-            st.first_name,
-            st.last_name,
+            st.full_name AS first_name,
+            '' AS last_name,
             st.email,
+
 
             sp.name AS plan_name,
             sp.price,
@@ -7135,9 +7136,10 @@ if (
             s.created_at,
             s.updated_at,
 
-            st.first_name,
-            st.last_name,
+            st.full_name AS first_name,
+            '' AS last_name,
             st.email,
+
 
             sp.name AS plan_name,
             sp.price,
@@ -7499,9 +7501,10 @@ if (
             s.created_at,
             s.updated_at,
 
-            st.first_name,
-            st.last_name,
+            st.full_name AS first_name,
+            '' AS last_name,
             st.email,
+
 
             sp.name AS plan_name,
             sp.price,
@@ -7886,9 +7889,10 @@ if (
             tu.created_at,
             tu.updated_at,
 
-            st.first_name,
-            st.last_name,
+            st.full_name AS first_name,
+            '' AS last_name,
             st.email,
+
 
             sb.name AS subject_name
 
@@ -7950,9 +7954,10 @@ if (
             tu.created_at,
             tu.updated_at,
 
-            st.first_name,
-            st.last_name,
+            st.full_name AS first_name,
+            '' AS last_name,
             st.email,
+
 
             sb.name AS subject_name
 
@@ -8352,9 +8357,10 @@ if (
             tu.created_at,
             tu.updated_at,
 
-            st.first_name,
-            st.last_name,
+            st.full_name AS first_name,
+            '' AS last_name,
             st.email,
+
 
             sb.name AS subject_name
 
@@ -8757,9 +8763,10 @@ if (
             tu.created_at,
             tu.updated_at,
 
-            st.first_name,
-            st.last_name,
+            st.full_name AS first_name,
+            '' AS last_name,
             st.email,
+
 
             sb.name AS subject_name
 
@@ -9860,7 +9867,380 @@ if (
 
 }
 
-                // =====================================================
+// =====================================================
+// REFERRAL MANAGEMENT
+// =====================================================
+
+// Get all referrals
+if (method === "GET" && pathname === "/api/admin/referrals") {
+
+    const { results } = await env.DB.prepare(`
+        SELECT
+            r.id,
+            r.referral_code,
+            r.referred_email,
+            r.status,
+            r.reward_qualified,
+            r.first_subscription_date,
+            r.created_at,
+
+            ref.full_name AS referrer_name,
+            ref.email AS referrer_email,
+
+            stu.full_name AS referred_name,
+            stu.email AS referred_email_registered,
+
+            e.name AS exam_name
+
+        FROM referrals r
+
+        LEFT JOIN students ref
+            ON ref.id = r.referrer_student_id
+
+        LEFT JOIN students stu
+            ON stu.id = r.referred_student_id
+
+        LEFT JOIN exams e
+            ON e.id = r.exam_id
+
+        ORDER BY r.created_at DESC
+    `).all();
+
+    return Response.json({
+        success: true,
+        referrals: results
+    });
+}
+
+// -----------------------------------------
+// GET SINGLE REFERRAL
+// GET /api/admin/referrals/:id
+// -----------------------------------------
+
+if (
+
+    method === "GET" &&
+
+    pathname.startsWith("/api/admin/referrals/")
+
+) {
+
+    const referralId = pathname.split("/").pop();
+
+    const referral = await env.DB.prepare(
+
+        `SELECT
+
+            r.id,
+
+            r.referral_code,
+
+            r.referrer_student_id,
+
+            ref.full_name AS referrer_name,
+
+            ref.email AS referrer_email,
+
+            r.referred_student_id,
+
+            stu.full_name AS referred_name,
+
+            stu.email AS referred_email_registered,
+
+            r.referred_email,
+
+            r.exam_id,
+
+            e.name AS exam_name,
+
+            r.status,
+
+            r.first_subscription_id,
+
+            r.first_subscription_date,
+
+            r.reward_qualified,
+
+            r.notes,
+
+            r.created_at,
+
+            r.updated_at
+
+        FROM referrals r
+
+        LEFT JOIN students ref
+
+            ON r.referrer_student_id = ref.id
+
+        LEFT JOIN students stu
+
+            ON r.referred_student_id = stu.id
+
+        LEFT JOIN exams e
+
+            ON r.exam_id = e.id
+
+        WHERE r.id = ?`
+
+    )
+
+    .bind(referralId)
+
+    .first();
+
+    if (!referral) {
+
+        return Response.json({
+
+            success: false,
+
+            message: "Referral not found."
+
+        }, {
+
+            status: 404
+
+        });
+
+    }
+
+    return Response.json({
+
+        success: true,
+
+        message: "Referral retrieved successfully.",
+
+        data: referral
+
+    });
+
+}
+
+// -----------------------------------------
+// UPDATE REFERRAL
+// PUT /api/admin/referrals/:id
+// -----------------------------------------
+
+if (
+
+    method === "PUT" &&
+
+    pathname.startsWith("/api/admin/referrals/")
+
+) {
+
+    const referralId = pathname.split("/").pop();
+
+    const body = await request.json();
+
+    const {
+
+        status,
+
+        notes
+
+    } = body;
+
+    // -----------------------------------------
+    // VALIDATION
+    // -----------------------------------------
+
+    const validStatuses = [
+
+        "Pending",
+
+        "Registered",
+
+        "Successful",
+
+        "Cancelled"
+
+    ];
+
+    if (
+
+        !status ||
+
+        !validStatuses.includes(status)
+
+    ) {
+
+        return Response.json({
+
+            success: false,
+
+            message: "Invalid referral status."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+    // -----------------------------------------
+    // VERIFY REFERRAL EXISTS
+    // -----------------------------------------
+
+    const referral = await env.DB.prepare(
+
+        `SELECT
+
+            id
+
+         FROM referrals
+
+         WHERE id = ?`
+
+    )
+
+    .bind(referralId)
+
+    .first();
+
+    if (!referral) {
+
+        return Response.json({
+
+            success: false,
+
+            message: "Referral not found."
+
+        }, {
+
+            status: 404
+
+        });
+
+    }
+
+    const now = new Date().toISOString();
+
+    // -----------------------------------------
+    // UPDATE REFERRAL
+    // -----------------------------------------
+
+    await env.DB.prepare(
+
+        `UPDATE referrals
+
+         SET
+
+            status = ?,
+
+            notes = ?,
+
+            updated_at = ?
+
+         WHERE id = ?`
+
+    )
+
+    .bind(
+
+        status,
+
+        notes || "",
+
+        now,
+
+        referralId
+
+    )
+
+    .run();
+
+    return Response.json({
+
+        success: true,
+
+        message: "Referral updated successfully."
+
+    });
+
+}
+
+// -----------------------------------------
+// DELETE REFERRAL
+// DELETE /api/admin/referrals/:id
+// -----------------------------------------
+
+if (
+
+    method === "DELETE" &&
+
+    pathname.startsWith("/api/admin/referrals/")
+
+) {
+
+    const referralId = pathname.split("/").pop();
+
+    // -----------------------------------------
+    // VERIFY REFERRAL EXISTS
+    // -----------------------------------------
+
+    const referral = await env.DB.prepare(
+
+        `SELECT
+
+            id
+
+         FROM referrals
+
+         WHERE id = ?`
+
+    )
+
+    .bind(referralId)
+
+    .first();
+
+    if (!referral) {
+
+        return Response.json({
+
+            success: false,
+
+            message: "Referral not found."
+
+        }, {
+
+            status: 404
+
+        });
+
+    }
+
+    // -----------------------------------------
+    // DELETE REFERRAL
+    // -----------------------------------------
+
+    await env.DB.prepare(
+
+        `DELETE
+
+         FROM referrals
+
+         WHERE id = ?`
+
+    )
+
+    .bind(referralId)
+
+    .run();
+
+    return Response.json({
+
+        success: true,
+
+        message: "Referral deleted successfully."
+
+    });
+
+}
+       // =====================================================
         // NOTIFICATION MANAGEMENT
         // =====================================================
 

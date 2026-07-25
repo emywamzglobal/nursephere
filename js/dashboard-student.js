@@ -12,241 +12,417 @@
 =========================================================*/
 
 const DashboardAPI = {
+
     dashboard: "http://127.0.0.1:8787/api/dashboard"
+
 };
 
-/*=========================================
-        DASHBOARD PAGE
-=========================================*/
+/*=========================================================
+    Student Session
+=========================================================*/
 
-document.addEventListener("DOMContentLoaded", initialiseDashboard);
+const studentToken = localStorage.getItem("studentToken");
 
+/*=========================================================
+    DOM Elements
+=========================================================*/
 
-/*=========================================
-        INITIALISE DASHBOARD
-=========================================*/
+const welcomeStudentName =
+    document.getElementById("welcomeStudentName");
 
-function initialiseDashboard(){
+const headerStudentName =
+    document.getElementById("headerStudentName");
 
-    loadStudentInformation();
+const studentPlan =
+    document.getElementById("studentPlan");
 
-    updateTrialCard();
+const daysLeft =
+    document.getElementById("daysLeft");
 
-    loadMotivationalQuote();
+const questionsLeft =
+    document.getElementById("questionsLeft");
+
+const subjectsStarted =
+    document.getElementById("subjectsStarted");
+
+const questionsAnswered =
+    document.getElementById("questionsAnswered");
+
+const successRate =
+    document.getElementById("successRate");
+
+const recentActivity =
+    document.getElementById("recentActivity");
+
+/*=========================================================
+    Dashboard Data
+=========================================================*/
+
+let dashboardData = null;
+
+/*=========================================================
+    Authentication
+=========================================================*/
+
+function clearStudentSession() {
+
+    localStorage.removeItem("studentToken");
+    localStorage.removeItem("studentId");
+    localStorage.removeItem("studentName");
+    localStorage.removeItem("studentEmail");
+    localStorage.removeItem("subscriptionStatus");
+    localStorage.removeItem("trialActive");
 
 }
 
+function redirectToLogin() {
 
-/*=========================================
-        STUDENT INFORMATION
-=========================================*/
+    clearStudentSession();
 
-async function loadStudentInformation() {
+    window.location.replace("../login.html");
+
+}
+
+function requireAuthentication() {
+
+    if (!studentToken) {
+
+        redirectToLogin();
+
+        return false;
+
+    }
+
+    return true;
+
+}
+
+/*=========================================================
+    Load Dashboard
+=========================================================*/
+
+async function loadDashboard() {
+
+    if (!requireAuthentication()) {
+
+        return;
+
+    }
 
     try {
 
-        const studentId = localStorage.getItem("studentId");
-
         const response = await fetch(
 
-            `${DashboardAPI.dashboard}?studentId=${studentId}`
+            DashboardAPI.dashboard,
+
+            {
+
+                method: "GET",
+
+                headers: {
+
+                    "Authorization":
+                        `Bearer ${studentToken}`,
+
+                    "Content-Type":
+                        "application/json"
+
+                }
+
+            }
 
         );
 
-        const result = await response.json();
-        console.log(result);
+        if (response.status === 401) {
 
-        if (!result.success) {
+            redirectToLogin();
 
-            throw new Error(result.message);
+            return;
 
         }
 
-        const student = {
+        const result = await response.json();
 
-            name: result.student.full_name,
+        if (!response.ok) {
 
-            plan: result.student.subscription_status,
+            throw new Error(
 
-            trialDays: result.trial.daysLeft,
+                result.message ||
 
-            questionsRemaining: result.progress.questions_remaining,
+                "Unable to load dashboard."
 
-            questionsAnswered: result.progress.questions_answered,
+            );
 
-            subjectsStarted: result.progress.subjects_started,
+        }
 
-            successRate: result.progress.success_rate + "%",
+        dashboardData = result;
 
-            streak: result.progress.day_streak
+        renderDashboard();
 
-        };
+        renderRecentActivity();
 
-        updateDashboard(student);
-        updateTrialCard(result.trial);
+        renderTrialStatus();
 
     }
 
     catch (error) {
 
-        console.error(error);
+        console.error(
+
+            "Dashboard Error:",
+
+            error
+
+        );
+
+        alert(
+
+            error.message ||
+
+            "Unable to load dashboard."
+
+        );
 
     }
 
 }
 
-/*=========================================
-        UPDATE DASHBOARD
-=========================================*/
+/*=========================================================
+    Initialise
+=========================================================*/
 
-function updateDashboard(student){
+document.addEventListener(
 
-    setText("welcomeStudentName", student.name);
+    "DOMContentLoaded",
 
-    setText("headerStudentName", student.name);
+    loadDashboard
 
-    setText("studentPlan",student.plan);
+);
 
-    setText("daysLeft", student.trialDays);
+/*=========================================================
+    Render Student Dashboard
+=========================================================*/
 
-    setText("questionsLeft",student.questionsRemaining);
+function renderDashboard() {
 
-    setText("subjectsStarted",student.subjectsStarted);
+    if (!dashboardData) {
 
-    setText("questionsAnswered",student.questionsAnswered);
-
-    setText("successRate",student.successRate);
-
-    setText("dayStreak", student.streak);
-
-}
-
-/*=========================================
-        TRIAL CARD
-=========================================*/
-
-function updateTrialCard(trial) {
-
-    const trialCard = document.querySelector(".trial-card");
-
-    const expiredCard = document.getElementById("trialExpiredCard");
-
-    const planBadge = document.getElementById("studentPlan");
-
-    if (!trialCard || !expiredCard || !planBadge) return;
-
-    if (trial.active) {
-
-        trialCard.style.display = "flex";
-
-        expiredCard.style.display = "none";
-
-        planBadge.textContent = "Free Trial";
+        return;
 
     }
 
-    else if (
+    const {
 
-    localStorage.getItem("subscriptionStatus") === "premium"
+        student,
 
-) {
+        trial,
 
-        trialCard.style.display = "none";
+        progress
 
-        expiredCard.style.display = "none";
+    } = dashboardData;
 
-        planBadge.textContent = "Premium";
+        /*=========================================
+        Student Information
+    =========================================*/
 
-    }
+    if (welcomeStudentName) {
 
-    else {
+        welcomeStudentName.textContent =
 
-        trialCard.style.display = "none";
-
-        expiredCard.style.display = "flex";
-
-        planBadge.textContent = "Trial Expired";
+            student.full_name;
 
     }
 
-}
+    if (headerStudentName) {
 
+        headerStudentName.textContent =
 
-/*=========================================
-        MOTIVATIONAL QUOTE
-=========================================*/
+            student.full_name;
 
-function loadMotivationalQuote(){
+    }
 
-    const quotes=[
+    if (studentPlan) {
 
-        "Success comes from consistent practice, not perfection.",
+        studentPlan.textContent =
 
-        "Small improvements every day lead to remarkable results.",
+            dashboardData.subscription.plan;
 
-        "Every question answered is one step closer to becoming a nurse.",
+    }
 
-        "Believe in yourself. You are preparing to save lives.",
+    /*=========================================
+        Trial Statistics
+    =========================================*/
 
-        "Discipline beats motivation. Keep practicing.",
+    if (daysLeft) {
 
-        "Confidence grows with every practice session.",
+        daysLeft.textContent =
 
-        "Today's effort becomes tomorrow's success.",
+            trial.days_left;
 
-        "One question at a time. One dream at a time."
+    }
 
-    ];
+    if (questionsLeft) {
 
-    const quote=document.querySelector(".dashboard-panel blockquote");
+        questionsLeft.textContent =
 
-    if(!quote) return;
+            trial.questions_remaining;
 
-    const random=Math.floor(Math.random()*quotes.length);
+    }
 
-    quote.textContent=quotes[random];
+    /*=========================================
+        Learning Progress
+    =========================================*/
 
-}
+    if (subjectsStarted) {
 
+        subjectsStarted.textContent =
 
-/*=========================================
-        HELPER
-=========================================*/
+            progress.subjects_started;
 
-function setText(id,value){
+    }
 
-    const element=document.getElementById(id);
+    if (questionsAnswered) {
 
-    if(element){
+        questionsAnswered.textContent =
 
-        element.textContent=value;
+            progress.questions_answered;
+
+    }
+
+    if (successRate) {
+
+        successRate.textContent =
+
+            `${progress.success_rate}%`;
 
     }
 
 }
 
-/*=========================================
-        SIDEBAR TOGGLE
-=========================================*/
+/*=========================================================
+    Render Recent Activity
+=========================================================*/
 
-document.addEventListener("DOMContentLoaded", () => {
+function renderRecentActivity() {
 
-    const menuToggle = document.getElementById("menuToggle");
+    if (!recentActivity) {
 
-    const sidebar = document.getElementById("studentSidebar");
-
-    const content = document.querySelector(".dashboard-content");
-
-    if(menuToggle && sidebar && content){
-
-        menuToggle.addEventListener("click", () => {
-
-            sidebar.classList.toggle("collapsed");
-
-            content.classList.toggle("expanded");
-
-        });
+        return;
 
     }
 
-});
+    recentActivity.innerHTML = "";
+
+    if (
+
+        !dashboardData.recent_activity ||
+
+        dashboardData.recent_activity.length === 0
+
+    ) {
+
+        recentActivity.innerHTML = `
+
+            <div class="empty-state">
+
+                <i class="fas fa-clock"></i>
+
+                <h3>No Activity Yet</h3>
+
+                <p>
+
+                    Your practice history will appear here
+                    after completing questions.
+
+                </p>
+
+            </div>
+
+        `;
+
+        return;
+
+    }
+
+    dashboardData.recent_activity.forEach(activity => {
+
+        recentActivity.insertAdjacentHTML(
+
+            "beforeend",
+
+            `
+
+            <div class="activity-item">
+
+                <div class="activity-details">
+
+                    <h4>${activity.subject}</h4>
+
+                    <p>
+
+                        ${activity.questions_used}
+                        Question(s)
+
+                    </p>
+
+                </div>
+
+                <div class="activity-score">
+
+                    <span class="correct">
+
+                        ✔ ${activity.correct_answers}
+
+                    </span>
+
+                    <span class="wrong">
+
+                        ✖ ${activity.wrong_answers}
+
+                    </span>
+
+                </div>
+
+            </div>
+
+            `
+
+        );
+
+    });
+
+}
+
+/*=========================================================
+    Trial Status
+=========================================================*/
+
+function renderTrialStatus() {
+
+    if (!dashboardData) {
+
+        return;
+
+    }
+
+    const {
+
+        trial
+
+    } = dashboardData;
+
+    if (
+
+        trial.upgrade_required
+
+    ) {
+
+        alert(
+
+            "Your free trial has ended. Upgrade your subscription to continue practising."
+
+        );
+
+    }
+
+}

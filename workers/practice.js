@@ -1,79 +1,236 @@
+/*
+========================================================
+    NurseSphere Student Practice Worker
+    File: workers/practice.js
+========================================================*/
+
 export default async function practiceHandler(request, env) {
 
     try {
 
         const url = new URL(request.url);
 
-        // =====================================
-// GET STUDY RESOURCES
-// GET /api/subjects/:subjectId/resources
-// =====================================
+        const method = request.method;
 
-if (
-    request.method === "GET" &&
-    url.pathname.startsWith("/api/subjects/") &&
-    url.pathname.endsWith("/resources")
-) {
+        /*==================================================
+            ROUTE:
+            GET /api/exams
+        ==================================================*/
 
-    const parts = url.pathname.split("/");
-    const subjectId = parts[3];
+        if (
 
-    const subject = await env.DB.prepare(`
-        SELECT
-            id,
-            name,
-            description
-        FROM subjects
-        WHERE id = ?
-        AND status = 'active'
-    `)
-    .bind(subjectId)
-    .first();
+            method === "GET" &&
+            url.pathname === "/api/exams"
 
-    if (!subject) {
+        ) {
 
-        return Response.json({
-            success: false,
-            message: "Subject not found."
-        }, {
-            status: 404
-        });
+            const { results } = await env.DB.prepare(`
 
-    }
+                SELECT
 
-    const { results } = await env.DB.prepare(`
-        SELECT
-            id,
-            title,
-            description,
-            file_url,
-            cover_image,
-            file_type AS type
-        FROM study_resources
-        WHERE subject_id = ?
-        AND status = 'active'
-        ORDER BY created_at DESC
-    `)
-    .bind(subjectId)
-    .all();
+                    id,
+                    name,
+                    description,
+                    image_url,
+                    display_order
 
-    return Response.json({
+                FROM exams
 
-        success: true,
+                WHERE status='active'
 
-        subject,
+                ORDER BY display_order ASC, name ASC
 
-        resources: results
+            `).all();
 
-    });
+            return Response.json({
 
-}
+                success: true,
 
-        // =====================================
-        // GET PRACTICE QUESTIONS
-        // =====================================
+                exams: results
 
-        if (request.method === "GET") {
+            });
+
+        }
+
+        /*==================================================
+            ROUTE:
+            GET /api/subjects
+            ?exam_id=...
+            ?subject_id=...
+        ==================================================*/
+
+        if (
+
+            method === "GET" &&
+            url.pathname === "/api/subjects"
+
+        ) {
+
+            const examId = url.searchParams.get("exam_id");
+
+            const subjectId = url.searchParams.get("subject_id");
+
+            /*
+            ------------------------------------------
+            Load ONE Subject
+            Used by questions.js
+            ------------------------------------------
+            */
+
+            if (subjectId) {
+
+                const subject = await env.DB.prepare(`
+
+                    SELECT
+
+                        id,
+                        exam_id,
+                        name,
+                        description,
+                        image_url
+
+                    FROM subjects
+
+                    WHERE id=?
+                    AND status='active'
+
+                `)
+
+                .bind(subjectId)
+
+                .first();
+
+                if (!subject) {
+
+                    return Response.json({
+
+                        success: false,
+
+                        message: "Subject not found."
+
+                    }, {
+
+                        status: 404
+
+                    });
+
+                }
+
+                return Response.json({
+
+                    success: true,
+
+                    subject
+
+                });
+
+            }
+
+            /*
+            ------------------------------------------
+            Load Subjects for an Exam
+            Used by practice.js
+            ------------------------------------------
+            */
+
+            if (!examId) {
+
+                return Response.json({
+
+                    success: false,
+
+                    message: "Exam ID is required."
+
+                }, {
+
+                    status: 400
+
+                });
+
+            }
+
+            const exam = await env.DB.prepare(`
+
+                SELECT
+
+                    id,
+                    name,
+                    description
+
+                FROM exams
+
+                WHERE id=?
+                AND status='active'
+
+            `)
+
+            .bind(examId)
+
+            .first();
+
+            if (!exam) {
+
+                return Response.json({
+
+                    success: false,
+
+                    message: "Exam not found."
+
+                }, {
+
+                    status: 404
+
+                });
+
+            }
+
+            const { results } = await env.DB.prepare(`
+
+                SELECT
+
+                    id,
+                    exam_id,
+                    name,
+                    description,
+                    image_url,
+                    display_order
+
+                FROM subjects
+
+                WHERE exam_id=?
+                AND status='active'
+
+                ORDER BY display_order ASC, name ASC
+
+            `)
+
+            .bind(examId)
+
+            .all();
+
+            return Response.json({
+
+                success: true,
+
+                exam,
+
+                subjects: results
+
+            });
+
+        }
+
+                /*==================================================
+            ROUTE:
+            GET /api/practice?subject_id=...
+        ==================================================*/
+
+        if (
+
+            method === "GET" &&
+            url.pathname === "/api/practice"
+
+        ) {
 
             const subjectId = url.searchParams.get("subject_id");
 
@@ -93,9 +250,46 @@ if (
 
             }
 
-            const { results } = await env.DB.prepare(
+            const subject = await env.DB.prepare(`
 
-                `SELECT
+                SELECT
+
+                    id,
+                    exam_id,
+                    name,
+                    description
+
+                FROM subjects
+
+                WHERE id=?
+                AND status='active'
+
+            `)
+
+            .bind(subjectId)
+
+            .first();
+
+            if (!subject) {
+
+                return Response.json({
+
+                    success: false,
+
+                    message: "Subject not found."
+
+                }, {
+
+                    status: 404
+
+                });
+
+            }
+
+            const { results } = await env.DB.prepare(`
+
+                SELECT
+
                     id,
                     subject_id,
                     question,
@@ -105,13 +299,17 @@ if (
                     option_c,
                     option_d,
                     correct_answer,
-                    explanation
-                 FROM practice_questions
-                 WHERE subject_id = ?
-                 AND status = 'active'
-                 ORDER BY RANDOM();`
+                    explanation,
+                    difficulty
 
-            )
+                FROM practice_questions
+
+                WHERE subject_id=?
+                AND status='active'
+
+                ORDER BY RANDOM()
+
+            `)
 
             .bind(subjectId)
 
@@ -121,69 +319,92 @@ if (
 
                 success: true,
 
+                subject,
+
+                total_questions: results.length,
+
                 questions: results
 
             });
 
         }
 
-        // =====================================
-        // SUBMIT PRACTICE
-        // =====================================
+        /*==================================================
+            ROUTE:
+            POST /api/practice
+        ==================================================*/
 
-        if (request.method === "POST") {
+        if (
+
+            method === "POST" &&
+            url.pathname === "/api/practice"
+
+        ) {
 
             const body = await request.json();
 
             const {
 
                 student_id,
-
                 subject_id,
-
                 total_questions,
-
                 correct_answers,
-
                 wrong_answers,
-
                 score
 
             } = body;
 
-            await env.DB.prepare(
+            if (
 
-                `INSERT INTO student_progress (
+                !student_id ||
+                !subject_id ||
+                total_questions === undefined ||
+                correct_answers === undefined ||
+                wrong_answers === undefined ||
+                score === undefined
+
+            ) {
+
+                return Response.json({
+
+                    success: false,
+
+                    message: "Missing required fields."
+
+                }, {
+
+                    status: 400
+
+                });
+
+            }
+
+            const now = new Date().toISOString();
+
+            await env.DB.prepare(`
+
+                INSERT INTO student_progress(
 
                     id,
-
                     student_id,
-
                     subject_id,
-
                     total_questions,
-
                     correct_answers,
-
                     wrong_answers,
-
                     score,
-
                     last_attempt,
-
                     created_at,
-
                     updated_at
 
                 )
 
-                VALUES (
+                VALUES(
 
                     ?,?,?,?,?,?,?,?,?,?
 
-                )`
+                )
 
-            )
+            `)
 
             .bind(
 
@@ -201,11 +422,11 @@ if (
 
                 score,
 
-                new Date().toISOString(),
+                now,
 
-                new Date().toISOString(),
+                now,
 
-                new Date().toISOString()
+                now
 
             )
 
@@ -215,21 +436,177 @@ if (
 
                 success: true,
 
-                message: "Practice submitted successfully."
+                message: "Practice results saved successfully."
 
             });
 
         }
 
+                /*==================================================
+            ROUTE:
+            GET /api/subjects/{subjectId}/resources
+        ==================================================*/
+
+        if (
+
+            method === "GET" &&
+            url.pathname.startsWith("/api/subjects/") &&
+            url.pathname.endsWith("/resources")
+
+        ) {
+
+            const parts = url.pathname.split("/");
+
+            const subjectId = parts[3];
+
+            const subject = await env.DB.prepare(`
+
+                SELECT
+
+                    id,
+                    name,
+                    description
+
+                FROM subjects
+
+                WHERE id=?
+                AND status='active'
+
+            `)
+
+            .bind(subjectId)
+
+            .first();
+
+            if (!subject) {
+
+                return Response.json({
+
+                    success: false,
+
+                    message: "Subject not found."
+
+                }, {
+
+                    status: 404
+
+                });
+
+            }
+
+            const { results } = await env.DB.prepare(`
+
+                SELECT
+
+                    id,
+                    title,
+                    description,
+                    file_url,
+                    cover_image,
+                    file_type AS type
+
+                FROM study_resources
+
+                WHERE subject_id=?
+                AND status='active'
+
+                ORDER BY created_at DESC
+
+            `)
+
+            .bind(subjectId)
+
+            .all();
+
+            return Response.json({
+
+                success: true,
+
+                subject,
+
+                resources: results
+
+            });
+
+        }
+
+        /*==================================================
+            ROUTE:
+            GET /api/resources/{resourceId}/download
+        ==================================================*/
+
+        if (
+
+            method === "GET" &&
+            url.pathname.startsWith("/api/resources/") &&
+            url.pathname.endsWith("/download")
+
+        ) {
+
+            const parts = url.pathname.split("/");
+
+            const resourceId = parts[3];
+
+            const resource = await env.DB.prepare(`
+
+                SELECT
+
+                    id,
+                    title,
+                    file_url
+
+                FROM study_resources
+
+                WHERE id=?
+                AND status='active'
+
+            `)
+
+            .bind(resourceId)
+
+            .first();
+
+            if (!resource) {
+
+                return Response.json({
+
+                    success: false,
+
+                    message: "Resource not found."
+
+                }, {
+
+                    status: 404
+
+                });
+
+            }
+
+            return Response.json({
+
+                success: true,
+
+                download_url: resource.file_url,
+
+                title: resource.title
+
+            });
+
+        }
+
+        /*==================================================
+            ENDPOINT NOT FOUND
+        ==================================================*/
+
         return Response.json({
 
             success: false,
 
-            message: "Method Not Allowed."
+            message: "Endpoint not found."
 
         }, {
 
-            status: 405
+            status: 404
 
         });
 
@@ -237,13 +614,23 @@ if (
 
     catch (error) {
 
-        console.error(error);
+        console.error(
+
+            "Practice Worker Error:",
+
+            error
+
+        );
 
         return Response.json({
 
             success: false,
 
-            message: error.message
+            message:
+
+                error.message ||
+
+                "Internal Server Error"
 
         }, {
 

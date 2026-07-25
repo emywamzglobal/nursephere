@@ -1,6 +1,11 @@
 "use strict";
 
 /*=========================================================
+    NurseSphere Subscription Controller
+    File: js/subscription.js
+=========================================================*/
+
+/*=========================================================
     Configuration
 =========================================================*/
 
@@ -11,55 +16,28 @@ const API_BASE = "http://127.0.0.1:8787/api";
 =========================================================*/
 
 const currentPlan = document.getElementById("currentPlan");
-
 const subscriptionStatus = document.getElementById("subscriptionStatus");
-
 const renewalDate = document.getElementById("renewalDate");
-
 const subscriptionStart = document.getElementById("subscriptionStart");
-
 const subscriptionRenewal = document.getElementById("subscriptionRenewal");
-
 const paymentMethod = document.getElementById("paymentMethod");
-
 const lastPayment = document.getElementById("lastPayment");
-
 const renewButton = document.querySelector(".renew-btn");
-
 const upgradeButtons = document.querySelectorAll(".upgrade-btn");
 
 /*=========================================================
     Helpers
 =========================================================*/
 
-function getToken() {
-
-    return localStorage.getItem("token");
-
-}
-
-function getStudentId() {
-
-    return localStorage.getItem("studentId");
-
-}
-
 async function apiRequest(endpoint) {
 
     const response = await fetch(
-
         `${API_BASE}${endpoint}`,
-
         {
-
             headers: {
-
-                Authorization: `Bearer ${getToken()}`
-
+                "Content-Type": "application/json"
             }
-
         }
-
     );
 
     return response.json();
@@ -72,13 +50,11 @@ async function apiRequest(endpoint) {
 
 function verifyLogin() {
 
-    const token = getToken();
+    const token = localStorage.getItem("studentToken");
 
-    const studentId = getStudentId();
+    if (!token) {
 
-    if (!token || !studentId) {
-
-        window.location.href = "../login.html";
+        window.location.replace("../login.html");
 
         return false;
 
@@ -87,7 +63,6 @@ function verifyLogin() {
     return true;
 
 }
-
 /*=========================================================
     Load Subscription
 =========================================================*/
@@ -95,25 +70,21 @@ function verifyLogin() {
 async function loadSubscription() {
 
     if (!verifyLogin()) {
-
         return;
-
     }
 
     try {
 
+        const session = getStudentSession();
+
         const result = await apiRequest(
-
-            `/subscription?studentId=${getStudentId()}`
-
+            `/subscription?studentId=${session.id}`
         );
 
         if (!result.success) {
 
             throw new Error(
-
                 result.message || "Unable to load subscription."
-
             );
 
         }
@@ -124,13 +95,7 @@ async function loadSubscription() {
 
     catch (error) {
 
-        console.error(
-
-            "Subscription Error:",
-
-            error
-
-        );
+        console.error("Subscription Error:", error);
 
     }
 
@@ -140,51 +105,31 @@ async function loadSubscription() {
     Initialize
 =========================================================*/
 
-document.addEventListener(
+document.addEventListener("DOMContentLoaded", async () => {
 
-    "DOMContentLoaded",
+    await loadSubscription();
 
-    async () => {
+    if (renewButton) {
 
-        await loadSubscription();
+        renewButton.addEventListener("click", () => {
 
-        if (renewButton) {
+            window.location.href = "../pricing.html";
 
-            renewButton.addEventListener(
-
-                "click",
-
-                () => {
-
-                    window.location.href = "../subscription-plans.html";
-
-                }
-
-            );
-
-        }
-
-        upgradeButtons.forEach(
-
-            button =>
-
-                button.addEventListener(
-
-                    "click",
-
-                    () => {
-
-                        window.location.href = "../subscription-plans.html";
-
-                    }
-
-                )
-
-        );
+        });
 
     }
 
-);
+    upgradeButtons.forEach(button => {
+
+        button.addEventListener("click", () => {
+
+            window.location.href = "../pricing.html";
+
+        });
+
+    });
+
+});
 
 /*=========================================================
     Populate Subscription
@@ -193,84 +138,50 @@ document.addEventListener(
 function populateSubscription(data) {
 
     const subscription = data.subscription;
-
     const permissions = data.permissions;
 
     currentPlan.textContent = formatPlan(
-
         subscription.subscription_status
-
     );
 
     subscriptionStatus.textContent = formatStatus(
-
         subscription.subscription_status
-
     );
 
     const startDate =
-
         subscription.subscription_started_at ||
-
         subscription.trial_started_at;
 
     const endDate =
-
         subscription.subscription_expires_at ||
-
         subscription.trial_expires_at;
 
-    subscriptionStart.textContent = formatDate(
+    subscriptionStart.textContent = formatDate(startDate);
 
-        startDate
+    renewalDate.textContent = formatDate(endDate);
 
-    );
-
-    renewalDate.textContent = formatDate(
-
-        endDate
-
-    );
-
-    subscriptionRenewal.textContent = formatDate(
-
-        endDate
-
-    );
+    subscriptionRenewal.textContent = formatDate(endDate);
 
     paymentMethod.textContent =
-
         subscription.subscription_status === "trial"
-
             ? "Free Trial"
-
             : "PayPal";
 
-    lastPayment.textContent = formatDate(
-
-        startDate
-
-    );
+    lastPayment.textContent = formatDate(startDate);
 
     if (renewButton) {
 
         renewButton.disabled =
-
             !permissions.subscription.canRenew;
 
     }
 
-    upgradeButtons.forEach(
+    upgradeButtons.forEach(button => {
 
-        button => {
+        button.disabled =
+            !permissions.subscription.canUpgrade;
 
-            button.disabled =
-
-                !permissions.subscription.canUpgrade;
-
-        }
-
-    );
+    });
 
 }
 
@@ -283,23 +194,18 @@ function formatPlan(status) {
     switch (status) {
 
         case "trial":
-
             return "Free Trial";
 
         case "monthly":
-
             return "Monthly Plan";
 
         case "90day":
-
             return "90-Day Plan";
 
         case "yearly":
-
             return "Annual Plan";
 
         default:
-
             return "No Active Plan";
 
     }
@@ -311,19 +217,14 @@ function formatStatus(status) {
     switch (status) {
 
         case "trial":
-
             return "Trial Active";
 
         case "monthly":
-
         case "90day":
-
         case "yearly":
-
             return "Active";
 
         default:
-
             return "Inactive";
 
     }
@@ -339,19 +240,12 @@ function formatDate(date) {
     }
 
     return new Date(date).toLocaleDateString(
-
         "en-US",
-
         {
-
             year: "numeric",
-
             month: "long",
-
             day: "numeric"
-
         }
-
     );
 
 }

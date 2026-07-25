@@ -3,7 +3,7 @@
 // ======================================================
 
 import bcrypt from "bcryptjs";
-
+import jwt from "@tsndr/cloudflare-worker-jwt";
 export default async function loginHandler(request, env) {
 
     try {
@@ -128,29 +128,43 @@ export default async function loginHandler(request, env) {
 
         }
 
-        return Response.json({
+        // Create JWT
+const token = await jwt.sign(
+    {
+        studentId: student.id,
+        email: student.email
+    },
+    env.JWT_SECRET,
+    {
+        expiresIn: "30d"
+    }
+);
 
-            success: true,
+return Response.json({
 
-            message: "Login successful.",
+    success: true,
 
-            student: {
+    message: "Login successful.",
 
-                id: student.id,
+    token,
 
-                studentNumber: student.student_number,
+    student: {
 
-                fullName: student.full_name,
+        id: student.id,
 
-                email: student.email,
+        studentNumber: student.student_number,
 
-                subscriptionStatus: student.subscription_status,
+        fullName: student.full_name,
 
-                trialActive: student.trial_active
+        email: student.email,
 
-            }
+        subscriptionStatus: student.subscription_status,
 
-        });
+        trialActive: student.trial_active
+
+    }
+
+});
 
     }
 
