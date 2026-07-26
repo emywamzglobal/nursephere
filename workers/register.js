@@ -200,8 +200,8 @@ const lastStudent = await env.DB.prepare(
 
     FROM students
 
-    ORDER BY student_number DESC
-
+    ORDER BY rowid DESC
+    
     LIMIT 1
     `
 
@@ -213,19 +213,21 @@ let sequence = 1;
 
 if (lastStudent?.student_number) {
 
-    const lastSequence = parseInt(
+    const match = lastStudent.student_number.match(/(\d+)$/);
 
-        lastStudent.student_number.split("-")[2],
+    const lastSequence = match
 
-        10
+        ? parseInt(match[1], 10)
 
-    );
+        : 0;
 
     sequence = lastSequence + 1;
 
 }
 
-const studentNumber = `NS-${currentYear}-${String(sequence).padStart(6, "0")}`;
+const studentNumber =
+
+    `NS-${currentYear}-${String(sequence).padStart(6, "0")}`;
 
 const trialExpiresAt = new Date(
 
