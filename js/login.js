@@ -100,25 +100,31 @@ loginForm.addEventListener("submit", async function (event) {
 
         setLoading(true);
 
-        const response = await fetch(LoginAPI.login, {
+        const response = await fetch(
 
-            method: "POST",
+    `${API_BASE}/login`,
 
-            headers: {
+    {
 
-                "Content-Type": "application/json"
+        method: "POST",
 
-            },
+        headers: {
 
-            body: JSON.stringify({
+            "Content-Type": "application/json"
 
-                email,
+        },
 
-                password
+        body: JSON.stringify({
 
-            })
+            email,
 
-        });
+            password
+
+        })
+
+    }
+
+);
 
         const result = await response.json();
 
