@@ -9,7 +9,7 @@
 /*========================================================
     API
 ========================================================*/
-
+const API_BASE = "https://nursephere.wamalwaemily.workers.dev";
 const API = {
 
     exams: "/api/exams",

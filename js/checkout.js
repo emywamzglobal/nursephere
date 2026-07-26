@@ -1,103 +1,51 @@
 "use strict";
 
-// =====================================================
-// NurseSphere Checkout
-// checkout.js
-// Bit 1 - Setup & Authentication
-// =====================================================
+/*=========================================================
+    NurseSphere Checkout Controller
 
-const API_BASE = "https://www.nursephere.com/api";
+    Page:
+        checkout.html
+
+    Responsibilities:
+        - Verify student authentication
+        - Load subscription details
+        - Load logged-in student
+        - Initialize PayPal Hosted Fields
+        - Process subscription payment
+=========================================================*/
+
+/*=========================================================
+    API Configuration
+=========================================================*/
+
+const API_BASE =
+    "https://nursephere.wamalwaemily.workers.dev/api";
+
+/*=========================================================
+    Global State
+=========================================================*/
 
 let student = null;
 let selectedPlan = null;
-let paypalHostedFields = null;
+let hostedFieldsInstance = null;
 
-// =====================================================
-// Helpers
-// =====================================================
+/*=========================================================
+    Authentication
+=========================================================*/
 
 function getToken() {
 
-    return localStorage.getItem("token");
+    return localStorage.getItem("studentToken");
 
 }
-
-function getStudentId() {
-
-    return localStorage.getItem("studentId");
-
-}
-
-function getPlanId() {
-
-    const params = new URLSearchParams(window.location.search);
-
-    return params.get("plan");
-
-}
-
-function formatCurrency(amount) {
-
-    return new Intl.NumberFormat("en-US", {
-
-        style: "currency",
-
-        currency: "USD"
-
-    }).format(amount);
-
-}
-
-// =====================================================
-// API Helper
-// =====================================================
-
-async function apiRequest(endpoint, options = {}) {
-
-    const token = getToken();
-
-    const response = await fetch(`${API_BASE}${endpoint}`, {
-
-        ...options,
-
-        headers: {
-
-            "Content-Type": "application/json",
-
-            "Authorization": `Bearer ${token}`,
-
-            ...(options.headers || {})
-
-        }
-
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-
-        throw new Error(data.message || "Request failed.");
-
-    }
-
-    return data;
-
-}
-
-// =====================================================
-// Verify Login
-// =====================================================
 
 function verifyLogin() {
 
     const token = getToken();
-    const studentId = getStudentId();
 
-    if (!token || !studentId) {
+    if (!token) {
 
-        alert("Please log in first.");
-
-        window.location.href = "login.html";
+        window.location.replace("login.html");
 
         return false;
 
@@ -107,170 +55,340 @@ function verifyLogin() {
 
 }
 
-// =====================================================
-// Initialize Checkout
-// =====================================================
+/*=========================================================
+    URL Helpers
+=========================================================*/
 
-document.addEventListener("DOMContentLoaded", () => {
+function getPlanId() {
 
-    if (!verifyLogin()) {
+    return new URLSearchParams(
+
+        window.location.search
+
+    ).get("plan");
+
+}
+
+/*=========================================================
+    Formatting Helpers
+=========================================================*/
+
+function formatCurrency(amount) {
+
+    return new Intl.NumberFormat(
+
+        "en-US",
+
+        {
+
+            style: "currency",
+
+            currency: "USD"
+
+        }
+
+    ).format(Number(amount));
+
+}
+
+/*=========================================================
+    UI Helpers
+=========================================================*/
+
+function showError(message) {
+
+    console.error(message);
+
+    alert(message);
+
+}
+
+function setLoading(isLoading) {
+
+    const button = document.getElementById("payButton");
+
+    if (!button) return;
+
+    button.disabled = isLoading;
+
+    button.innerHTML = isLoading
+
+        ? '<i class="fas fa-spinner fa-spin"></i> Processing Payment...'
+
+        : '<i class="fas fa-lock"></i> Complete Payment';
+
+}
+
+/*=========================================================
+    Secure API Helper
+=========================================================*/
+
+async function apiRequest(endpoint, options = {}) {
+
+    const response = await fetch(
+
+        `${API_BASE}${endpoint}`,
+
+        {
+
+            ...options,
+
+            headers: {
+
+                "Content-Type": "application/json",
+
+                "Authorization": `Bearer ${getToken()}`,
+
+                ...(options.headers || {})
+
+            }
+
+        }
+
+    );
+
+    let data = {};
+
+    try {
+
+        data = await response.json();
+
+    }
+
+    catch {
+
+        data = {};
+
+    }
+
+    if (response.status === 401) {
+
+        localStorage.removeItem("studentToken");
+
+        window.location.replace("login.html");
 
         return;
 
     }
 
-    console.log("Checkout initialized.");
+    if (!response.ok) {
 
-});
+        throw new Error(
 
-// =====================================================
-// Load Selected Subscription Plan
-// =====================================================
+            data.message ||
+
+            "Server request failed."
+
+        );
+
+    }
+
+    return data;
+
+}
+
+/*=========================================================
+    Load Selected Subscription Plan
+=========================================================*/
 
 async function loadSubscriptionPlan() {
 
-    try {
+    const planId = getPlanId();
 
-        const planId = getPlanId();
+    if (!planId) {
 
-        if (!planId) {
+        throw new Error(
 
-            alert("No subscription plan selected.");
-
-            window.location.href = "subscriptions.html";
-
-            return;
-
-        }
-
-        const result = await apiRequest(
-
-            `/subscription-plans/${planId}`
+            "No subscription plan was selected."
 
         );
 
-        if (!result.success) {
+    }
 
-            throw new Error(result.message);
+    const result = await apiRequest(
 
+        `/subscription-plans/${planId}`
+
+    );
+
+    /*
+        Expected backend response
+
+        {
+            success: true,
+            plan: {
+                id,
+                name,
+                description,
+                duration_days,
+                price
+            }
         }
+    */
 
-        selectedPlan = result.plan;
+    if (!result.success || !result.plan) {
 
-        // ---------------------------------
-        // Populate Checkout Summary
-        // ---------------------------------
+        throw new Error(
 
-        const planName = document.getElementById("planName");
-        const planDescription = document.getElementById("planDescription");
-        const planDuration = document.getElementById("planDuration");
-        const planPrice = document.getElementById("planPrice");
+            result.message ||
 
-        if (planName) {
+            "Subscription plan not found."
 
-            planName.textContent = selectedPlan.name;
-
-        }
-
-        if (planDescription) {
-
-            planDescription.textContent =
-                selectedPlan.description || "";
-
-        }
-
-        if (planDuration) {
-
-            planDuration.textContent =
-                `${selectedPlan.duration_days} Days`;
-
-        }
-
-        if (planPrice) {
-
-            planPrice.textContent =
-                formatCurrency(selectedPlan.price);
-
-        }
-
-        console.log("Subscription plan loaded.", selectedPlan);
+        );
 
     }
 
-    catch (error) {
+    selectedPlan = result.plan;
 
-        console.error(error);
-
-        alert(error.message);
-
-        window.location.href = "subscriptions.html";
-
-    }
+    populatePlanSummary();
 
 }
 
-// =====================================================
-// Load Student Details
-// =====================================================
+/*=========================================================
+    Load Logged-in Student
+=========================================================*/
 
 async function loadStudent() {
 
-    try {
+    const result = await apiRequest(
 
-        const result = await apiRequest(
+        "/dashboard"
 
-            `/dashboard?studentId=${getStudentId()}`
+    );
+
+    /*
+        Expected backend response
+
+        {
+            success: true,
+            student: {
+                full_name,
+                email
+            }
+        }
+    */
+
+    if (!result.success || !result.student) {
+
+        throw new Error(
+
+            result.message ||
+
+            "Unable to load student profile."
 
         );
 
-        if (!result.success) {
+    }
 
-            throw new Error(result.message);
+    student = result.student;
 
-        }
+    populateStudentInformation();
 
-        student = result.student;
+}
 
-        // ---------------------------------
-        // Populate Billing Information
-        // ---------------------------------
+/*=========================================================
+    Populate Billing Information
+=========================================================*/
 
-        const fullName = document.getElementById("fullName");
-        const email = document.getElementById("email");
+function populateStudentInformation() {
 
-        if (fullName) {
+    const fullNameInput =
 
-            fullName.value = student.full_name || "";
+        document.getElementById("fullName");
 
-        }
+    const emailInput =
 
-        if (email) {
+        document.getElementById("email");
 
-            email.value = student.email || "";
+    if (fullNameInput) {
 
-        }
+        fullNameInput.value =
 
-        console.log("Student loaded.", student);
+            student.full_name || "";
 
     }
 
-    catch (error) {
+    if (emailInput) {
 
-        console.error(error);
+        emailInput.value =
 
-        alert(error.message);
-
-        window.location.href = "login.html";
+            student.email || "";
 
     }
 
 }
 
-// =====================================================
-// Create PayPal Order
-// =====================================================
+/*=========================================================
+    Populate Order Summary
+=========================================================*/
+
+function populatePlanSummary() {
+
+    const duration =
+
+        `${selectedPlan.duration_days} Days`;
+
+    const price =
+
+        formatCurrency(selectedPlan.price);
+
+    document.getElementById(
+
+        "planName"
+
+    ).textContent =
+
+        selectedPlan.name;
+
+    document.getElementById(
+
+        "planDescription"
+
+    ).textContent =
+
+        selectedPlan.description || "";
+
+    document.getElementById(
+
+        "planDuration"
+
+    ).textContent =
+
+        duration;
+
+    document.getElementById(
+
+        "planPrice"
+
+    ).textContent =
+
+        price;
+
+    document.getElementById(
+
+        "totalPrice"
+
+    ).textContent =
+
+        price;
+
+}
+
+/*=========================================================
+    Create PayPal Order
+=========================================================*/
 
 async function createOrder() {
+
+    if (!selectedPlan) {
+
+        throw new Error(
+
+            "No subscription plan selected."
+
+        );
+
+    }
 
     const result = await apiRequest(
 
@@ -282,8 +400,6 @@ async function createOrder() {
 
             body: JSON.stringify({
 
-                studentId: student.id,
-
                 planId: selectedPlan.id
 
             })
@@ -292,9 +408,24 @@ async function createOrder() {
 
     );
 
-    if (!result.success) {
+    /*
+        Expected Response
 
-        throw new Error(result.message);
+        {
+            success: true,
+            orderId: "PAYPAL_ORDER_ID"
+        }
+    */
+
+    if (!result.success || !result.orderId) {
+
+        throw new Error(
+
+            result.message ||
+
+            "Unable to create PayPal order."
+
+        );
 
     }
 
@@ -302,122 +433,115 @@ async function createOrder() {
 
 }
 
-// =====================================================
-// Initialize PayPal Hosted Fields
-// =====================================================
+/*=========================================================
+    Initialize PayPal Hosted Fields
+=========================================================*/
 
 async function initializeHostedFields() {
 
     if (!window.paypal) {
 
-        throw new Error("PayPal SDK not loaded.");
+        throw new Error(
+
+            "PayPal SDK failed to load."
+
+        );
+
+    }
+
+    if (!paypal.HostedFields) {
+
+        throw new Error(
+
+            "PayPal Hosted Fields unavailable."
+
+        );
 
     }
 
     if (!paypal.HostedFields.isEligible()) {
 
-        throw new Error("Hosted Fields are not eligible on this device.");
+        throw new Error(
+
+            "Card payments are unavailable."
+
+        );
 
     }
 
-    paypalHostedFields = await paypal.HostedFields.render({
+    hostedFieldsInstance =
 
-        createOrder,
+        await paypal.HostedFields.render({
 
-        styles: {
+            createOrder,
 
-            "input": {
+            styles: {
 
-                "font-size": "16px",
-                "font-family": "Arial, sans-serif",
-                "color": "#222"
+                input: {
+
+                    "font-size": "16px",
+
+                    "font-family": "Poppins, sans-serif",
+
+                    color: "#222"
+
+                },
+
+                ":focus": {
+
+                    color: "#000"
+
+                },
+
+                ".invalid": {
+
+                    color: "#dc3545"
+
+                }
 
             },
 
-            ":focus": {
+            fields: {
 
-                "color": "#000"
+                number: {
 
-            },
+                    selector: "#card-number",
 
-            ".invalid": {
+                    placeholder:
 
-                "color": "#dc3545"
+                        "4111 1111 1111 1111"
+
+                },
+
+                expirationDate: {
+
+                    selector:
+
+                        "#expiration-date",
+
+                    placeholder:
+
+                        "MM / YY"
+
+                },
+
+                cvv: {
+
+                    selector: "#cvv",
+
+                    placeholder: "123"
+
+                }
 
             }
 
-        },
-
-        fields: {
-
-            number: {
-
-                selector: "#card-number",
-                placeholder: "4111 1111 1111 1111"
-
-            },
-
-            cvv: {
-
-                selector: "#cvv",
-                placeholder: "123"
-
-            },
-
-            expirationDate: {
-
-                selector: "#expiration-date",
-                placeholder: "MM/YY"
-
-            }
-
-        }
-
-    });
-
-    console.log("PayPal Hosted Fields initialized.");
+        });
 
 }
 
-// =====================================================
-// Create PayPal Order
-// =====================================================
-
-async function createOrder() {
-
-    const result = await apiRequest(
-
-        "/payments/create-order",
-
-        {
-
-            method: "POST",
-
-            body: JSON.stringify({
-
-                studentId: student.id,
-
-                planId: selectedPlan.id
-
-            })
-
-        }
-
-    );
-
-    if (!result.success) {
-
-        throw new Error(result.message);
-
-    }
-
-    return result.orderId;
-
-}
-
-// =====================================================
-// Capture Successful Payment
-// =====================================================
+/*=========================================================
+    Capture PayPal Order
+=========================================================*/
 
 async function captureOrder(orderId) {
 
@@ -439,9 +563,24 @@ async function captureOrder(orderId) {
 
     );
 
+    /*
+        Expected Response
+
+        {
+            success: true,
+            subscription: {...}
+        }
+    */
+
     if (!result.success) {
 
-        throw new Error(result.message);
+        throw new Error(
+
+            result.message ||
+
+            "Payment could not be completed."
+
+        );
 
     }
 
@@ -449,133 +588,55 @@ async function captureOrder(orderId) {
 
 }
 
-// =====================================================
-// Toggle Checkout Button
-// =====================================================
+/*=========================================================
+    Process Payment
+=========================================================*/
 
-function setLoading(isLoading) {
+async function processPayment() {
 
-    const button = document.getElementById("payButton");
+    if (!hostedFieldsInstance) {
 
-    if (!button) {
+        showError(
+
+            "Payment system is not ready."
+
+        );
 
         return;
 
     }
 
-    button.disabled = isLoading;
-
-    button.textContent = isLoading
-
-        ? "Processing Payment..."
-
-        : "Pay Now";
-
-}
-
-// =====================================================
-// Initialize Hosted Fields
-// =====================================================
-
-async function initializeHostedFields() {
-
-    if (!window.paypal) {
-
-        throw new Error("PayPal SDK not loaded.");
-
-    }
-
-    if (!paypal.HostedFields.isEligible()) {
-
-        throw new Error("Hosted Fields are not available.");
-
-    }
-
-    paypalHostedFields = await paypal.HostedFields.render({
-
-        createOrder,
-
-        styles: {
-
-            input: {
-
-                "font-size": "16px",
-                color: "#333",
-                "font-family": "Arial, sans-serif"
-
-            },
-
-            ".invalid": {
-
-                color: "#dc3545"
-
-            },
-
-            ":focus": {
-
-                color: "#000"
-
-            }
-
-        },
-
-        fields: {
-
-            number: {
-
-                selector: "#card-number",
-                placeholder: "4111 1111 1111 1111"
-
-            },
-
-            expirationDate: {
-
-                selector: "#expiration-date",
-                placeholder: "MM / YY"
-
-            },
-
-            cvv: {
-
-                selector: "#cvv",
-                placeholder: "123"
-
-            }
-
-        }
-
-    });
-
-    console.log("Hosted Fields Ready.");
-
-}
-
-// =====================================================
-// Pay Button
-// =====================================================
-
-async function processPayment() {
-
     try {
 
         setLoading(true);
 
-        const submitResult = await paypalHostedFields.submit({
+        const submission =
 
-            cardholderName: student.full_name
+            await hostedFieldsInstance.submit({
 
-        });
+                cardholderName:
 
-        const capture = await captureOrder(
+                    student.full_name
 
-            submitResult.orderId
+            });
+
+        await captureOrder(
+
+            submission.orderId
 
         );
 
-        alert("Payment Successful!");
+        alert(
 
-        window.location.href =
-            `payment-success.html?subscription=${capture.subscriptionId}`;
+            "Subscription activated successfully."
+
+        );
+
+        window.location.replace(
+
+            "student/dashboard.html"
+
+        );
 
     }
 
@@ -583,11 +644,11 @@ async function processPayment() {
 
         console.error(error);
 
-        alert(
+        showError(
 
             error.message ||
 
-            "Payment could not be completed."
+            "Payment failed."
 
         );
 
@@ -601,50 +662,88 @@ async function processPayment() {
 
 }
 
-// =====================================================
-// Event Listeners
-// =====================================================
+/*=========================================================
+    Initialize Checkout Page
+=========================================================*/
 
-document.addEventListener("DOMContentLoaded", async () => {
+async function initializeCheckout() {
 
-    try {
+    if (!verifyLogin()) {
 
-        if (!verifyLogin()) {
+        return;
 
-            return;
+    }
+
+    await loadSubscriptionPlan();
+
+    await loadStudent();
+
+    await initializeHostedFields();
+
+    const payButton =
+
+        document.getElementById(
+
+            "payButton"
+
+        );
+
+    if (!payButton) {
+
+        throw new Error(
+
+            "Pay button not found."
+
+        );
+
+    }
+
+    payButton.addEventListener(
+
+        "click",
+
+        processPayment
+
+    );
+
+    console.log(
+
+        "Checkout initialized successfully."
+
+    );
+
+}
+
+/*=========================================================
+    DOM Ready
+=========================================================*/
+
+document.addEventListener(
+
+    "DOMContentLoaded",
+
+    async () => {
+
+        try {
+
+            await initializeCheckout();
 
         }
 
-        await loadSubscriptionPlan();
+        catch (error) {
 
-        await loadStudent();
+            console.error(error);
 
-        await initializeHostedFields();
+            showError(
 
-        const button = document.getElementById("payButton");
+                error.message ||
 
-        if (button) {
-
-            button.addEventListener(
-
-                "click",
-
-                processPayment
+                "Unable to initialize checkout."
 
             );
 
         }
 
-        console.log("Checkout Ready.");
-
     }
 
-    catch (error) {
-
-        console.error(error);
-
-        alert(error.message);
-
-    }
-
-});
+);

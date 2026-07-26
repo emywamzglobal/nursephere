@@ -10,12 +10,13 @@
 /*========================================================
     API ENDPOINTS
 ========================================================*/
-
+const API_BASE =
+    "https://nursephere.wamalwaemily.workers.dev/api";
 const PracticeAPI = {
 
-    exams: "http://127.0.0.1:8787/api/exams",
+    exams: "https://nursephere.wamalwaemily.workers.dev/api/exams",
 
-    subjects: "http://127.0.0.1:8787/api/subjects"
+    subjects: "https://nursephere.wamalwaemily.workers.dev/api/subjects"
 
 };
 

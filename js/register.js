@@ -8,10 +8,11 @@
 /*==================================================
     Configuration
 ==================================================*/
-
+const API_BASE =
+    "https://nursephere.wamalwaemily.workers.dev/api";
 const RegisterAPI = {
 
-    register: "http://127.0.0.1:8787/api/register"
+    register: "https://nursephere.wamalwaemily.workers.dev/api/register"
 
 };
 

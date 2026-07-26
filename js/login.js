@@ -11,11 +11,8 @@
     Configuration
 =========================================================*/
 
-const LoginAPI = {
-
-    login: "http://127.0.0.1:8787/api/login"
-
-};
+const API_BASE =
+    "https://nursephere.wamalwaemily.workers.dev/api";
 
 /*=========================================================
     DOM Elements

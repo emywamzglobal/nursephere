@@ -11,11 +11,8 @@
     Configuration
 =========================================================*/
 
-const DashboardAPI = {
-
-    dashboard: "http://127.0.0.1:8787/api/dashboard"
-
-};
+const API_BASE =
+    "https://nursephere.wamalwaemily.workers.dev/api";
 
 /*=========================================================
     Student Session

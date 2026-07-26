@@ -1,7 +1,7 @@
 // ======================================================
 // Nursephere Cloudflare Worker
 // Main API Router
-// Domain: https://www.nursephere.com
+// Domain: https://nursephere.wamalwaemily.workers.dev
 // ======================================================
 import registerHandler from "./workers/register.js";
 import loginHandler from "./workers/login.js";

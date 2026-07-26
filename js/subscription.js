@@ -9,7 +9,7 @@
     Configuration
 =========================================================*/
 
-const API_BASE = "http://127.0.0.1:8787/api";
+const API_BASE = "https://nursephere.wamalwaemily.workers.dev/api";
 
 /*=========================================================
     DOM Elements

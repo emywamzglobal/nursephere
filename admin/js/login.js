@@ -13,7 +13,7 @@
 
 const AdminAPI = {
 
-    login: "http://127.0.0.1:8787/api/admin/login"
+    login: "https://nursephere.wamalwaemily.workers.dev/api/admin/login"
 
 };
 

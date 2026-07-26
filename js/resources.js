@@ -10,12 +10,13 @@
 /*=========================================================
     Configuration
 =========================================================*/
-
+const API_BASE =
+    "https://nursephere.wamalwaemily.workers.dev/api";
 const ResourceAPI = {
 
-    subjects: "http://127.0.0.1:8787/api/subjects",
+    subjects: "https://nursephere.wamalwaemily.workers.dev/api/subjects",
 
-    resources: "http://127.0.0.1:8787/api/resources"
+    resources: "https://nursephere.wamalwaemily.workers.dev/api/resources"
 
 };
 
