@@ -13,7 +13,7 @@
 
 const API = {
 
-    BASE_URL: "http://127.0.0.1:8787",
+    BASE_URL: "https://nursephere.wamalwaemily.workers.dev/api",
 
     ADMIN: "/api/admin",
 
