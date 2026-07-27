@@ -1,55 +1,79 @@
 /*=========================================
-    NURSEPHERE NAVBAR
+    NURSEPHERE NAVBAR & FAQ
 =========================================*/
 
 document.addEventListener("DOMContentLoaded", () => {
+
+    /*=========================
+            NAVBAR
+    =========================*/
 
     const dropdownBtn = document.querySelector(".dropdown-btn");
     const dropdownMenu = document.querySelector(".dropdown-menu");
     const arrow = document.querySelector(".arrow");
 
-    dropdownBtn.addEventListener("click", (e) => {
+    if (dropdownBtn && dropdownMenu && arrow) {
 
-        e.stopPropagation();
+        dropdownBtn.addEventListener("click", (e) => {
 
-        dropdownMenu.classList.toggle("show");
-        arrow.classList.toggle("rotate");
+            e.stopPropagation();
 
-    });
+            dropdownMenu.classList.toggle("show");
+            arrow.classList.toggle("rotate");
 
-    document.addEventListener("click", () => {
+        });
 
-        dropdownMenu.classList.remove("show");
-        arrow.classList.remove("rotate");
+        document.addEventListener("click", () => {
 
-    });
+            dropdownMenu.classList.remove("show");
+            arrow.classList.remove("rotate");
 
-    dropdownMenu.addEventListener("click", (e) => {
+        });
 
-        e.stopPropagation();
+        dropdownMenu.addEventListener("click", (e) => {
 
-    });
+            e.stopPropagation();
 
-});
+        });
 
-const faqButtons = document.querySelectorAll(".faq-question");
+    }
 
-faqButtons.forEach(button => {
 
-    button.addEventListener("click", () => {
+    /*=========================
+                FAQ
+    =========================*/
 
-        const answer = button.nextElementSibling;
+    const faqButtons = document.querySelectorAll(".faq-question");
 
-        button.classList.toggle("active");
+    if (faqButtons.length) {
 
-        if (answer.style.maxHeight) {
-            answer.style.maxHeight = null;
-            button.querySelector("span").textContent = "+";
-        } else {
-            answer.style.maxHeight = answer.scrollHeight + "px";
-            button.querySelector("span").textContent = "−";
-        }
+        faqButtons.forEach(button => {
 
-    });
+            button.addEventListener("click", () => {
+
+                const answer = button.nextElementSibling;
+
+                button.classList.toggle("active");
+
+                if (answer.style.maxHeight) {
+
+                    answer.style.maxHeight = null;
+
+                    button.querySelector("span").textContent = "+";
+
+                } else {
+
+                    answer.style.maxHeight =
+                        answer.scrollHeight + "px";
+
+                    button.querySelector("span").textContent = "−";
+
+                }
+
+            });
+
+        });
+
+    }
 
 });
