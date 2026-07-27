@@ -7,7 +7,6 @@
 // ======================================================
 
 import bcrypt from "bcryptjs";
-import { createNotification } from "../services/notifications.js";
 export default async function registerHandler(request, env) {
 
     try {

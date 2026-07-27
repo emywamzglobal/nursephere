@@ -1,6 +1,6 @@
 /*
 =========================================================
-    Nursephere Student Dashboard Controller
+    NurseSphere Student Dashboard Controller
     File: js/dashboard-student.js
 =========================================================
 */
@@ -8,7 +8,7 @@
 "use strict";
 
 /*=========================================================
-    Configuration
+    API Configuration
 =========================================================*/
 
 const API_BASE =
@@ -18,7 +18,14 @@ const API_BASE =
     Student Session
 =========================================================*/
 
-const studentToken = localStorage.getItem("studentToken");
+const studentToken =
+    localStorage.getItem("studentToken");
+
+/*=========================================================
+    Dashboard Data
+=========================================================*/
+
+let dashboardData = null;
 
 /*=========================================================
     DOM Elements
@@ -51,23 +58,34 @@ const successRate =
 const recentActivity =
     document.getElementById("recentActivity");
 
-/*=========================================================
-    Dashboard Data
-=========================================================*/
+const trialCard =
+    document.getElementById("trialCard");
 
-let dashboardData = null;
+const trialExpiredCard =
+    document.getElementById("trialExpiredCard");
+
+const sidebarLogoutBtn =
+    document.getElementById("sidebarLogoutBtn");
+
+const profileLogoutBtn =
+    document.getElementById("profileLogoutBtn");
 
 /*=========================================================
-    Authentication
+    Session Management
 =========================================================*/
 
 function clearStudentSession() {
 
     localStorage.removeItem("studentToken");
+
     localStorage.removeItem("studentId");
+
     localStorage.removeItem("studentName");
+
     localStorage.removeItem("studentEmail");
+
     localStorage.removeItem("subscriptionStatus");
+
     localStorage.removeItem("trialActive");
 
 }
@@ -76,7 +94,8 @@ function redirectToLogin() {
 
     clearStudentSession();
 
-    window.location.replace("../login.html");
+    window.location.href =
+        "../login.html";
 
 }
 
@@ -91,6 +110,45 @@ function requireAuthentication() {
     }
 
     return true;
+
+}
+
+/*=========================================================
+    Logout
+=========================================================*/
+
+function logoutStudent(event) {
+
+    event.preventDefault();
+
+    clearStudentSession();
+
+    window.location.href =
+        "../index.html";
+
+}
+
+if (sidebarLogoutBtn) {
+
+    sidebarLogoutBtn.addEventListener(
+
+        "click",
+
+        logoutStudent
+
+    );
+
+}
+
+if (profileLogoutBtn) {
+
+    profileLogoutBtn.addEventListener(
+
+        "click",
+
+        logoutStudent
+
+    );
 
 }
 
@@ -110,7 +168,7 @@ async function loadDashboard() {
 
         const response = await fetch(
 
-            DashboardAPI.dashboard,
+            `${API_BASE}/dashboard`,
 
             {
 
@@ -138,7 +196,8 @@ async function loadDashboard() {
 
         }
 
-        const result = await response.json();
+        const result =
+            await response.json();
 
         if (!response.ok) {
 
@@ -156,9 +215,9 @@ async function loadDashboard() {
 
         renderDashboard();
 
-        renderRecentActivity();
-
         renderTrialStatus();
+
+        renderRecentActivity();
 
     }
 
@@ -185,19 +244,7 @@ async function loadDashboard() {
 }
 
 /*=========================================================
-    Initialise
-=========================================================*/
-
-document.addEventListener(
-
-    "DOMContentLoaded",
-
-    loadDashboard
-
-);
-
-/*=========================================================
-    Render Student Dashboard
+    Render Dashboard
 =========================================================*/
 
 function renderDashboard() {
@@ -214,18 +261,19 @@ function renderDashboard() {
 
         trial,
 
-        progress
+        progress,
+
+        subscription
 
     } = dashboardData;
 
-        /*=========================================
+    /*=========================================
         Student Information
     =========================================*/
 
     if (welcomeStudentName) {
 
         welcomeStudentName.textContent =
-
             student.full_name;
 
     }
@@ -233,7 +281,6 @@ function renderDashboard() {
     if (headerStudentName) {
 
         headerStudentName.textContent =
-
             student.full_name;
 
     }
@@ -241,19 +288,17 @@ function renderDashboard() {
     if (studentPlan) {
 
         studentPlan.textContent =
-
-            dashboardData.subscription.plan;
+            subscription.plan;
 
     }
 
     /*=========================================
-        Trial Statistics
+        Trial Information
     =========================================*/
 
     if (daysLeft) {
 
         daysLeft.textContent =
-
             trial.days_left;
 
     }
@@ -261,7 +306,6 @@ function renderDashboard() {
     if (questionsLeft) {
 
         questionsLeft.textContent =
-
             trial.questions_remaining;
 
     }
@@ -273,7 +317,6 @@ function renderDashboard() {
     if (subjectsStarted) {
 
         subjectsStarted.textContent =
-
             progress.subjects_started;
 
     }
@@ -281,7 +324,6 @@ function renderDashboard() {
     if (questionsAnswered) {
 
         questionsAnswered.textContent =
-
             progress.questions_answered;
 
     }
@@ -289,7 +331,6 @@ function renderDashboard() {
     if (successRate) {
 
         successRate.textContent =
-
             `${progress.success_rate}%`;
 
     }
@@ -297,7 +338,63 @@ function renderDashboard() {
 }
 
 /*=========================================================
-    Render Recent Activity
+    Trial Status
+=========================================================*/
+
+function renderTrialStatus() {
+
+    if (!dashboardData) {
+
+        return;
+
+    }
+
+    const {
+
+        trial
+
+    } = dashboardData;
+
+    if (trial.upgrade_required) {
+
+        if (trialCard) {
+
+            trialCard.style.display =
+                "none";
+
+        }
+
+        if (trialExpiredCard) {
+
+            trialExpiredCard.style.display =
+                "flex";
+
+        }
+
+    }
+
+    else {
+
+        if (trialCard) {
+
+            trialCard.style.display =
+                "flex";
+
+        }
+
+        if (trialExpiredCard) {
+
+            trialExpiredCard.style.display =
+                "none";
+
+        }
+
+    }
+
+}
+
+/*=========================================================
+    Recent Activity
 =========================================================*/
 
 function renderRecentActivity() {
@@ -322,16 +419,24 @@ function renderRecentActivity() {
 
             <div class="empty-state">
 
-                <i class="fas fa-clock"></i>
+                <i class="fas fa-clock-rotate-left"></i>
 
                 <h3>No Activity Yet</h3>
 
                 <p>
 
-                    Your practice history will appear here
-                    after completing questions.
+                    Your completed practice
+                    sessions will appear here.
 
                 </p>
+
+                <a
+                    href="practice.html"
+                    class="secondary-btn">
+
+                    Start Practicing
+
+                </a>
 
             </div>
 
@@ -341,85 +446,77 @@ function renderRecentActivity() {
 
     }
 
-    dashboardData.recent_activity.forEach(activity => {
+    dashboardData.recent_activity.forEach(
 
-        recentActivity.insertAdjacentHTML(
+        activity => {
 
-            "beforeend",
+            recentActivity.insertAdjacentHTML(
 
-            `
+                "beforeend",
 
-            <div class="activity-item">
+                `
 
-                <div class="activity-details">
+                <div class="activity-item">
 
-                    <h4>${activity.subject}</h4>
+                    <div
+                        class="activity-details">
 
-                    <p>
+                        <h4>
 
-                        ${activity.questions_used}
-                        Question(s)
+                            ${activity.subject}
 
-                    </p>
+                        </h4>
+
+                        <p>
+
+                            ${activity.questions_used}
+                            Question(s)
+
+                        </p>
+
+                    </div>
+
+                    <div
+                        class="activity-score">
+
+                        <span class="correct">
+
+                            ✔ ${activity.correct_answers}
+
+                        </span>
+
+                        <span class="wrong">
+
+                            ✖ ${activity.wrong_answers}
+
+                        </span>
+
+                    </div>
 
                 </div>
 
-                <div class="activity-score">
+                `
 
-                    <span class="correct">
+            );
 
-                        ✔ ${activity.correct_answers}
+        }
 
-                    </span>
-
-                    <span class="wrong">
-
-                        ✖ ${activity.wrong_answers}
-
-                    </span>
-
-                </div>
-
-            </div>
-
-            `
-
-        );
-
-    });
+    );
 
 }
 
 /*=========================================================
-    Trial Status
+    Initialise Dashboard
 =========================================================*/
 
-function renderTrialStatus() {
+document.addEventListener(
 
-    if (!dashboardData) {
+    "DOMContentLoaded",
 
-        return;
+    () => {
 
-    }
-
-    const {
-
-        trial
-
-    } = dashboardData;
-
-    if (
-
-        trial.upgrade_required
-
-    ) {
-
-        alert(
-
-            "Your free trial has ended. Upgrade your subscription to continue practising."
-
-        );
+        loadDashboard();
 
     }
 
-}
+);
