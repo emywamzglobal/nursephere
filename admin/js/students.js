@@ -56,7 +56,7 @@ async function loadStudents() {
 
     try {
 
-        const result = await API.get(API.ADMIN + "/students");
+        const result = await API.get("/admin/students");
 
         if (!result.success) {
 
@@ -182,7 +182,7 @@ window.viewStudent = async function (studentId) {
 
         const result = await API.get(
 
-            API.ADMIN + "/students/" + studentId
+            "/admin/students/" + studentId
 
         );
 
