@@ -13,11 +13,7 @@
 
 const API = {
 
-    BASE_URL: "https://nursephere.wamalwaemily.workers.dev/api",
-
-    ADMIN: "/api/admin",
-
-    STUDENT: "/api"
+    BASE_URL: "https://nursephere.wamalwaemily.workers.dev/api"
 
 };
 
@@ -89,7 +85,7 @@ async function request(endpoint, options = {}) {
 
         const response = await fetch(
 
-            API.BASE_URL + endpoint,
+            `${API.BASE_URL}${endpoint}`,
 
             {
 
@@ -269,7 +265,7 @@ API.upload = async function (
 
     const response = await fetch(
 
-        API.BASE_URL + endpoint,
+        `${API.BASE_URL}${endpoint}`,
 
         {
 

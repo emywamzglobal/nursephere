@@ -10,11 +10,7 @@
 ==================================================*/
 const API_BASE =
     "https://nursephere.wamalwaemily.workers.dev/api";
-const RegisterAPI = {
 
-    register: "https://nursephere.wamalwaemily.workers.dev/api/register"
-
-};
 
 /*==================================================
     DOM Elements
@@ -220,7 +216,7 @@ form.addEventListener("submit", async function (event) {
 
         setLoading(true);
 
-        const response = await fetch(RegisterAPI.register, {
+        const response = await fetch(`${API_BASE}/register`, {
 
             method: "POST",
 

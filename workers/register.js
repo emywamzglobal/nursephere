@@ -349,18 +349,6 @@ await env.DB.prepare(
 
 .run();
 
-await createNotification(env, {
-
-    studentId,
-
-    title: "Welcome to Nursephere!",
-
-    message: "Your FREE 3-day trial has started. You can now practice up to 30 questions.",
-
-    type: "welcome"
-
-});
-
 // ======================================================
 // Registration Successful
 // ======================================================

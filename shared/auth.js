@@ -163,38 +163,6 @@ Auth.requireAdmin = function () {
 
 };
 
-Auth.requireStudent = function () {
-
-    Auth.requireRole([
-
-        "student"
-
-    ]);
-
-};
-
-/*=========================================================
-    Require Student
-=========================================================*/
-
-Auth.requireStudent = function () {
-
-    Auth.requireLogin();
-
-    const role = localStorage.getItem(
-
-        Auth.KEYS.USER_ROLE
-
-    );
-
-    if (role !== "student") {
-
-        window.location.href = "../admin/login.html";
-
-    }
-
-};
-
 /*=========================================================
     Logout
 =========================================================*/
