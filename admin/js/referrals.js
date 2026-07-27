@@ -98,7 +98,7 @@ async function loadReferrals() {
 
             await API.get(
 
-                "/api/admin/referrals"
+                "/admin/referrals"
 
             );
 
@@ -284,7 +284,7 @@ async function viewReferral(referralId) {
 
         const response = await API.get(
 
-            `/api/admin/referrals/${referralId}`
+            `/admin/referrals/${referralId}`
 
         );
 

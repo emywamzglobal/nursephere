@@ -32,7 +32,7 @@ async function loadDashboard() {
 
         const response = await API.get(
 
-            API.ADMIN + "/dashboard"
+           "/admin/dashboard"
 
         );
 

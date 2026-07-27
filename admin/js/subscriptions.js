@@ -82,7 +82,7 @@ async function loadSubscriptions() {
     try {
 
         const response =
-            await API.get("/api/admin/subscriptions");
+            await API.get("/admin/subscriptions");
 
         if (!response.success) {
 
@@ -234,7 +234,7 @@ async function viewSubscription(subscriptionId) {
     try {
 
         const response = await API.get(
-            `/api/admin/subscriptions/${subscriptionId}`
+            `/admin/subscriptions/${subscriptionId}`
         );
 
         if (!response.success) {
