@@ -6,13 +6,18 @@
     Page:
         checkout.html
 
-    Responsibilities:
-        - Verify student authentication
-        - Load subscription details
-        - Load logged-in student
-        - Initialize PayPal Hosted Fields
-        - Process subscription payment
+    Responsibilities
+
+        • Verify authentication
+        • Load logged-in student
+        • Load selected subscription plan
+        • Populate checkout page
+        • Initialize PayPal Hosted Fields
+        • Create PayPal order
+        • Capture PayPal payment
+        • Activate subscription
 =========================================================*/
+
 
 /*=========================================================
     API Configuration
@@ -21,13 +26,46 @@
 const API_BASE =
     "https://nursephere.wamalwaemily.workers.dev/api";
 
+
 /*=========================================================
     Global State
 =========================================================*/
 
 let student = null;
+
 let selectedPlan = null;
-let hostedFieldsInstance = null;
+
+let hostedFields = null;
+
+
+/*=========================================================
+    DOM Elements
+=========================================================*/
+
+const fullNameInput =
+    document.getElementById("fullName");
+
+const emailInput =
+    document.getElementById("email");
+
+const planName =
+    document.getElementById("planName");
+
+const planDescription =
+    document.getElementById("planDescription");
+
+const planDuration =
+    document.getElementById("planDuration");
+
+const planPrice =
+    document.getElementById("planPrice");
+
+const totalPrice =
+    document.getElementById("totalPrice");
+
+const payButton =
+    document.getElementById("payButton");
+
 
 /*=========================================================
     Authentication
@@ -35,9 +73,12 @@ let hostedFieldsInstance = null;
 
 function getToken() {
 
-    return localStorage.getItem("studentToken");
+    return localStorage.getItem(
+        "studentToken"
+    );
 
 }
+
 
 function verifyLogin() {
 
@@ -45,7 +86,9 @@ function verifyLogin() {
 
     if (!token) {
 
-        window.location.replace("login.html");
+        window.location.replace(
+            "login.html"
+        );
 
         return false;
 
@@ -55,19 +98,23 @@ function verifyLogin() {
 
 }
 
+
 /*=========================================================
     URL Helpers
 =========================================================*/
 
 function getPlanId() {
 
-    return new URLSearchParams(
+    const params = new URLSearchParams(
 
         window.location.search
 
-    ).get("plan");
+    );
+
+    return params.get("plan");
 
 }
+
 
 /*=========================================================
     Formatting Helpers
@@ -87,9 +134,14 @@ function formatCurrency(amount) {
 
         }
 
-    ).format(Number(amount));
+    ).format(
+
+        Number(amount)
+
+    );
 
 }
+
 
 /*=========================================================
     UI Helpers
@@ -103,27 +155,45 @@ function showError(message) {
 
 }
 
-function setLoading(isLoading) {
 
-    const button = document.getElementById("payButton");
+function setButtonLoading(isLoading) {
 
-    if (!button) return;
+    if (!payButton) return;
 
-    button.disabled = isLoading;
+    payButton.disabled = isLoading;
 
-    button.innerHTML = isLoading
+    if (isLoading) {
 
-        ? '<i class="fas fa-spinner fa-spin"></i> Processing Payment...'
+        payButton.innerHTML =
 
-        : '<i class="fas fa-lock"></i> Complete Payment';
+            `<i class="fas fa-spinner fa-spin"></i>
+             Processing Payment...`;
+
+    }
+
+    else {
+
+        payButton.innerHTML =
+
+            `<i class="fas fa-lock"></i>
+             Complete Secure Payment`;
+
+    }
 
 }
 
+
 /*=========================================================
-    Secure API Helper
+    Secure API Request
 =========================================================*/
 
-async function apiRequest(endpoint, options = {}) {
+async function apiRequest(
+
+    endpoint,
+
+    options = {}
+
+) {
 
     const response = await fetch(
 
@@ -135,9 +205,13 @@ async function apiRequest(endpoint, options = {}) {
 
             headers: {
 
-                "Content-Type": "application/json",
+                "Content-Type":
 
-                "Authorization": `Bearer ${getToken()}`,
+                    "application/json",
+
+                Authorization:
+
+                    `Bearer ${getToken()}`,
 
                 ...(options.headers || {})
 
@@ -163,9 +237,17 @@ async function apiRequest(endpoint, options = {}) {
 
     if (response.status === 401) {
 
-        localStorage.removeItem("studentToken");
+        localStorage.removeItem(
 
-        window.location.replace("login.html");
+            "studentToken"
+
+        );
+
+        window.location.replace(
+
+            "login.html"
+
+        );
 
         return;
 
@@ -188,7 +270,44 @@ async function apiRequest(endpoint, options = {}) {
 }
 
 /*=========================================================
-    Load Selected Subscription Plan
+    Load Logged-in Student
+=========================================================*/
+
+async function loadStudent() {
+
+    const result = await apiRequest(
+
+        "/dashboard"
+
+    );
+
+    if (
+
+        !result.success ||
+
+        !result.student
+
+    ) {
+
+        throw new Error(
+
+            result.message ||
+
+            "Unable to load your account."
+
+        );
+
+    }
+
+    student = result.student;
+
+    populateStudentInformation();
+
+}
+
+
+/*=========================================================
+    Load Subscription Plan
 =========================================================*/
 
 async function loadSubscriptionPlan() {
@@ -211,22 +330,13 @@ async function loadSubscriptionPlan() {
 
     );
 
-    /*
-        Expected backend response
+    if (
 
-        {
-            success: true,
-            plan: {
-                id,
-                name,
-                description,
-                duration_days,
-                price
-            }
-        }
-    */
+        !result.success ||
 
-    if (!result.success || !result.plan) {
+        !result.plan
+
+    ) {
 
         throw new Error(
 
@@ -244,47 +354,6 @@ async function loadSubscriptionPlan() {
 
 }
 
-/*=========================================================
-    Load Logged-in Student
-=========================================================*/
-
-async function loadStudent() {
-
-    const result = await apiRequest(
-
-        "/dashboard"
-
-    );
-
-    /*
-        Expected backend response
-
-        {
-            success: true,
-            student: {
-                full_name,
-                email
-            }
-        }
-    */
-
-    if (!result.success || !result.student) {
-
-        throw new Error(
-
-            result.message ||
-
-            "Unable to load student profile."
-
-        );
-
-    }
-
-    student = result.student;
-
-    populateStudentInformation();
-
-}
 
 /*=========================================================
     Populate Billing Information
@@ -292,31 +361,18 @@ async function loadStudent() {
 
 function populateStudentInformation() {
 
-    const fullNameInput =
+    if (!student) return;
 
-        document.getElementById("fullName");
+    fullNameInput.value =
 
-    const emailInput =
+        student.full_name || "";
 
-        document.getElementById("email");
+    emailInput.value =
 
-    if (fullNameInput) {
-
-        fullNameInput.value =
-
-            student.full_name || "";
-
-    }
-
-    if (emailInput) {
-
-        emailInput.value =
-
-            student.email || "";
-
-    }
+        student.email || "";
 
 }
+
 
 /*=========================================================
     Populate Order Summary
@@ -324,53 +380,87 @@ function populateStudentInformation() {
 
 function populatePlanSummary() {
 
-    const duration =
+    if (!selectedPlan) return;
 
-        `${selectedPlan.duration_days} Days`;
-
-    const price =
-
-        formatCurrency(selectedPlan.price);
-
-    document.getElementById(
-
-        "planName"
-
-    ).textContent =
+    planName.textContent =
 
         selectedPlan.name;
 
-    document.getElementById(
-
-        "planDescription"
-
-    ).textContent =
+    planDescription.textContent =
 
         selectedPlan.description || "";
 
-    document.getElementById(
+    let durationText = "";
 
-        "planDuration"
+    switch (
 
-    ).textContent =
+        Number(
 
-        duration;
+            selectedPlan.duration_days
 
-    document.getElementById(
+        )
 
-        "planPrice"
+    ) {
 
-    ).textContent =
+        case 30:
 
-        price;
+            durationText =
 
-    document.getElementById(
+                "30 Days";
 
-        "totalPrice"
+            break;
 
-    ).textContent =
+        case 90:
 
-        price;
+            durationText =
+
+                "90 Days";
+
+            break;
+
+        case 180:
+
+            durationText =
+
+                "180 Days";
+
+            break;
+
+        case 365:
+
+            durationText =
+
+                "365 Days";
+
+            break;
+
+        default:
+
+            durationText =
+
+                `${selectedPlan.duration_days} Days`;
+
+    }
+
+    planDuration.textContent =
+
+        durationText;
+
+    const formattedPrice =
+
+        formatCurrency(
+
+            selectedPlan.price
+
+        );
+
+    planPrice.textContent =
+
+        formattedPrice;
+
+    totalPrice.textContent =
+
+        formattedPrice;
 
 }
 
@@ -408,22 +498,19 @@ async function createOrder() {
 
     );
 
-    /*
-        Expected Response
+    if (
 
-        {
-            success: true,
-            orderId: "PAYPAL_ORDER_ID"
-        }
-    */
+        !result.success ||
 
-    if (!result.success || !result.orderId) {
+        !result.orderId
+
+    ) {
 
         throw new Error(
 
             result.message ||
 
-            "Unable to create PayPal order."
+            "Unable to create payment order."
 
         );
 
@@ -432,6 +519,7 @@ async function createOrder() {
     return result.orderId;
 
 }
+
 
 /*=========================================================
     Initialize PayPal Hosted Fields
@@ -453,7 +541,7 @@ async function initializeHostedFields() {
 
         throw new Error(
 
-            "PayPal Hosted Fields unavailable."
+            "Hosted Fields unavailable."
 
         );
 
@@ -469,7 +557,7 @@ async function initializeHostedFields() {
 
     }
 
-    hostedFieldsInstance =
+    hostedFields =
 
         await paypal.HostedFields.render({
 
@@ -481,7 +569,9 @@ async function initializeHostedFields() {
 
                     "font-size": "16px",
 
-                    "font-family": "Poppins, sans-serif",
+                    "font-family":
+
+                        "Poppins, sans-serif",
 
                     color: "#222"
 
@@ -505,7 +595,9 @@ async function initializeHostedFields() {
 
                 number: {
 
-                    selector: "#card-number",
+                    selector:
+
+                        "#card-number",
 
                     placeholder:
 
@@ -527,9 +619,13 @@ async function initializeHostedFields() {
 
                 cvv: {
 
-                    selector: "#cvv",
+                    selector:
 
-                    placeholder: "123"
+                        "#cvv",
+
+                    placeholder:
+
+                        "123"
 
                 }
 
@@ -538,6 +634,7 @@ async function initializeHostedFields() {
         });
 
 }
+
 
 /*=========================================================
     Capture PayPal Order
@@ -563,15 +660,6 @@ async function captureOrder(orderId) {
 
     );
 
-    /*
-        Expected Response
-
-        {
-            success: true,
-            subscription: {...}
-        }
-    */
-
     if (!result.success) {
 
         throw new Error(
@@ -588,13 +676,14 @@ async function captureOrder(orderId) {
 
 }
 
+
 /*=========================================================
     Process Payment
 =========================================================*/
 
 async function processPayment() {
 
-    if (!hostedFieldsInstance) {
+    if (!hostedFields) {
 
         showError(
 
@@ -608,11 +697,11 @@ async function processPayment() {
 
     try {
 
-        setLoading(true);
+        setButtonLoading(true);
 
         const submission =
 
-            await hostedFieldsInstance.submit({
+            await hostedFields.submit({
 
                 cardholderName:
 
@@ -656,47 +745,34 @@ async function processPayment() {
 
     finally {
 
-        setLoading(false);
+        setButtonLoading(false);
 
     }
 
 }
 
+
 /*=========================================================
-    Initialize Checkout Page
+    Initialize Checkout
 =========================================================*/
 
 async function initializeCheckout() {
 
-    if (!verifyLogin()) {
+    if (
+
+        !verifyLogin()
+
+    ) {
 
         return;
 
     }
 
-    await loadSubscriptionPlan();
-
     await loadStudent();
 
+    await loadSubscriptionPlan();
+
     await initializeHostedFields();
-
-    const payButton =
-
-        document.getElementById(
-
-            "payButton"
-
-        );
-
-    if (!payButton) {
-
-        throw new Error(
-
-            "Pay button not found."
-
-        );
-
-    }
 
     payButton.addEventListener(
 
@@ -708,11 +784,12 @@ async function initializeCheckout() {
 
     console.log(
 
-        "Checkout initialized successfully."
+        "Checkout initialized."
 
     );
 
 }
+
 
 /*=========================================================
     DOM Ready
