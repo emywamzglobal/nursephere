@@ -1,6 +1,6 @@
 /*
 =========================================================
-    Nursephere Login Controller
+    NurseSphere Login Controller
     File: js/login.js
 =========================================================
 */
@@ -18,15 +18,20 @@ const API_BASE =
     DOM Elements
 =========================================================*/
 
-const loginForm = document.getElementById("loginForm");
+const loginForm =
+    document.getElementById("loginForm");
 
-const emailInput = document.getElementById("email");
+const emailInput =
+    document.getElementById("email");
 
-const passwordInput = document.getElementById("password");
+const passwordInput =
+    document.getElementById("password");
 
-const messageBox = document.getElementById("loginMessage");
+const messageBox =
+    document.getElementById("loginMessage");
 
-const submitButton = document.querySelector(".login-btn");
+const submitButton =
+    document.querySelector(".login-btn");
 
 /*=========================================================
     Helper Functions
@@ -62,150 +67,159 @@ function setLoading(isLoading) {
 
     submitButton.disabled = isLoading;
 
-    submitButton.textContent = isLoading
+    submitButton.textContent =
 
-        ? "Signing In..."
+        isLoading
 
-        : "Log In";
+            ? "Signing In..."
+
+            : "Log In";
 
 }
+
+/*=========================================================
+    Redirect Logged In Students
+=========================================================*/
+
+document.addEventListener(
+
+    "DOMContentLoaded",
+
+    function () {
+
+        redirectIfAuthenticated();
+
+    }
+
+);
 
 /*=========================================================
     Login Submit
 =========================================================*/
 
-loginForm.addEventListener("submit", async function (event) {
+loginForm.addEventListener(
 
-    event.preventDefault();
+    "submit",
 
-    clearMessage();
+    async function (event) {
 
-    const email = emailInput.value.trim().toLowerCase();
+        event.preventDefault();
 
-    const password = passwordInput.value;
+        clearMessage();
 
-    if (!email || !password) {
+        const email =
 
-        showMessage(
+            emailInput.value
+                .trim()
+                .toLowerCase();
 
-            "Please enter your email and password."
+        const password =
 
-        );
+            passwordInput.value;
 
-        return;
+        if (
 
-    }
+            !email ||
 
-    try {
+            !password
 
-        setLoading(true);
+        ) {
 
-        const response = await fetch(
+            showMessage(
 
-    `${API_BASE}/login`,
+                "Please enter your email and password."
 
-    {
+            );
 
-        method: "POST",
+            return;
 
-        headers: {
+        }
 
-            "Content-Type": "application/json"
+        try {
 
-        },
+            setLoading(true);
 
-        body: JSON.stringify({
+            const response = await fetch(
 
-            email,
+                `${API_BASE}/login`,
 
-            password
+                {
 
-        })
+                    method: "POST",
 
-    }
+                    headers: {
 
-);
+                        "Content-Type":
+                            "application/json"
 
-        const result = await response.json();
+                    },
 
-        if (!response.ok) {
+                    body: JSON.stringify({
 
-            throw new Error(
+                        email,
 
-                result.message ||
+                        password
 
-                "Login failed."
+                    })
+
+                }
+
+            );
+
+            const result =
+
+                await response.json();
+
+            if (!response.ok) {
+
+                throw new Error(
+
+                    result.message ||
+
+                    "Login failed."
+
+                );
+
+            }
+
+            showMessage(
+
+                "Login successful.",
+
+                "success"
+
+            );
+
+            setTimeout(function () {
+
+                completeLogin(
+
+                    result.token,
+
+                    result.student
+
+                );
+
+            }, 800);
+
+        }
+
+        catch (error) {
+
+            showMessage(
+
+                error.message
 
             );
 
         }
 
-        /*-----------------------------------------
-    Save Student Session
------------------------------------------*/
+        finally {
 
-localStorage.setItem(
-    "studentToken",
-    result.token
-);
+            setLoading(false);
 
-localStorage.setItem(
-    "studentId",
-    result.student.id
-);
-
-localStorage.setItem(
-    "studentName",
-    result.student.fullName
-);
-
-localStorage.setItem(
-    "studentEmail",
-    result.student.email
-);
-
-localStorage.setItem(
-    "subscriptionStatus",
-    result.student.subscriptionStatus
-);
-
-localStorage.setItem(
-    "trialActive",
-    result.student.trialActive
-);
-
-        showMessage(
-
-            "Login successful.",
-
-            "success"
-
-        );
-
-        setTimeout(() => {
-
-            window.location.href =
-
-                "student/dashboard.html";
-
-        }, 1000);
+        }
 
     }
 
-    catch (error) {
-
-        showMessage(
-
-            error.message
-
-        );
-
-    }
-
-    finally {
-
-        setLoading(false);
-
-    }
-
-});
+);
