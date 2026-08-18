@@ -2,521 +2,1035 @@
 =========================================================
     NurseSphere Student Dashboard Controller
     File: js/dashboard-student.js
+
+    Responsibilities:
+    - Student authentication/session
+    - Dashboard API loading
+    - Dashboard data rendering
+    - Trial status rendering
+    - Recent activity rendering
+    - Mobile sidebar toggle
+    - Profile dropdown
+    - Avatar preview
+    - Avatar persistence in browser
+    - Header search/navigation
+    - Logout
+
+    Notifications are intentionally NOT handled here.
 =========================================================
 */
 
 "use strict";
 
-/*=========================================================
-    API Configuration
-=========================================================*/
+(() => {
 
-const API_BASE =
-    "https://nursephere.wamalwaemily.workers.dev/api";
+    /*=========================================================
+        API CONFIGURATION
+    =========================================================*/
 
-/*=========================================================
-    Student Session
-=========================================================*/
+    const API_BASE =
+        "https://nursephere.wamalwaemily.workers.dev/api";
 
-const studentToken =
-    localStorage.getItem("studentToken");
 
-/*=========================================================
-    Dashboard Data
-=========================================================*/
+    /*=========================================================
+        STUDENT SESSION
+    =========================================================*/
 
-let dashboardData = null;
+    const studentToken =
+        localStorage.getItem("studentToken");
 
-/*=========================================================
-    DOM Elements
-=========================================================*/
 
-const welcomeStudentName =
-    document.getElementById("welcomeStudentName");
+    /*=========================================================
+        DASHBOARD DATA
+    =========================================================*/
 
-const headerStudentName =
-    document.getElementById("headerStudentName");
+    let dashboardData = null;
 
-const studentPlan =
-    document.getElementById("studentPlan");
 
-const daysLeft =
-    document.getElementById("daysLeft");
+    /*=========================================================
+        DOM ELEMENTS
+    =========================================================*/
 
-const questionsLeft =
-    document.getElementById("questionsLeft");
+    // Layout
+    const studentSidebar =
+        document.getElementById("studentSidebar");
 
-const subjectsStarted =
-    document.getElementById("subjectsStarted");
+    const menuToggle =
+        document.getElementById("menuToggle");
 
-const questionsAnswered =
-    document.getElementById("questionsAnswered");
 
-const successRate =
-    document.getElementById("successRate");
+    // Search
+    const searchInput =
+        document.getElementById("searchInput");
 
-const recentActivity =
-    document.getElementById("recentActivity");
 
-const trialCard =
-    document.getElementById("trialCard");
+    // Profile
+    const profileToggle =
+        document.getElementById("profileToggle");
 
-const trialExpiredCard =
-    document.getElementById("trialExpiredCard");
+    const profileMenu =
+        document.getElementById("profileMenu");
 
-const sidebarLogoutBtn =
-    document.getElementById("sidebarLogoutBtn");
 
-const profileLogoutBtn =
-    document.getElementById("profileLogoutBtn");
+    // Avatar
+    const studentAvatar =
+        document.getElementById("studentAvatar");
 
-/*=========================================================
-    Session Management
-=========================================================*/
+    const avatarUpload =
+        document.getElementById("avatarUpload");
 
-function clearStudentSession() {
+    const uploadPhoto =
+        document.getElementById("uploadPhoto");
 
-    localStorage.removeItem("studentToken");
 
-    localStorage.removeItem("studentId");
+    // Student information
+    const welcomeStudentName =
+        document.getElementById("welcomeStudentName");
 
-    localStorage.removeItem("studentName");
+    const headerStudentName =
+        document.getElementById("headerStudentName");
 
-    localStorage.removeItem("studentEmail");
+    const studentPlan =
+        document.getElementById("studentPlan");
 
-    localStorage.removeItem("subscriptionStatus");
 
-    localStorage.removeItem("trialActive");
+    // Trial
+    const daysLeft =
+        document.getElementById("daysLeft");
 
-}
+    const questionsLeft =
+        document.getElementById("questionsLeft");
 
-function redirectToLogin() {
+    const trialCard =
+        document.getElementById("trialCard");
 
-    clearStudentSession();
+    const trialExpiredCard =
+        document.getElementById("trialExpiredCard");
 
-    window.location.href =
-        "../login.html";
 
-}
+    // Progress
+    const subjectsStarted =
+        document.getElementById("subjectsStarted");
 
-function requireAuthentication() {
+    const questionsAnswered =
+        document.getElementById("questionsAnswered");
 
-    if (!studentToken) {
+    const successRate =
+        document.getElementById("successRate");
 
-        redirectToLogin();
 
-        return false;
+    // Activity
+    const recentActivity =
+        document.getElementById("recentActivity");
 
-    }
 
-    return true;
+    // Logout
+    const sidebarLogoutBtn =
+        document.getElementById("sidebarLogoutBtn");
 
-}
+    const profileLogoutBtn =
+        document.getElementById("profileLogoutBtn");
 
-/*=========================================================
-    Logout
-=========================================================*/
 
-function logoutStudent(event) {
+    /*=========================================================
+        CONSTANTS
+    =========================================================*/
 
-    event.preventDefault();
+    const AVATAR_STORAGE_KEY =
+        "studentAvatar";
 
-    clearStudentSession();
 
-    window.location.href =
-        "../index.html";
+    const DEFAULT_AVATAR =
+        "../assets/images/avatar-placeholder.png";
 
-}
 
-if (sidebarLogoutBtn) {
+    /*=========================================================
+        SESSION MANAGEMENT
+    =========================================================*/
 
-    sidebarLogoutBtn.addEventListener(
+    function clearStudentSession() {
 
-        "click",
-
-        logoutStudent
-
-    );
-
-}
-
-if (profileLogoutBtn) {
-
-    profileLogoutBtn.addEventListener(
-
-        "click",
-
-        logoutStudent
-
-    );
-
-}
-
-/*=========================================================
-    Load Dashboard
-=========================================================*/
-
-async function loadDashboard() {
-
-    if (!requireAuthentication()) {
-
-        return;
+        localStorage.removeItem("studentToken");
+        localStorage.removeItem("studentId");
+        localStorage.removeItem("studentName");
+        localStorage.removeItem("studentEmail");
+        localStorage.removeItem("subscriptionStatus");
+        localStorage.removeItem("trialActive");
+        localStorage.removeItem(AVATAR_STORAGE_KEY);
 
     }
 
-    try {
 
-        const response = await fetch(
+    function redirectToLogin() {
 
-            `${API_BASE}/dashboard`,
+        clearStudentSession();
 
-            {
+        window.location.href =
+            "../login.html";
 
-                method: "GET",
+    }
 
-                headers: {
 
-                    "Authorization":
-                        `Bearer ${studentToken}`,
+    function requireAuthentication() {
 
-                    "Content-Type":
-                        "application/json"
+        if (!studentToken) {
+
+            redirectToLogin();
+
+            return false;
+        }
+
+        return true;
+
+    }
+
+
+    /*=========================================================
+        LOGOUT
+    =========================================================*/
+
+    function logoutStudent(event) {
+
+        if (event) {
+            event.preventDefault();
+        }
+
+        clearStudentSession();
+
+        window.location.href =
+            "../index.html";
+
+    }
+
+
+    /*=========================================================
+        MOBILE SIDEBAR
+    =========================================================*/
+
+    function setupSidebar() {
+
+        if (!menuToggle || !studentSidebar) {
+            return;
+        }
+
+        menuToggle.addEventListener(
+            "click",
+            () => {
+
+                studentSidebar.classList.toggle(
+                    "active"
+                );
+
+            }
+        );
+
+    }
+
+
+    /*=========================================================
+        PROFILE DROPDOWN
+    =========================================================*/
+
+    function closeProfileMenu() {
+
+        if (!profileMenu) {
+            return;
+        }
+
+        profileMenu.classList.remove("active");
+
+    }
+
+
+    function setupProfileDropdown() {
+
+        if (!profileToggle || !profileMenu) {
+            return;
+        }
+
+        profileToggle.addEventListener(
+            "click",
+            event => {
+
+                event.stopPropagation();
+
+                profileMenu.classList.toggle(
+                    "active"
+                );
+
+            }
+        );
+
+
+        document.addEventListener(
+            "click",
+            event => {
+
+                if (
+                    !profileMenu.contains(event.target) &&
+                    !profileToggle.contains(event.target)
+                ) {
+
+                    closeProfileMenu();
 
                 }
 
             }
-
         );
 
-        if (response.status === 401) {
 
-            redirectToLogin();
+        profileMenu.addEventListener(
+            "click",
+            event => {
+
+                event.stopPropagation();
+
+            }
+        );
+
+    }
+
+
+    /*=========================================================
+        AVATAR
+    =========================================================*/
+
+    function loadStoredAvatar() {
+
+        if (!studentAvatar) {
+            return;
+        }
+
+        const storedAvatar =
+            localStorage.getItem(
+                AVATAR_STORAGE_KEY
+            );
+
+        if (storedAvatar) {
+
+            studentAvatar.src =
+                storedAvatar;
+
+            return;
+        }
+
+        studentAvatar.src =
+            DEFAULT_AVATAR;
+
+    }
+
+
+    function renderServerAvatar() {
+
+        if (
+            !studentAvatar ||
+            !dashboardData ||
+            !dashboardData.student
+        ) {
+            return;
+        }
+
+        /*
+            Future R2 support.
+
+            When the dashboard worker returns:
+
+                student.avatar_url
+
+            the frontend will automatically use it.
+
+            We do NOT invent an R2 URL here.
+        */
+
+        const avatarUrl =
+            dashboardData.student.avatar_url;
+
+        if (
+            typeof avatarUrl === "string" &&
+            avatarUrl.trim() !== ""
+        ) {
+
+            studentAvatar.src =
+                avatarUrl;
+
+        }
+
+    }
+
+
+    function previewAvatar(file) {
+
+        if (
+            !file ||
+            !studentAvatar
+        ) {
+            return;
+        }
+
+        if (!file.type.startsWith("image/")) {
+
+            alert(
+                "Please select an image file."
+            );
+
+            return;
+        }
+
+
+        const MAX_SIZE =
+            5 * 1024 * 1024;
+
+
+        if (file.size > MAX_SIZE) {
+
+            alert(
+                "Please choose an image smaller than 5 MB."
+            );
+
+            return;
+        }
+
+
+        const reader =
+            new FileReader();
+
+
+        reader.onload = event => {
+
+            const imageData =
+                event.target.result;
+
+            studentAvatar.src =
+                imageData;
+
+            /*
+                Temporary browser persistence.
+
+                This keeps the avatar visible after
+                refreshing this browser.
+
+                It is NOT R2 storage.
+            */
+            try {
+
+                localStorage.setItem(
+                    AVATAR_STORAGE_KEY,
+                    imageData
+                );
+
+            }
+            catch (error) {
+
+                console.warn(
+                    "Unable to store avatar locally:",
+                    error
+                );
+
+            }
+
+        };
+
+
+        reader.onerror = () => {
+
+            alert(
+                "Unable to preview the selected image."
+            );
+
+        };
+
+
+        reader.readAsDataURL(file);
+
+    }
+
+
+    function setupAvatarUpload() {
+
+        if (
+            !uploadPhoto ||
+            !avatarUpload
+        ) {
+            return;
+        }
+
+
+        uploadPhoto.addEventListener(
+            "click",
+            event => {
+
+                event.preventDefault();
+
+                avatarUpload.click();
+
+            }
+        );
+
+
+        avatarUpload.addEventListener(
+            "change",
+            () => {
+
+                const file =
+                    avatarUpload.files?.[0];
+
+                if (!file) {
+                    return;
+                }
+
+                previewAvatar(file);
+
+                /*
+                    IMPORTANT:
+
+                    The current Worker /api/upload endpoint
+                    is still a temporary stub.
+
+                    Therefore we intentionally do not claim
+                    this file has been uploaded to R2.
+
+                    R2 upload will be connected once the
+                    backend upload handler is implemented.
+                */
+
+                avatarUpload.value = "";
+
+            }
+        );
+
+    }
+
+
+    /*=========================================================
+        SEARCH
+    =========================================================*/
+
+    function setupSearch() {
+
+        if (!searchInput) {
+            return;
+        }
+
+
+        searchInput.addEventListener(
+            "keydown",
+            event => {
+
+                if (
+                    event.key !== "Enter"
+                ) {
+                    return;
+                }
+
+
+                const query =
+                    searchInput.value.trim();
+
+
+                if (!query) {
+                    return;
+                }
+
+
+                /*
+                    No /api/search endpoint currently exists
+                    in the supplied Worker.
+
+                    Therefore we do not invent one.
+
+                    For now, Enter takes the student to
+                    Practice where question searching can
+                    eventually be connected to the real
+                    practice/search backend.
+                */
+
+                const target =
+                    `practice.html?search=${encodeURIComponent(query)}`;
+
+                window.location.href =
+                    target;
+
+            }
+        );
+
+    }
+
+
+    /*=========================================================
+        LOAD DASHBOARD
+    =========================================================*/
+
+    async function loadDashboard() {
+
+        if (!requireAuthentication()) {
+            return;
+        }
+
+
+        try {
+
+            const response =
+                await fetch(
+                    `${API_BASE}/dashboard`,
+                    {
+                        method: "GET",
+
+                        headers: {
+                            "Authorization":
+                                `Bearer ${studentToken}`,
+
+                            "Content-Type":
+                                "application/json"
+                        }
+                    }
+                );
+
+
+            if (
+                response.status === 401
+            ) {
+
+                redirectToLogin();
+
+                return;
+
+            }
+
+
+            const result =
+                await response.json();
+
+
+            if (!response.ok) {
+
+                throw new Error(
+                    result.message ||
+                    "Unable to load dashboard."
+                );
+
+            }
+
+
+            if (
+                result.success === false
+            ) {
+
+                throw new Error(
+                    result.message ||
+                    "Unable to load dashboard."
+                );
+
+            }
+
+
+            dashboardData =
+                result;
+
+
+            renderDashboard();
+
+            renderTrialStatus();
+
+            renderRecentActivity();
+
+            renderServerAvatar();
+
+        }
+
+
+        catch (error) {
+
+            console.error(
+                "Dashboard Error:",
+                error
+            );
+
+
+            alert(
+                error.message ||
+                "Unable to load dashboard."
+            );
+
+        }
+
+    }
+
+
+    /*=========================================================
+        RENDER DASHBOARD
+    =========================================================*/
+
+    function renderDashboard() {
+
+        if (!dashboardData) {
+            return;
+        }
+
+
+        const student =
+            dashboardData.student || {};
+
+
+        const trial =
+            dashboardData.trial || {};
+
+
+        const progress =
+            dashboardData.progress || {};
+
+
+        const subscription =
+            dashboardData.subscription || {};
+
+
+        /*-----------------------------------------
+            Student Information
+        -----------------------------------------*/
+
+        if (welcomeStudentName) {
+
+            welcomeStudentName.textContent =
+                student.full_name ||
+                "Student";
+
+        }
+
+
+        if (headerStudentName) {
+
+            headerStudentName.textContent =
+                student.full_name ||
+                "Student";
+
+        }
+
+
+        if (studentPlan) {
+
+            studentPlan.textContent =
+                subscription.plan ||
+                "Free Trial";
+
+        }
+
+
+        /*-----------------------------------------
+            Trial Information
+        -----------------------------------------*/
+
+        if (daysLeft) {
+
+            daysLeft.textContent =
+                Number(
+                    trial.days_left ?? 0
+                );
+
+        }
+
+
+        if (questionsLeft) {
+
+            questionsLeft.textContent =
+                Number(
+                    trial.questions_remaining ?? 0
+                );
+
+        }
+
+
+        /*-----------------------------------------
+            Learning Progress
+        -----------------------------------------*/
+
+        if (subjectsStarted) {
+
+            subjectsStarted.textContent =
+                Number(
+                    progress.subjects_started ?? 0
+                );
+
+        }
+
+
+        if (questionsAnswered) {
+
+            questionsAnswered.textContent =
+                Number(
+                    progress.questions_answered ?? 0
+                );
+
+        }
+
+
+        if (successRate) {
+
+            const rate =
+                Number(
+                    progress.success_rate ?? 0
+                );
+
+            successRate.textContent =
+                `${rate}%`;
+
+        }
+
+    }
+
+
+    /*=========================================================
+        TRIAL STATUS
+    =========================================================*/
+
+    function renderTrialStatus() {
+
+        if (!dashboardData) {
+            return;
+        }
+
+
+        const trial =
+            dashboardData.trial || {};
+
+
+        const upgradeRequired =
+            Boolean(
+                trial.upgrade_required
+            );
+
+
+        if (upgradeRequired) {
+
+            if (trialCard) {
+
+                trialCard.style.display =
+                    "none";
+
+            }
+
+
+            if (trialExpiredCard) {
+
+                trialExpiredCard.style.display =
+                    "flex";
+
+            }
+
+        }
+
+
+        else {
+
+            if (trialCard) {
+
+                trialCard.style.display =
+                    "flex";
+
+            }
+
+
+            if (trialExpiredCard) {
+
+                trialExpiredCard.style.display =
+                    "none";
+
+            }
+
+        }
+
+    }
+
+
+    /*=========================================================
+        RECENT ACTIVITY
+    =========================================================*/
+
+    function escapeHtml(value) {
+
+        return String(value ?? "")
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
+
+    }
+
+
+    function renderRecentActivity() {
+
+        if (!recentActivity) {
+            return;
+        }
+
+
+        recentActivity.innerHTML = "";
+
+
+        const activities =
+            Array.isArray(
+                dashboardData?.recent_activity
+            )
+                ? dashboardData.recent_activity
+                : [];
+
+
+        if (
+            activities.length === 0
+        ) {
+
+            recentActivity.innerHTML = `
+
+                <div class="empty-state">
+
+                    <i class="fas fa-clock-rotate-left"></i>
+
+                    <h3>No Activity Yet</h3>
+
+                    <p>
+                        Your completed practice
+                        sessions will appear here.
+                    </p>
+
+                    <a
+                        href="practice.html"
+                        class="secondary-btn">
+
+                        Start Practicing
+
+                    </a>
+
+                </div>
+
+            `;
 
             return;
 
         }
 
-        const result =
-            await response.json();
 
-        if (!response.ok) {
+        activities.forEach(
+            activity => {
 
-            throw new Error(
+                const subject =
+                    escapeHtml(
+                        activity.subject ||
+                        "Practice"
+                    );
 
-                result.message ||
 
-                "Unable to load dashboard."
+                const questionsUsed =
+                    Number(
+                        activity.questions_used ?? 0
+                    );
 
+
+                const correctAnswers =
+                    Number(
+                        activity.correct_answers ?? 0
+                    );
+
+
+                const wrongAnswers =
+                    Number(
+                        activity.wrong_answers ?? 0
+                    );
+
+
+                recentActivity.insertAdjacentHTML(
+                    "beforeend",
+
+                    `
+
+                    <div class="activity-item">
+
+                        <div class="activity-details">
+
+                            <h4>
+                                ${subject}
+                            </h4>
+
+                            <p>
+                                ${questionsUsed}
+                                Question(s)
+                            </p>
+
+                        </div>
+
+                        <div class="activity-score">
+
+                            <span class="correct">
+                                ✔ ${correctAnswers}
+                            </span>
+
+                            <span class="wrong">
+                                ✖ ${wrongAnswers}
+                            </span>
+
+                        </div>
+
+                    </div>
+
+                    `
+                );
+
+            }
+        );
+
+    }
+
+
+    /*=========================================================
+        EVENT BINDINGS
+    =========================================================*/
+
+    function setupEventListeners() {
+
+        if (sidebarLogoutBtn) {
+
+            sidebarLogoutBtn.addEventListener(
+                "click",
+                logoutStudent
             );
 
         }
 
-        dashboardData = result;
 
-        renderDashboard();
+        if (profileLogoutBtn) {
 
-        renderTrialStatus();
-
-        renderRecentActivity();
-
-    }
-
-    catch (error) {
-
-        console.error(
-
-            "Dashboard Error:",
-
-            error
-
-        );
-
-        alert(
-
-            error.message ||
-
-            "Unable to load dashboard."
-
-        );
-
-    }
-
-}
-
-/*=========================================================
-    Render Dashboard
-=========================================================*/
-
-function renderDashboard() {
-
-    if (!dashboardData) {
-
-        return;
-
-    }
-
-    const {
-
-        student,
-
-        trial,
-
-        progress,
-
-        subscription
-
-    } = dashboardData;
-
-    /*=========================================
-        Student Information
-    =========================================*/
-
-    if (welcomeStudentName) {
-
-        welcomeStudentName.textContent =
-            student.full_name;
-
-    }
-
-    if (headerStudentName) {
-
-        headerStudentName.textContent =
-            student.full_name;
-
-    }
-
-    if (studentPlan) {
-
-        studentPlan.textContent =
-            subscription.plan;
-
-    }
-
-    /*=========================================
-        Trial Information
-    =========================================*/
-
-    if (daysLeft) {
-
-        daysLeft.textContent =
-            trial.days_left;
-
-    }
-
-    if (questionsLeft) {
-
-        questionsLeft.textContent =
-            trial.questions_remaining;
-
-    }
-
-    /*=========================================
-        Learning Progress
-    =========================================*/
-
-    if (subjectsStarted) {
-
-        subjectsStarted.textContent =
-            progress.subjects_started;
-
-    }
-
-    if (questionsAnswered) {
-
-        questionsAnswered.textContent =
-            progress.questions_answered;
-
-    }
-
-    if (successRate) {
-
-        successRate.textContent =
-            `${progress.success_rate}%`;
-
-    }
-
-}
-
-/*=========================================================
-    Trial Status
-=========================================================*/
-
-function renderTrialStatus() {
-
-    if (!dashboardData) {
-
-        return;
-
-    }
-
-    const {
-
-        trial
-
-    } = dashboardData;
-
-    if (trial.upgrade_required) {
-
-        if (trialCard) {
-
-            trialCard.style.display =
-                "none";
-
-        }
-
-        if (trialExpiredCard) {
-
-            trialExpiredCard.style.display =
-                "flex";
-
-        }
-
-    }
-
-    else {
-
-        if (trialCard) {
-
-            trialCard.style.display =
-                "flex";
-
-        }
-
-        if (trialExpiredCard) {
-
-            trialExpiredCard.style.display =
-                "none";
-
-        }
-
-    }
-
-}
-
-/*=========================================================
-    Recent Activity
-=========================================================*/
-
-function renderRecentActivity() {
-
-    if (!recentActivity) {
-
-        return;
-
-    }
-
-    recentActivity.innerHTML = "";
-
-    if (
-
-        !dashboardData.recent_activity ||
-
-        dashboardData.recent_activity.length === 0
-
-    ) {
-
-        recentActivity.innerHTML = `
-
-            <div class="empty-state">
-
-                <i class="fas fa-clock-rotate-left"></i>
-
-                <h3>No Activity Yet</h3>
-
-                <p>
-
-                    Your completed practice
-                    sessions will appear here.
-
-                </p>
-
-                <a
-                    href="practice.html"
-                    class="secondary-btn">
-
-                    Start Practicing
-
-                </a>
-
-            </div>
-
-        `;
-
-        return;
-
-    }
-
-    dashboardData.recent_activity.forEach(
-
-        activity => {
-
-            recentActivity.insertAdjacentHTML(
-
-                "beforeend",
-
-                `
-
-                <div class="activity-item">
-
-                    <div
-                        class="activity-details">
-
-                        <h4>
-
-                            ${activity.subject}
-
-                        </h4>
-
-                        <p>
-
-                            ${activity.questions_used}
-                            Question(s)
-
-                        </p>
-
-                    </div>
-
-                    <div
-                        class="activity-score">
-
-                        <span class="correct">
-
-                            ✔ ${activity.correct_answers}
-
-                        </span>
-
-                        <span class="wrong">
-
-                            ✖ ${activity.wrong_answers}
-
-                        </span>
-
-                    </div>
-
-                </div>
-
-                `
-
+            profileLogoutBtn.addEventListener(
+                "click",
+                logoutStudent
             );
 
         }
 
+
+        setupSidebar();
+
+        setupProfileDropdown();
+
+        setupAvatarUpload();
+
+        setupSearch();
+
+    }
+
+
+    /*=========================================================
+        INITIALISE DASHBOARD
+    =========================================================*/
+
+    document.addEventListener(
+        "DOMContentLoaded",
+        () => {
+
+            setupEventListeners();
+
+            loadStoredAvatar();
+
+            loadDashboard();
+
+        }
     );
 
-}
-
-/*=========================================================
-    Initialise Dashboard
-=========================================================*/
-
-document.addEventListener(
-
-    "DOMContentLoaded",
-
-    () => {
-
-        loadDashboard();
-
-    }
-
-);
+})();
