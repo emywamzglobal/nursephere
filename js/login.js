@@ -61,6 +61,61 @@ function clearMessage() {
 
 }
 
+function completeLogin(token, student) {
+
+    localStorage.setItem(
+        "studentToken",
+        token
+    );
+
+    localStorage.setItem(
+        "studentId",
+        student.id
+    );
+
+    localStorage.setItem(
+        "studentName",
+        student.fullName
+    );
+
+    localStorage.setItem(
+        "studentEmail",
+        student.email
+    );
+
+    localStorage.setItem(
+        "subscriptionStatus",
+        student.subscriptionStatus
+    );
+
+    localStorage.setItem(
+        "trialActive",
+        String(student.trialActive)
+    );
+
+
+    window.location.href =
+        "student/dashboard-student.html";
+
+}
+
+
+function redirectIfAuthenticated() {
+
+    const token =
+        localStorage.getItem(
+            "studentToken"
+        );
+
+    if (token) {
+
+        window.location.href =
+            "student/dashboard-student.html";
+
+    }
+
+}
+
 function setLoading(isLoading) {
 
     if (!submitButton) return;
