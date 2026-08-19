@@ -3,16 +3,41 @@
         MAIN JAVASCRIPT
 =========================================*/
 
+"use strict";
+
+
+/*=========================================
+        API CONFIGURATION
+=========================================*/
+
+const STUDENT_API_BASE =
+    "https://nursephere.wamalwaemily.workers.dev/api";
+
+
+/*=========================================
+        STUDENT SESSION
+=========================================*/
+
+const studentToken =
+    localStorage.getItem("studentToken");
+
+
+/*=========================================
+        PAGE INITIALISATION
+=========================================*/
+
 document.addEventListener("DOMContentLoaded", () => {
 
     highlightStudentMenu();
-    
+
     initialiseStudentHeader();
 
     initializeSidebarToggle();
 
+    checkDocumentsAccess();
 
 });
+
 
 /*=========================================
         ACTIVE SIDEBAR MENU
@@ -20,23 +45,32 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function highlightStudentMenu() {
 
-    const currentPage = window.location.pathname.split("/").pop();
+    const currentPage =
+        window.location.pathname
+            .split("/")
+            .pop();
 
-    document.querySelectorAll(".sidebar-menu a").forEach(link => {
+    document
+        .querySelectorAll(".sidebar-menu a")
+        .forEach(link => {
 
-        link.classList.remove("active");
+            link.classList.remove("active");
 
-        const href = link.getAttribute("href");
+            const href =
+                link.getAttribute("href");
 
-        if (href === currentPage) {
+            if (
+                href === currentPage
+            ) {
 
-            link.classList.add("active");
+                link.classList.add("active");
 
-        }
+            }
 
-    });
+        });
 
 }
+
 
 /*=========================================
         INITIALISE HEADER
@@ -50,7 +84,7 @@ function initialiseStudentHeader() {
 
     studentLogout();
 
-    initializeSidebarToggle();;
+    initializeSidebarToggle();
 
 }
 
@@ -61,25 +95,50 @@ function initialiseStudentHeader() {
 
 function studentProfileDropdown() {
 
-    const toggle = document.getElementById("profileToggle");
+    const toggle =
+        document.getElementById(
+            "profileToggle"
+        );
 
-    const menu = document.getElementById("profileMenu");
+    const menu =
+        document.getElementById(
+            "profileMenu"
+        );
 
-    if (!toggle || !menu) return;
+    if (
+        !toggle ||
+        !menu
+    ) {
 
-    toggle.addEventListener("click", function (e) {
+        return;
 
-        e.stopPropagation();
+    }
 
-        menu.classList.toggle("active");
 
-    });
+    toggle.addEventListener(
+        "click",
+        function (e) {
 
-    document.addEventListener("click", function () {
+            e.stopPropagation();
 
-        menu.classList.remove("active");
+            menu.classList.toggle(
+                "active"
+            );
 
-    });
+        }
+    );
+
+
+    document.addEventListener(
+        "click",
+        function () {
+
+            menu.classList.remove(
+                "active"
+            );
+
+        }
+    );
 
 }
 
@@ -90,72 +149,87 @@ function studentProfileDropdown() {
 
 function studentAvatarUpload() {
 
-    const uploadButton = document.getElementById("uploadPhoto");
+    const uploadButton =
+        document.getElementById(
+            "uploadPhoto"
+        );
 
-    const uploadInput = document.getElementById("avatarUpload");
+    const uploadInput =
+        document.getElementById(
+            "avatarUpload"
+        );
 
-    const avatar = document.getElementById("studentAvatar");
+    const avatar =
+        document.getElementById(
+            "studentAvatar"
+        );
 
-    if (!uploadButton || !uploadInput || !avatar) return;
+    if (
+        !uploadButton ||
+        !uploadInput ||
+        !avatar
+    ) {
 
-    uploadButton.addEventListener("click", function (e) {
+        return;
 
-        e.preventDefault();
-
-        uploadInput.click();
-
-    });
-
-    avatar.addEventListener("click", function () {
-
-        uploadInput.click();
-
-    });
-
-    uploadInput.addEventListener("change", function () {
-
-        const file = this.files[0];
-
-        if (!file) return;
-
-        const reader = new FileReader();
-
-        reader.onload = function (event) {
-
-            avatar.src = event.target.result;
-
-        };
-
-        reader.readAsDataURL(file);
-
-    });
-
-}
+    }
 
 
-/*=========================================
-        ACTIVE SIDEBAR MENU
-=========================================*/
+    uploadButton.addEventListener(
+        "click",
+        function (e) {
 
-function highlightStudentMenu() {
+            e.preventDefault();
 
-    const currentPage = window.location.pathname.split("/").pop();
-
-    const links = document.querySelectorAll(".sidebar-menu a");
-
-    links.forEach(link => {
-
-        link.classList.remove("active");
-
-        const href = link.getAttribute("href");
-
-        if (href === currentPage) {
-
-            link.classList.add("active");
+            uploadInput.click();
 
         }
+    );
 
-    });
+
+    avatar.addEventListener(
+        "click",
+        function () {
+
+            uploadInput.click();
+
+        }
+    );
+
+
+    uploadInput.addEventListener(
+        "change",
+        function () {
+
+            const file =
+                this.files[0];
+
+            if (!file) {
+
+                return;
+
+            }
+
+
+            const reader =
+                new FileReader();
+
+
+            reader.onload =
+                function (event) {
+
+                    avatar.src =
+                        event.target.result;
+
+                };
+
+
+            reader.readAsDataURL(
+                file
+            );
+
+        }
+    );
 
 }
 
@@ -166,65 +240,483 @@ function highlightStudentMenu() {
 
 function studentLogout() {
 
-    const logoutButton = document.getElementById("logoutBtn");
+    const logoutButtons =
+        document.querySelectorAll(
+            "#logoutBtn, #sidebarLogoutBtn, #profileLogoutBtn"
+        );
 
-    if (!logoutButton) return;
+    if (
+        !logoutButtons.length
+    ) {
 
-    logoutButton.addEventListener("click", function (e) {
+        return;
 
-        const confirmLogout = confirm("Are you sure you want to logout?");
+    }
 
-        if (!confirmLogout) {
 
-            e.preventDefault();
+    logoutButtons.forEach(
+        logoutButton => {
+
+            logoutButton.addEventListener(
+                "click",
+                function (e) {
+
+                    const confirmLogout =
+                        confirm(
+                            "Are you sure you want to logout?"
+                        );
+
+
+                    if (
+                        !confirmLogout
+                    ) {
+
+                        e.preventDefault();
+
+                    }
+
+                }
+            );
 
         }
-
-    });
+    );
 
 }
 
-/* ==========================================
-   SIDEBAR COLLAPSE / EXPAND
-========================================== */
+
+/*=========================================
+        DOCUMENTS ACCESS
+=========================================*/
+
+async function checkDocumentsAccess() {
+
+    const documentsLink =
+        document.querySelector(
+            '.sidebar-menu a[href="documents.html"]'
+        );
+
+
+    if (!documentsLink) {
+
+        return;
+
+    }
+
+
+    /*-----------------------------------------
+            NO JWT
+    -----------------------------------------*/
+
+    if (!studentToken) {
+
+        lockDocumentsMenu(
+            documentsLink
+        );
+
+        return;
+
+    }
+
+
+    try {
+
+        const response =
+            await fetch(
+
+                `${STUDENT_API_BASE}/documents`,
+
+                {
+
+                    method: "GET",
+
+                    headers: {
+
+                        "Authorization":
+                            `Bearer ${studentToken}`,
+
+                        "Content-Type":
+                            "application/json"
+
+                    }
+
+                }
+
+            );
+
+
+        /*-----------------------------------------
+                UNAUTHORIZED
+        -----------------------------------------*/
+
+        if (
+            response.status === 401
+        ) {
+
+            lockDocumentsMenu(
+                documentsLink
+            );
+
+            return;
+
+        }
+
+
+        /*-----------------------------------------
+                NON-ANNUAL
+        -----------------------------------------*/
+
+        if (
+            response.status === 403
+        ) {
+
+            lockDocumentsMenu(
+                documentsLink
+            );
+
+            return;
+
+        }
+
+
+        /*-----------------------------------------
+                OTHER API ERROR
+        -----------------------------------------*/
+
+        if (
+            !response.ok
+        ) {
+
+            /*
+                Do not unlock Documents when
+                the access check fails.
+            */
+
+            lockDocumentsMenu(
+                documentsLink
+            );
+
+            return;
+
+        }
+
+
+        /*-----------------------------------------
+                ACCESS GRANTED
+        -----------------------------------------*/
+
+        const result =
+            await response.json();
+
+
+        if (
+            result &&
+            result.success === true &&
+            result.access === true
+        ) {
+
+            unlockDocumentsMenu(
+                documentsLink
+            );
+
+            return;
+
+        }
+
+
+        /*
+            Fail closed.
+            If the Worker does not explicitly
+            grant access, keep Documents locked.
+        */
+
+        lockDocumentsMenu(
+            documentsLink
+        );
+
+    }
+
+
+    catch (error) {
+
+        console.error(
+            "Documents Access Check Error:",
+            error
+        );
+
+
+        /*
+            Fail closed.
+            Network/API failure must never
+            accidentally unlock a paid feature.
+        */
+
+        lockDocumentsMenu(
+            documentsLink
+        );
+
+    }
+
+}
+
+
+/*=========================================
+        LOCK DOCUMENTS MENU
+=========================================*/
+
+function lockDocumentsMenu(
+    documentsLink
+) {
+
+    if (!documentsLink) {
+
+        return;
+
+    }
+
+
+    documentsLink.classList.add(
+        "documents-locked"
+    );
+
+
+    documentsLink.dataset.locked =
+        "true";
+
+
+    /*
+        Replace icon
+    */
+
+    const icon =
+        documentsLink.querySelector(
+            "i"
+        );
+
+
+    if (icon) {
+
+        icon.className =
+            "fas fa-lock";
+
+    }
+
+
+    /*
+        Replace label
+    */
+
+    const label =
+        documentsLink.querySelector(
+            "span"
+        );
+
+
+    if (label) {
+
+        label.textContent =
+            "Documents";
+
+    }
+
+
+    /*
+        Do NOT navigate directly
+        to documents.html.
+    */
+
+    documentsLink.addEventListener(
+        "click",
+        handleLockedDocumentsClick
+    );
+
+}
+
+
+/*=========================================
+        UNLOCK DOCUMENTS MENU
+=========================================*/
+
+function unlockDocumentsMenu(
+    documentsLink
+) {
+
+    if (!documentsLink) {
+
+        return;
+
+    }
+
+
+    documentsLink.classList.remove(
+        "documents-locked"
+    );
+
+
+    documentsLink.dataset.locked =
+        "false";
+
+
+    const icon =
+        documentsLink.querySelector(
+            "i"
+        );
+
+
+    if (icon) {
+
+        icon.className =
+            "fas fa-folder-open";
+
+    }
+
+
+    const label =
+        documentsLink.querySelector(
+            "span"
+        );
+
+
+    if (label) {
+
+        label.textContent =
+            "Documents";
+
+    }
+
+
+    /*
+        Remove the locked handler
+        without affecting normal navigation.
+    */
+
+    documentsLink.removeEventListener(
+        "click",
+        handleLockedDocumentsClick
+    );
+
+}
+
+
+/*=========================================
+        LOCKED DOCUMENTS CLICK
+=========================================*/
+
+function handleLockedDocumentsClick(
+    event
+) {
+
+    event.preventDefault();
+
+    event.stopPropagation();
+
+
+    window.location.href =
+        "../checkout.html?plan=yearly";
+
+}
+
+
+/*=========================================
+        SIDEBAR COLLAPSE / EXPAND
+=========================================*/
 
 function initializeSidebarToggle() {
 
-    const sidebar = document.getElementById("studentSidebar");
-    const content = document.querySelector(".dashboard-content");
-    const toggle = document.getElementById("menuToggle");
+    const sidebar =
+        document.getElementById(
+            "studentSidebar"
+        );
 
-    if (!sidebar || !toggle) return;
+    const content =
+        document.querySelector(
+            ".dashboard-content"
+        );
 
-    // Restore previous state
-    if (localStorage.getItem("sidebar") === "collapsed") {
+    const toggle =
+        document.getElementById(
+            "menuToggle"
+        );
 
-        sidebar.classList.add("collapsed");
+
+    if (
+        !sidebar ||
+        !toggle
+    ) {
+
+        return;
+
+    }
+
+
+    /*-----------------------------------------
+            RESTORE PREVIOUS STATE
+    -----------------------------------------*/
+
+    if (
+        localStorage.getItem(
+            "sidebar"
+        ) === "collapsed"
+    ) {
+
+        sidebar.classList.add(
+            "collapsed"
+        );
+
 
         if (content) {
-            content.classList.add("expanded");
+
+            content.classList.add(
+                "expanded"
+            );
+
         }
 
     }
 
-    toggle.addEventListener("click", () => {
 
-        sidebar.classList.toggle("collapsed");
+    /*-----------------------------------------
+            TOGGLE
+    -----------------------------------------*/
 
-        if (content) {
-            content.classList.toggle("expanded");
+    toggle.addEventListener(
+        "click",
+        () => {
+
+            sidebar.classList.toggle(
+                "collapsed"
+            );
+
+
+            if (content) {
+
+                content.classList.toggle(
+                    "expanded"
+                );
+
+            }
+
+
+            if (
+                sidebar.classList.contains(
+                    "collapsed"
+                )
+            ) {
+
+                localStorage.setItem(
+                    "sidebar",
+                    "collapsed"
+                );
+
+            } else {
+
+                localStorage.setItem(
+                    "sidebar",
+                    "expanded"
+                );
+
+            }
+
         }
-
-        if (sidebar.classList.contains("collapsed")) {
-
-            localStorage.setItem("sidebar", "collapsed");
-
-        } else {
-
-            localStorage.setItem("sidebar", "expanded");
-
-        }
-
-    });
+    );
 
 }
