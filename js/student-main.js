@@ -605,16 +605,21 @@ function handleLockedDocumentsClick(
     event
 ) {
 
-    event.preventDefault();
+    /*
+        Locked Documents should still open
+        the Documents page.
+
+        The Documents page itself will show
+        the Annual Plan upgrade requirement.
+
+        Checkout is ONLY opened when the
+        student explicitly clicks:
+        "Upgrade to Annual Plan".
+    */
 
     event.stopPropagation();
 
-
-    window.location.href =
-        "../checkout.html?plan=yearly";
-
 }
-
 
 /*=========================================
         SIDEBAR COLLAPSE / EXPAND
