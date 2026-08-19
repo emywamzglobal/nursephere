@@ -95,7 +95,7 @@ function completeLogin(token, student) {
 
 
     window.location.href =
-        "student/dashboard-student.html";
+        "student/dashboard.html";
 
 }
 
@@ -110,7 +110,7 @@ function redirectIfAuthenticated() {
     if (token) {
 
         window.location.href =
-            "student/dashboard-student.html";
+            "student/dashboard.html";
 
     }
 
