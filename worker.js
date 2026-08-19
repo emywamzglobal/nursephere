@@ -14,6 +14,7 @@ import jwt from "@tsndr/cloudflare-worker-jwt";
 import paymentHandler from "./workers/payment.js";
 import parserHandler from "./workers/parser.js";
 import progressHandler from "./workers/progress.js";
+import documentsHandler from "./workers/documents.js";
 export default {
 
     async fetch(request, env, ctx) {
@@ -151,6 +152,75 @@ if (
     return response;
 
 }
+
+// -----------------------------
+// Download Student Document
+// -----------------------------
+if (
+
+    url.pathname === "/api/documents/download" &&
+
+    request.method === "GET"
+
+) {
+
+    const response =
+        await documentsHandler(
+            request,
+            env
+        );
+
+    Object.entries(corsHeaders).forEach(
+        ([key, value]) => {
+
+            response.headers.set(
+                key,
+                value
+            );
+
+        }
+    );
+
+    return response;
+
+}
+
+// -----------------------------
+// Student Documents
+// -----------------------------
+if (
+
+    url.pathname === "/api/documents" &&
+
+    (
+        request.method === "GET" ||
+        request.method === "POST" ||
+        request.method === "DELETE"
+    )
+
+) {
+
+    const response =
+        await documentsHandler(
+            request,
+            env
+        );
+
+    Object.entries(corsHeaders).forEach(
+        ([key, value]) => {
+
+            response.headers.set(
+                key,
+                value
+            );
+
+        }
+    );
+
+    return response;
+
+}
+
 
 // -----------------------------
 // Student Subscription

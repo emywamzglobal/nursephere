@@ -18,3 +18,7 @@ database_id = "ddf3e527-030e-4e0f-8c62-96a51b73d133"
 [[r2_buckets]]
 binding = "IMAGES"
 bucket_name = "nursephere-uploads"
+
+[[r2_buckets]]
+binding = "DOCUMENTS"
+bucket_name = "documents"
