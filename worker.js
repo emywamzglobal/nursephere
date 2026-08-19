@@ -13,6 +13,7 @@ import { handleGetExams } from "./workers/exams.js";
 import jwt from "@tsndr/cloudflare-worker-jwt";
 import paymentHandler from "./workers/payment.js";
 import parserHandler from "./workers/parser.js";
+import progressHandler from "./workers/progress.js";
 export default {
 
     async fetch(request, env, ctx) {
@@ -118,6 +119,34 @@ if (
         response.headers.set(key, value);
 
     });
+
+    return response;
+
+}
+
+// -----------------------------
+// Student Progress
+// -----------------------------
+if (
+    url.pathname === "/api/progress"
+) {
+
+    const response =
+        await progressHandler(
+            request,
+            env
+        );
+
+    Object.entries(corsHeaders).forEach(
+        ([key, value]) => {
+
+            response.headers.set(
+                key,
+                value
+            );
+
+        }
+    );
 
     return response;
 
