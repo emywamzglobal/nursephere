@@ -34,8 +34,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     initializeSidebarToggle();
 
-    checkDocumentsAccess();
-
 });
 
 
