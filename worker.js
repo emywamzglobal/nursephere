@@ -17,8 +17,6 @@ export default {
 
     async fetch(request, env, ctx) {
 
-        console.log("ENV JWT_SECRET:", env.JWT_SECRET);
-
         const url = new URL(request.url);
 
         const corsHeaders = {
@@ -328,47 +326,62 @@ if (
 
 }
 
-        // -----------------------------
-        // Uploads
-        // -----------------------------
-        if (
+// -----------------------------
+// Student Avatar Upload
+// -----------------------------
+if (
+    url.pathname === "/api/upload" &&
+    request.method === "POST"
+) {
 
-            url.pathname === "/api/upload"
+    const response =
+        await handleStudentAvatarUpload(
+            request,
+            env
+        );
 
-        ) {
+    Object.entries(corsHeaders).forEach(
+        ([key, value]) => {
 
-            return handleUpload(request, env);
+            response.headers.set(
+                key,
+                value
+            );
+
+        }
+    );
+
+    return response;
+
+}
+
+// -----------------------------
+// API Route Not Found
+// -----------------------------
+return new Response(
+
+    JSON.stringify({
+
+        success: false,
+
+        message: "API route not found."
+
+    }),
+
+    {
+
+        status: 404,
+
+        headers: {
+
+            "Content-Type":
+                "application/json"
 
         }
 
-        return new Response(
-
-            JSON.stringify({
-
-                success: false,
-
-                message: "API route not found."
-
-            }),
-
-            {
-
-                status: 404,
-
-                headers: {
-
-                    "Content-Type": "application/json"
-
-                }
-
-            }
-
-        );
-
     }
 
-};
-
+);
 
 // ======================================================
 // Temporary handlers
@@ -387,14 +400,281 @@ async function handlePayment(request, env) {
 
 }
 
-async function handleUpload(request, env) {
+async function handleStudentAvatarUpload(request, env) {
 
-    return Response.json({
+    try {
 
-        success: true,
+        // =============================================
+        // AUTHENTICATION
+        // =============================================
 
-        message: "Upload Worker Connected"
+        const authHeader =
+            request.headers.get("Authorization");
 
-    });
+        if (
+            !authHeader ||
+            !authHeader.startsWith("Bearer ")
+        ) {
+
+            return Response.json(
+                {
+                    success: false,
+                    message: "Unauthorized."
+                },
+                {
+                    status: 401
+                }
+            );
+
+        }
+
+        const token =
+            authHeader.substring(7);
+
+        const valid =
+            await jwt.verify(
+                token,
+                env.JWT_SECRET
+            );
+
+        if (!valid) {
+
+            return Response.json(
+                {
+                    success: false,
+                    message: "Invalid or expired session."
+                },
+                {
+                    status: 401
+                }
+            );
+
+        }
+
+        const payload =
+            jwt.decode(token).payload;
+
+        const studentId =
+            payload.studentId;
+
+        if (!studentId) {
+
+            return Response.json(
+                {
+                    success: false,
+                    message: "Student identity missing."
+                },
+                {
+                    status: 401
+                }
+            );
+
+        }
+
+
+        // =============================================
+        // VERIFY STUDENT
+        // =============================================
+
+        const student =
+            await env.DB.prepare(`
+                SELECT id
+                FROM students
+                WHERE id = ?
+                LIMIT 1
+            `)
+            .bind(studentId)
+            .first();
+
+        if (!student) {
+
+            return Response.json(
+                {
+                    success: false,
+                    message: "Student not found."
+                },
+                {
+                    status: 404
+                }
+            );
+
+        }
+
+
+        // =============================================
+        // READ UPLOADED FILE
+        // =============================================
+
+        const formData =
+            await request.formData();
+
+        const file =
+            formData.get("file");
+
+        if (
+            !file ||
+            typeof file.stream !== "function"
+        ) {
+
+            return Response.json(
+                {
+                    success: false,
+                    message: "No image file uploaded."
+                },
+                {
+                    status: 400
+                }
+            );
+
+        }
+
+
+        // =============================================
+        // VALIDATE IMAGE
+        // =============================================
+
+        const allowedTypes = {
+
+            "image/jpeg": "jpg",
+            "image/png": "png",
+            "image/webp": "webp"
+
+        };
+
+        const extension =
+            allowedTypes[file.type];
+
+        if (!extension) {
+
+            return Response.json(
+                {
+                    success: false,
+                    message:
+                        "Only JPG, PNG and WebP images are allowed."
+                },
+                {
+                    status: 400
+                }
+            );
+
+        }
+
+
+        const MAX_SIZE =
+            5 * 1024 * 1024;
+
+        if (file.size > MAX_SIZE) {
+
+            return Response.json(
+                {
+                    success: false,
+                    message:
+                        "Image must be smaller than 5 MB."
+                },
+                {
+                    status: 413
+                }
+            );
+
+        }
+
+
+        // =============================================
+        // R2 OBJECT KEY
+        // =============================================
+
+        const objectKey =
+            `images/students/${studentId}.${extension}`;
+
+
+        // =============================================
+        // UPLOAD TO R2
+        // =============================================
+
+        await env.IMAGES.put(
+            objectKey,
+            file.stream(),
+            {
+                httpMetadata: {
+
+                    contentType:
+                        file.type
+
+                },
+
+                customMetadata: {
+
+                    studentId:
+                        String(studentId),
+
+                    type:
+                        "student-avatar"
+
+                }
+
+            }
+        );
+
+
+        // =============================================
+        // SAVE R2 KEY IN D1
+        // =============================================
+
+        await env.DB.prepare(`
+            UPDATE students
+
+            SET
+                avatar_url = ?,
+                updated_at = CURRENT_TIMESTAMP
+
+            WHERE id = ?
+        `)
+        .bind(
+            objectKey,
+            studentId
+        )
+        .run();
+
+
+        // =============================================
+        // SUCCESS
+        // =============================================
+
+        return Response.json({
+
+            success: true,
+
+            message:
+                "Profile photo uploaded successfully.",
+
+            avatar_url:
+                objectKey
+
+        });
+
+    }
+
+        catch (error) {
+
+        console.error(
+            "STUDENT AVATAR UPLOAD ERROR:",
+            error
+        );
+
+                return Response.json(
+            {
+                success: false,
+                message:
+                    "Unable to upload profile photo."
+            },
+            {
+                status: 500
+            }
+        );
+
+    }
 
 }
+    }
+
+};

@@ -291,216 +291,309 @@
     }
 
 
-    /*=========================================================
-        AVATAR
-    =========================================================*/
+   /*=========================================================
+    AVATAR
+=========================================================*/
 
-    function loadStoredAvatar() {
+function renderServerAvatar() {
 
-        if (!studentAvatar) {
-            return;
-        }
-
-        const storedAvatar =
-            localStorage.getItem(
-                AVATAR_STORAGE_KEY
-            );
-
-        if (storedAvatar) {
-
-            studentAvatar.src =
-                storedAvatar;
-
-            return;
-        }
-
-        studentAvatar.src =
-            DEFAULT_AVATAR;
-
+    if (
+        !studentAvatar ||
+        !dashboardData ||
+        !dashboardData.student
+    ) {
+        return;
     }
 
 
-    function renderServerAvatar() {
+    const avatarUrl =
+        dashboardData.student.avatar_url;
 
-        if (
-            !studentAvatar ||
-            !dashboardData ||
-            !dashboardData.student
-        ) {
-            return;
-        }
+
+    if (
+        typeof avatarUrl === "string" &&
+        avatarUrl.trim() !== ""
+    ) {
 
         /*
-            Future R2 support.
+            avatar_url returned by the Worker is:
 
-            When the dashboard worker returns:
+            /api/avatar/{studentId}
 
-                student.avatar_url
+            API_BASE is:
 
-            the frontend will automatically use it.
-
-            We do NOT invent an R2 URL here.
+            https://nursephere.wamalwaemily.workers.dev/api
         */
 
-        const avatarUrl =
-            dashboardData.student.avatar_url;
+        const avatarEndpoint =
+            avatarUrl.startsWith("http")
+                ? avatarUrl
+                : `${API_BASE.replace(
+                    "/api",
+                    ""
+                )}${avatarUrl}`;
 
-        if (
-            typeof avatarUrl === "string" &&
-            avatarUrl.trim() !== ""
-        ) {
+        studentAvatar.src =
+            avatarEndpoint;
 
-            studentAvatar.src =
-                avatarUrl;
-
-        }
+        return;
 
     }
 
 
-    function previewAvatar(file) {
+    studentAvatar.src =
+        DEFAULT_AVATAR;
 
-        if (
-            !file ||
-            !studentAvatar
-        ) {
-            return;
+}
+
+
+/*=========================================================
+    AVATAR UPLOAD
+=========================================================*/
+
+function setupAvatarUpload() {
+
+    if (
+        !uploadPhoto ||
+        !avatarUpload
+    ) {
+        return;
+    }
+
+
+    uploadPhoto.addEventListener(
+        "click",
+        event => {
+
+            event.preventDefault();
+
+            avatarUpload.click();
+
         }
-
-        if (!file.type.startsWith("image/")) {
-
-            alert(
-                "Please select an image file."
-            );
-
-            return;
-        }
+    );
 
 
-        const MAX_SIZE =
-            5 * 1024 * 1024;
+    avatarUpload.addEventListener(
+        "change",
+        async () => {
+
+            const file =
+                avatarUpload.files?.[0];
 
 
-        if (file.size > MAX_SIZE) {
-
-            alert(
-                "Please choose an image smaller than 5 MB."
-            );
-
-            return;
-        }
+            if (!file) {
+                return;
+            }
 
 
-        const reader =
-            new FileReader();
+            /*-----------------------------------------
+                VALIDATE FILE TYPE
+            -----------------------------------------*/
+
+            const allowedTypes = [
+                "image/jpeg",
+                "image/png",
+                "image/webp"
+            ];
 
 
-        reader.onload = event => {
+            if (
+                !allowedTypes.includes(
+                    file.type
+                )
+            ) {
 
-            const imageData =
-                event.target.result;
-
-            studentAvatar.src =
-                imageData;
-
-            /*
-                Temporary browser persistence.
-
-                This keeps the avatar visible after
-                refreshing this browser.
-
-                It is NOT R2 storage.
-            */
-            try {
-
-                localStorage.setItem(
-                    AVATAR_STORAGE_KEY,
-                    imageData
+                alert(
+                    "Please select a JPG, PNG or WebP image."
                 );
 
+                avatarUpload.value = "";
+
+                return;
+
             }
+
+
+            /*-----------------------------------------
+                VALIDATE FILE SIZE
+            -----------------------------------------*/
+
+            const MAX_SIZE =
+                5 * 1024 * 1024;
+
+
+            if (
+                file.size > MAX_SIZE
+            ) {
+
+                alert(
+                    "Please choose an image smaller than 5 MB."
+                );
+
+                avatarUpload.value = "";
+
+                return;
+
+            }
+
+
+            /*-----------------------------------------
+                TEMPORARY PREVIEW
+            -----------------------------------------*/
+
+            const previewUrl =
+                URL.createObjectURL(file);
+
+
+            if (studentAvatar) {
+
+                studentAvatar.src =
+                    previewUrl;
+
+            }
+
+
+            /*-----------------------------------------
+                UPLOAD TO R2
+            -----------------------------------------*/
+
+            try {
+
+                const formData =
+                    new FormData();
+
+
+                formData.append(
+                    "file",
+                    file
+                );
+
+
+                const response =
+                    await fetch(
+                        `${API_BASE}/upload`,
+                        {
+
+                            method: "POST",
+
+                            headers: {
+
+                                "Authorization":
+                                    `Bearer ${studentToken}`
+
+                            },
+
+                            body:
+                                formData
+
+                        }
+                    );
+
+
+                if (
+                    response.status === 401
+                ) {
+
+                    redirectToLogin();
+
+                    return;
+
+                }
+
+
+                const result =
+                    await response.json();
+
+
+                if (
+                    !response.ok ||
+                    !result.success
+                ) {
+
+                    throw new Error(
+                        result.message ||
+                        "Unable to upload profile photo."
+                    );
+
+                }
+
+
+                /*-------------------------------------
+                    STORE SERVER RESULT
+                -------------------------------------*/
+
+                if (
+                    result.avatar_url &&
+                    studentAvatar
+                ) {
+
+                    const avatarEndpoint =
+                        result.avatar_url.startsWith("http")
+                            ? result.avatar_url
+                            : `${API_BASE.replace(
+                                "/api",
+                                ""
+                            )}${result.avatar_url}`;
+
+                    studentAvatar.src =
+                        avatarEndpoint;
+
+                }
+
+
+                /*-------------------------------------
+                    UPDATE DASHBOARD DATA
+                -------------------------------------*/
+
+                if (
+                    dashboardData &&
+                    dashboardData.student
+                ) {
+
+                    dashboardData.student.avatar_url =
+                        result.avatar_url;
+
+                }
+
+
+            }
+
             catch (error) {
 
-                console.warn(
-                    "Unable to store avatar locally:",
+                console.error(
+                    "Avatar upload error:",
                     error
                 );
 
-            }
 
-        };
-
-
-        reader.onerror = () => {
-
-            alert(
-                "Unable to preview the selected image."
-            );
-
-        };
+                alert(
+                    error.message ||
+                    "Unable to upload profile photo."
+                );
 
 
-        reader.readAsDataURL(file);
+                /*-------------------------------------
+                    RESTORE CURRENT SERVER AVATAR
+                -------------------------------------*/
 
-    }
-
-
-    function setupAvatarUpload() {
-
-        if (
-            !uploadPhoto ||
-            !avatarUpload
-        ) {
-            return;
-        }
-
-
-        uploadPhoto.addEventListener(
-            "click",
-            event => {
-
-                event.preventDefault();
-
-                avatarUpload.click();
+                renderServerAvatar();
 
             }
-        );
 
+            finally {
 
-        avatarUpload.addEventListener(
-            "change",
-            () => {
-
-                const file =
-                    avatarUpload.files?.[0];
-
-                if (!file) {
-                    return;
-                }
-
-                previewAvatar(file);
-
-                /*
-                    IMPORTANT:
-
-                    The current Worker /api/upload endpoint
-                    is still a temporary stub.
-
-                    Therefore we intentionally do not claim
-                    this file has been uploaded to R2.
-
-                    R2 upload will be connected once the
-                    backend upload handler is implemented.
-                */
+                URL.revokeObjectURL(
+                    previewUrl
+                );
 
                 avatarUpload.value = "";
 
             }
-        );
 
-    }
+        }
+    );
 
-
+}
     /*=========================================================
         SEARCH
     =========================================================*/
@@ -1025,8 +1118,6 @@
         () => {
 
             setupEventListeners();
-
-            loadStoredAvatar();
 
             loadDashboard();
 
