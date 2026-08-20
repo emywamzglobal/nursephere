@@ -579,15 +579,25 @@ function configureRenewButton(
 
     }
 
-
     renewButton.disabled = false;
-
 
     renewButton.onclick =
         function () {
 
+            if (
+                !plan ||
+                !plan.name
+            ) {
+
+                window.location.href =
+                    "/pricing";
+
+                return;
+
+            }
+
             window.location.href =
-                "../pricing.html";
+                "/pricing";
 
         };
 
@@ -608,12 +618,11 @@ function configureUpgradeButtons(
 
             button.disabled = false;
 
-
             button.onclick =
                 function () {
 
                     window.location.href =
-                        "../pricing.html";
+                        "/pricing";
 
                 };
 
@@ -621,8 +630,6 @@ function configureUpgradeButtons(
     );
 
 }
-
-
 /*=========================================================
     FORMAT STATUS
 =========================================================*/
