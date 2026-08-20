@@ -1618,33 +1618,41 @@ async function deleteDocument(
 
 }
 
-
 /*=========================================================
         LOCKED DOCUMENTS STATE
 =========================================================*/
 
 function showDocumentsLocked() {
 
-    if (uploadArea) {
+    /*-----------------------------------------------------
+        HIDE ALL PROTECTED DOCUMENT CONTENT
+    -----------------------------------------------------*/
 
-        uploadArea.style.display =
+    const documentsSection =
+        document.querySelector(
+            ".documents-section"
+        );
+
+
+    if (documentsSection) {
+
+        documentsSection.style.display =
             "none";
 
     }
 
 
-    if (documentsList) {
+    if (receiptsSection) {
 
-        documentsList.style.display =
+        receiptsSection.style.display =
             "none";
 
     }
 
 
-    /*
-        Keep the page itself open.
-        We do NOT redirect to checkout.
-    */
+    /*-----------------------------------------------------
+        REMOVE EXISTING NOTICE IF PRESENT
+    -----------------------------------------------------*/
 
     const existingNotice =
         document.getElementById(
@@ -1658,6 +1666,10 @@ function showDocumentsLocked() {
 
     }
 
+
+    /*-----------------------------------------------------
+        CREATE LOCKED ACCESS NOTICE
+    -----------------------------------------------------*/
 
     const notice =
         document.createElement(
@@ -1686,20 +1698,23 @@ function showDocumentsLocked() {
             </h2>
 
             <p>
-                Secure document storage and payment
-                receipt access are available with
-                an eligible premium subscription.
+                Document storage and payment receipt
+                access are available with the Annual Plan.
             </p>
 
             <a
-                href="../pricing.html"
+                href="../checkout.html?plan=yearly"
                 class="documents-upgrade-btn"
             >
                 <i class="fas fa-crown"></i>
-                Upgrade Plan
+                Upgrade to Annual Plan
             </a>
         `;
 
+
+    /*-----------------------------------------------------
+        PLACE NOTICE AFTER HERO
+    -----------------------------------------------------*/
 
     const main =
         document.querySelector(
@@ -1707,28 +1722,34 @@ function showDocumentsLocked() {
         );
 
 
-    if (main) {
-
-        main.appendChild(
-            notice
+    const hero =
+        main?.querySelector(
+            ".dashboard-top"
         );
 
-    }
 
+    if (main) {
 
-    /*
-        Receipts are also protected.
-    */
+        if (hero) {
 
-    if (receiptsSection) {
+            hero.insertAdjacentElement(
+                "afterend",
+                notice
+            );
 
-        receiptsSection.style.display =
-            "none";
+        }
+
+        else {
+
+            main.prepend(
+                notice
+            );
+
+        }
 
     }
 
 }
-
 
 /*=========================================================
         AUTHENTICATION REQUIRED
