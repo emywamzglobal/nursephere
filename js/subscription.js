@@ -474,20 +474,16 @@ function showNoActiveSubscription() {
         be directed to the public pricing page.
     -----------------------------------------------------*/
 
-    if (renewButton) {
+    configureRenewButton(
+    null,
+    null
+);
 
-        renewButton.disabled = false;
 
-    }
-
-
-    upgradeButtons.forEach(
-        button => {
-
-            button.disabled = false;
-
-        }
-    );
+configureUpgradeButtons(
+    null,
+    null
+);
 
 }
 
