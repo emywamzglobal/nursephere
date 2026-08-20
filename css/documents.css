@@ -323,3 +323,208 @@
     }
 
 }
+
+/*=========================================
+        DOCUMENTS LOCKED STATE
+=========================================*/
+
+.documents-access-notice{
+
+    background:#ffffff;
+
+    border-radius:24px;
+
+    padding:55px 45px;
+
+    margin-bottom:40px;
+
+    text-align:center;
+
+    box-shadow:0 10px 30px rgba(15,23,42,.08);
+
+    border:1px solid #e2e8f0;
+
+    max-width:850px;
+
+    margin-left:auto;
+
+    margin-right:auto;
+
+}
+
+
+.documents-lock-icon{
+
+    width:76px;
+
+    height:76px;
+
+    margin:0 auto 22px;
+
+    border-radius:50%;
+
+    background:#edf4ff;
+
+    color:#2563eb;
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:center;
+
+}
+
+
+.documents-lock-icon i{
+
+    font-size:32px;
+
+}
+
+
+.documents-access-notice h2{
+
+    color:#1d3557;
+
+    font-size:1.8rem;
+
+    margin:0 0 14px;
+
+}
+
+
+.documents-access-notice p{
+
+    color:#64748b;
+
+    line-height:1.8;
+
+    max-width:620px;
+
+    margin:0 auto 28px;
+
+}
+
+
+.documents-upgrade-btn{
+
+    display:inline-flex;
+
+    align-items:center;
+
+    justify-content:center;
+
+    gap:10px;
+
+    background:#2563eb;
+
+    color:#ffffff;
+
+    text-decoration:none;
+
+    border:none;
+
+    border-radius:14px;
+
+    padding:15px 28px;
+
+    font-size:1rem;
+
+    font-weight:600;
+
+    cursor:pointer;
+
+    transition:
+
+        background .25s ease,
+
+        transform .25s ease,
+
+        box-shadow .25s ease;
+
+    box-shadow:0 8px 18px rgba(37,99,235,.20);
+
+}
+
+
+.documents-upgrade-btn:hover{
+
+    background:#1d4ed8;
+
+    color:#ffffff;
+
+    text-decoration:none;
+
+    transform:translateY(-2px);
+
+    box-shadow:0 12px 24px rgba(37,99,235,.25);
+
+}
+
+
+.documents-upgrade-btn:active{
+
+    transform:translateY(0);
+
+}
+
+
+/*=========================================
+        LOCKED STATE - MOBILE
+=========================================*/
+
+@media(max-width:768px){
+
+    .documents-access-notice{
+
+        padding:40px 25px;
+
+        border-radius:20px;
+
+        margin-left:10px;
+
+        margin-right:10px;
+
+    }
+
+
+    .documents-lock-icon{
+
+        width:68px;
+
+        height:68px;
+
+    }
+
+
+    .documents-lock-icon i{
+
+        font-size:28px;
+
+    }
+
+
+    .documents-access-notice h2{
+
+        font-size:1.5rem;
+
+    }
+
+
+    .documents-access-notice p{
+
+        font-size:.95rem;
+
+    }
+
+
+    .documents-upgrade-btn{
+
+        width:100%;
+
+        max-width:280px;
+
+    }
+
+}
