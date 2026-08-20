@@ -158,6 +158,8 @@ return Response.json({
 
         email: student.email,
 
+        referralCode: student.referral_code,
+
         subscriptionStatus: student.subscription_status,
 
         trialActive: student.trial_active

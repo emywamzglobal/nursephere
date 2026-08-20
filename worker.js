@@ -16,6 +16,7 @@ import parserHandler from "./workers/parser.js";
 import progressHandler from "./workers/progress.js";
 import documentsHandler from "./workers/documents.js";
 import profileHandler from "./workers/profile.js";
+import referralHandler from "./workers/referral.js";
 export default {
 
     async fetch(request, env, ctx) {
@@ -354,6 +355,65 @@ if (
 }
 
 // -----------------------------
+// Student Referral
+// -----------------------------
+if (
+    url.pathname === "/api/referral" &&
+    request.method === "GET"
+) {
+
+    const response =
+        await referralHandler(
+            request,
+            env
+        );
+
+    Object.entries(corsHeaders).forEach(
+        ([key, value]) => {
+
+            response.headers.set(
+                key,
+                value
+            );
+
+        }
+    );
+
+    return response;
+
+}
+
+// -----------------------------
+// Student Avatar Upload
+// -----------------------------
+if (
+    url.pathname === "/api/upload" &&
+    request.method === "POST"
+) {
+
+    const response =
+        await handleStudentAvatarUpload(
+            request,
+            env
+        );
+
+    Object.entries(corsHeaders).forEach(
+        ([key, value]) => {
+
+            response.headers.set(
+                key,
+                value
+            );
+
+        }
+    );
+
+    return response;
+
+}
+
+
+// -----------------------------
 // Payment Management
 // -----------------------------
 if (
@@ -460,34 +520,6 @@ if (
 
 }
 
-// -----------------------------
-// Student Avatar Upload
-// -----------------------------
-if (
-    url.pathname === "/api/upload" &&
-    request.method === "POST"
-) {
-
-    const response =
-        await handleStudentAvatarUpload(
-            request,
-            env
-        );
-
-    Object.entries(corsHeaders).forEach(
-        ([key, value]) => {
-
-            response.headers.set(
-                key,
-                value
-            );
-
-        }
-    );
-
-    return response;
-
-}
 
 // -----------------------------
 // API Route Not Found
