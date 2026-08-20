@@ -18,8 +18,13 @@ const DOCUMENTS_API_BASE =
         SESSION
 =========================================================*/
 
-const studentToken =
-    localStorage.getItem("studentToken");
+function getStudentToken() {
+
+    return localStorage.getItem(
+        "studentToken"
+    );
+
+}
 
 
 /*=========================================================
@@ -76,7 +81,11 @@ document.addEventListener(
 
 async function initialiseDocumentsPage() {
 
-    if (!studentToken) {
+    const token =
+        getStudentToken();
+
+
+    if (!token) {
 
         showAuthenticationRequired();
 
@@ -101,10 +110,14 @@ async function initialiseDocumentsPage() {
 
 function getAuthHeaders() {
 
+    const token =
+        getStudentToken();
+
+
     return {
 
         "Authorization":
-            `Bearer ${studentToken}`
+            `Bearer ${token}`
 
     };
 
@@ -379,6 +392,23 @@ function enableUpload() {
 
         documentUpload.disabled =
             false;
+
+    }
+
+
+    const uploadButton =
+        uploadArea.querySelector(
+            ".upload-btn"
+        );
+
+
+    if (uploadButton) {
+
+        uploadButton.disabled =
+            false;
+
+        uploadButton.title =
+            "";
 
     }
 
@@ -918,7 +948,7 @@ function createDocumentElement(
 
     const meta =
         document.createElement(
-            "p"
+        "p"
         );
 
 
