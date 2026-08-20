@@ -1,33 +1,49 @@
 "use strict";
 
 /*=========================================================
-    NurseSphere Student Profile Controller
-    File: js/profile.js
+    NURSEPHERE STUDENT PROFILE CONTROLLER
 
-    Production-ready.
+    File:
+        js/profile.js
 
-    Database-driven.
-    Authenticated student only.
-    No hardcoded student data.
-    No hardcoded subscription data.
-    No hardcoded examinations.
+    Production-ready frontend controller.
 
-    Handles:
-    - Profile loading
-    - Personal information
-    - Study information
-    - Admin-managed examinations
-    - Save Changes
-    - Cancel Changes
-    - Account summary cards
-    - Member Since
-    - Header student name
-    - Header subscription plan
-    - Profile avatar
-    - Header avatar synchronization
-    - Profile photo upload
-    - Logout
-    - Session expiry
+    DATABASE OWNERSHIP
+    ---------------------------------------------------------
+    students:
+        - student_number
+        - full_name
+        - email
+        - account_status
+        - created_at
+        - avatar_url
+        - exam_id
+
+    student_profiles:
+        - first_name
+        - last_name
+        - phone_number
+        - country
+        - gender
+        - date_of_birth
+        - institution_name
+        - expected_graduation
+        - expected_exam_date
+        - study_level
+
+    Other backend sources:
+        - subscription
+        - student_progress
+        - student_activity
+        - student_documents
+
+    This file:
+        - never determines student identity
+        - never hardcodes student information
+        - never hardcodes subscription information
+        - never hardcodes examinations
+        - never overwrites student number
+        - never sends email back as an editable field
 =========================================================*/
 
 
@@ -44,7 +60,7 @@ const PROFILE_API_BASE =
 =========================================================*/
 
 /*---------------------------------------------------------
-    PROFILE CONTAINER
+    PROFILE FORM
 ---------------------------------------------------------*/
 
 const profileForm =
@@ -65,53 +81,73 @@ const personalFormGroups =
         : [];
 
 
+/*
+    The Student Number field was added to the HTML.
+
+    We first try the explicit ID.
+
+    If the page version does not contain the ID,
+    the label-based fallback prevents the rest of
+    the profile controller from breaking.
+*/
+
+const studentNumberInput =
+    document.getElementById(
+        "studentNumber"
+    );
+
+
+/*
+    Existing personal fields.
+*/
+
 const firstNameInput =
-    personalFormGroups[0]
-        ?.querySelector(
-            "input"
-        );
+    getPersonalField(
+        "first name",
+        0
+    );
 
 
 const lastNameInput =
-    personalFormGroups[1]
-        ?.querySelector(
-            "input"
-        );
+    getPersonalField(
+        "last name",
+        1
+    );
 
 
 const emailInput =
-    personalFormGroups[2]
-        ?.querySelector(
-            "input"
-        );
+    getPersonalField(
+        "email address",
+        2
+    );
 
 
 const phoneInput =
-    personalFormGroups[3]
-        ?.querySelector(
-            "input"
-        );
+    getPersonalField(
+        "phone number",
+        3
+    );
 
 
 const countryInput =
-    personalFormGroups[4]
-        ?.querySelector(
-            "input"
-        );
+    getPersonalField(
+        "country",
+        4
+    );
 
 
 const genderSelect =
-    personalFormGroups[5]
-        ?.querySelector(
-            "select"
-        );
+    getPersonalField(
+        "gender",
+        5
+    );
 
 
 const dateOfBirthInput =
-    personalFormGroups[6]
-        ?.querySelector(
-            "input"
-        );
+    getPersonalField(
+        "date of birth",
+        6
+    );
 
 
 /*---------------------------------------------------------
@@ -149,7 +185,7 @@ const studyFormGroups =
 
 
 /*
-    Current Examination
+    Examination has an explicit ID in the HTML.
 */
 
 const examinationSelect =
@@ -161,39 +197,39 @@ const examinationSelect =
 /*
     Study information order:
 
-    0 = Current Examination
-    1 = Nursing School / Institution
-    2 = Expected Graduation
-    3 = Expected Exam Date
-    4 = Current Study Level
+        0 = Current Examination
+        1 = Institution
+        2 = Expected Graduation
+        3 = Expected Exam Date
+        4 = Study Level
 */
 
 const institutionInput =
-    studyFormGroups[1]
-        ?.querySelector(
-            "input"
-        );
+    getStudyField(
+        1,
+        "institution"
+    );
 
 
 const graduationInput =
-    studyFormGroups[2]
-        ?.querySelector(
-            "input"
-        );
+    getStudyField(
+        2,
+        "graduation"
+    );
 
 
 const examDateInput =
-    studyFormGroups[3]
-        ?.querySelector(
-            "input"
-        );
+    getStudyField(
+        3,
+        "exam date"
+    );
 
 
 const studyLevelSelect =
-    studyFormGroups[4]
-        ?.querySelector(
-            "select"
-        );
+    getStudyField(
+        4,
+        "study level"
+    );
 
 
 /*---------------------------------------------------------
@@ -247,6 +283,183 @@ const studentAvatar =
 
 
 /*=========================================================
+    DOM FIELD HELPERS
+=========================================================*/
+
+function normalizeLabel(
+    value
+) {
+
+    return String(
+        value || ""
+    )
+        .trim()
+        .replace(
+            /\s+/g,
+            " "
+        )
+        .toLowerCase();
+
+}
+
+
+/*---------------------------------------------------------
+    PERSONAL FIELD LOOKUP
+---------------------------------------------------------*/
+
+function getPersonalField(
+    labelText,
+    fallbackIndex
+) {
+
+    if (
+        !profileForm
+    ) {
+
+        return null;
+
+    }
+
+
+    const groups =
+        profileForm.querySelectorAll(
+            ".form-group"
+        );
+
+
+    const targetLabel =
+        normalizeLabel(
+            labelText
+        );
+
+
+    for (
+        const group
+        of groups
+    ) {
+
+        const label =
+            group.querySelector(
+                "label"
+            );
+
+
+        if (
+            !label
+        ) {
+
+            continue;
+
+        }
+
+
+        if (
+            normalizeLabel(
+                label.textContent
+            ) === targetLabel
+        ) {
+
+            return group.querySelector(
+                "input, select"
+            );
+
+        }
+
+    }
+
+
+    return groups[
+        fallbackIndex
+    ]
+        ?.querySelector(
+            "input, select"
+        ) || null;
+
+}
+
+
+/*---------------------------------------------------------
+    STUDY FIELD LOOKUP
+---------------------------------------------------------*/
+
+function getStudyField(
+    index,
+    labelText
+) {
+
+    if (
+        !studyGrid
+    ) {
+
+        return null;
+
+    }
+
+
+    const groups =
+        studyGrid.querySelectorAll(
+            ".form-group"
+        );
+
+
+    const targetLabel =
+        normalizeLabel(
+            labelText
+        );
+
+
+    for (
+        const group
+        of groups
+    ) {
+
+        const label =
+            group.querySelector(
+                "label"
+            );
+
+
+        if (
+            !label
+        ) {
+
+            continue;
+
+        }
+
+
+        const labelValue =
+            normalizeLabel(
+                label.textContent
+            );
+
+
+        if (
+            labelValue.includes(
+                targetLabel
+            )
+        ) {
+
+            return group.querySelector(
+                "input, select"
+            );
+
+        }
+
+    }
+
+
+    return groups[
+        index
+    ]
+        ?.querySelector(
+            "input, select"
+        ) || null;
+
+}
+
+
+/*=========================================================
     AUTHENTICATION
 =========================================================*/
 
@@ -269,7 +482,9 @@ function verifyLogin() {
         getStudentToken();
 
 
-    if (!token) {
+    if (
+        !token
+    ) {
 
         window.location.replace(
             "../login.html"
@@ -298,7 +513,9 @@ async function apiRequest(
         getStudentToken();
 
 
-    if (!token) {
+    if (
+        !token
+    ) {
 
         throw new Error(
             "Your session has expired."
@@ -307,7 +524,7 @@ async function apiRequest(
     }
 
 
-    const requestHeaders = {
+    const headers = {
 
         "Authorization":
             `Bearer ${token}`
@@ -316,19 +533,22 @@ async function apiRequest(
 
 
     /*
-        JSON content type only when
-        the request contains a JSON body.
+        Only send JSON content type when
+        the request actually contains JSON.
 
-        FormData must NOT receive
-        a manually assigned content type.
+        This is important for FormData uploads.
     */
 
     if (
         options.body &&
-        !(options.body instanceof FormData)
+        !(
+            options.body
+            instanceof
+            FormData
+        )
     ) {
 
-        requestHeaders[
+        headers[
             "Content-Type"
         ] =
             "application/json";
@@ -347,7 +567,7 @@ async function apiRequest(
 
                 headers: {
 
-                    ...requestHeaders,
+                    ...headers,
 
                     ...(options.headers || {})
 
@@ -403,7 +623,9 @@ async function apiRequest(
     }
 
 
-    if (!response.ok) {
+    if (
+        !response.ok
+    ) {
 
         throw new Error(
 
@@ -466,7 +688,9 @@ async function loadProfile() {
 
     }
 
-    catch (error) {
+    catch (
+        error
+    ) {
 
         console.error(
             "NurseSphere Profile Error:",
@@ -500,10 +724,6 @@ async function loadExaminations(
     }
 
 
-    /*
-        Temporary loading state.
-    */
-
     examinationSelect.innerHTML =
         "";
 
@@ -536,8 +756,8 @@ async function loadExaminations(
 
 
         /*
-            Support the existing exams
-            API response structures.
+            Accept the response structures
+            used by the existing examinations API.
         */
 
         const exams =
@@ -589,7 +809,9 @@ async function loadExaminations(
         exams.forEach(
             exam => {
 
-                if (!exam) {
+                if (
+                    !exam
+                ) {
 
                     return;
 
@@ -655,7 +877,8 @@ async function loadExaminations(
 
 
         /*
-            Restore saved examination.
+            The database stores the exam ID.
+            Always restore by ID, not by display name.
         */
 
         if (
@@ -671,7 +894,9 @@ async function loadExaminations(
 
     }
 
-    catch (error) {
+    catch (
+        error
+    ) {
 
         console.error(
             "Examination Load Error:",
@@ -727,7 +952,31 @@ async function populateProfile(
 
 
     /*-----------------------------------------------------
-        PERSONAL INFORMATION
+        STUDENT NUMBER
+        Source:
+            students.student_number
+
+        Read-only.
+    -----------------------------------------------------*/
+
+    setInputValue(
+        studentNumberInput,
+        profile.student_number
+    );
+
+
+    if (
+        studentNumberInput
+    ) {
+
+        studentNumberInput.readOnly =
+            true;
+
+    }
+
+
+    /*-----------------------------------------------------
+        FIRST NAME
     -----------------------------------------------------*/
 
     setInputValue(
@@ -736,48 +985,29 @@ async function populateProfile(
     );
 
 
+    /*-----------------------------------------------------
+        LAST NAME
+    -----------------------------------------------------*/
+
     setInputValue(
         lastNameInput,
         profile.last_name
     );
 
 
+    /*-----------------------------------------------------
+        EMAIL
+        Source:
+            students.email
+
+        Read-only.
+    -----------------------------------------------------*/
+
     setInputValue(
         emailInput,
         profile.email
     );
 
-
-    setInputValue(
-        phoneInput,
-        profile.phone_number
-    );
-
-
-    setInputValue(
-        countryInput,
-        profile.country
-    );
-
-
-    setSelectValue(
-        genderSelect,
-        profile.gender
-    );
-
-
-    setInputValue(
-        dateOfBirthInput,
-        formatInputDate(
-            profile.date_of_birth
-        )
-    );
-
-
-    /*
-        Email belongs to the student account.
-        Profile does not modify it.
-    */
 
     if (
         emailInput
@@ -790,20 +1020,69 @@ async function populateProfile(
 
 
     /*-----------------------------------------------------
-        STUDY INFORMATION
+        PHONE
+    -----------------------------------------------------*/
+
+    setInputValue(
+        phoneInput,
+        profile.phone_number
+    );
+
+
+    /*-----------------------------------------------------
+        COUNTRY
+    -----------------------------------------------------*/
+
+    setInputValue(
+        countryInput,
+        profile.country
+    );
+
+
+    /*-----------------------------------------------------
+        GENDER
+    -----------------------------------------------------*/
+
+    setSelectValue(
+        genderSelect,
+        profile.gender
+    );
+
+
+    /*-----------------------------------------------------
+        DATE OF BIRTH
+    -----------------------------------------------------*/
+
+    setInputValue(
+        dateOfBirthInput,
+        formatInputDate(
+            profile.date_of_birth
+        )
+    );
+
+
+    /*-----------------------------------------------------
+        EXAMINATIONS
     -----------------------------------------------------*/
 
     await loadExaminations(
-        profile.examination_id ||
-        ""
+        profile.examination_id
     );
 
+
+    /*-----------------------------------------------------
+        INSTITUTION
+    -----------------------------------------------------*/
 
     setInputValue(
         institutionInput,
         profile.institution_name
     );
 
+
+    /*-----------------------------------------------------
+        EXPECTED GRADUATION
+    -----------------------------------------------------*/
 
     setInputValue(
         graduationInput,
@@ -813,6 +1092,10 @@ async function populateProfile(
     );
 
 
+    /*-----------------------------------------------------
+        EXPECTED EXAM DATE
+    -----------------------------------------------------*/
+
     setInputValue(
         examDateInput,
         formatInputDate(
@@ -821,6 +1104,10 @@ async function populateProfile(
     );
 
 
+    /*-----------------------------------------------------
+        STUDY LEVEL
+    -----------------------------------------------------*/
+
     setSelectValue(
         studyLevelSelect,
         profile.study_level
@@ -828,7 +1115,7 @@ async function populateProfile(
 
 
     /*-----------------------------------------------------
-        HEADER STUDENT NAME
+        HEADER NAME
     -----------------------------------------------------*/
 
     const fullName =
@@ -876,15 +1163,9 @@ async function populateProfile(
         AVATAR
     -----------------------------------------------------*/
 
-    if (
+    setAvatar(
         profile.avatar_url
-    ) {
-
-        setAvatar(
-            profile.avatar_url
-        );
-
-    }
+    );
 
 
     /*-----------------------------------------------------
@@ -899,7 +1180,7 @@ async function populateProfile(
 
 
 /*=========================================================
-    POPULATE SUMMARY CARDS
+    SUMMARY CARDS
 =========================================================*/
 
 function populateSummary(
@@ -938,13 +1219,9 @@ function populateSummary(
 
 
             const label =
-                heading.textContent
-                    .trim()
-                    .replace(
-                        /\s+/g,
-                        " "
-                    )
-                    .toLowerCase();
+                normalizeLabel(
+                    heading.textContent
+                );
 
 
             /*---------------------------------------------
@@ -1122,6 +1399,17 @@ async function saveProfile(
 
     try {
 
+        /*
+            IMPORTANT:
+
+            Student Number is NOT submitted.
+
+            Email is NOT submitted.
+
+            Those are account identity fields
+            owned by students.
+        */
+
         const payload = {
 
             first_name:
@@ -1149,8 +1437,10 @@ async function saveProfile(
 
 
             gender:
-                getInputValue(
-                    genderSelect
+                normalizeGender(
+                    getInputValue(
+                        genderSelect
+                    )
                 ),
 
 
@@ -1185,8 +1475,10 @@ async function saveProfile(
 
 
             study_level:
-                getInputValue(
-                    studyLevelSelect
+                normalizeStudyLevel(
+                    getInputValue(
+                        studyLevelSelect
+                    )
                 )
 
         };
@@ -1235,15 +1527,17 @@ async function saveProfile(
 
 
         /*
-            Reload the actual saved
-            database values.
+            Database becomes the source
+            of truth again after saving.
         */
 
         await loadProfile();
 
     }
 
-    catch (error) {
+    catch (
+        error
+    ) {
 
         console.error(
             "Profile Save Error:",
@@ -1301,8 +1595,11 @@ async function cancelChanges(
 
 
     /*
-        Discard unsaved browser changes
-        and reload saved database values.
+        Do not manually reset individual fields.
+
+        Reload the database-backed profile.
+        This guarantees Cancel returns the UI
+        to the actual persisted values.
     */
 
     await loadProfile();
@@ -1339,7 +1636,7 @@ function openProfileUpload(
 
 
 /*=========================================================
-    UPLOAD PROFILE PHOTO
+    PROFILE PHOTO UPLOAD
 =========================================================*/
 
 async function uploadProfilePhoto() {
@@ -1360,17 +1657,28 @@ async function uploadProfilePhoto() {
 
 
     /*-----------------------------------------------------
-        IMAGE TYPE
+        VALIDATE FILE TYPE
     -----------------------------------------------------*/
 
+    const allowedTypes = [
+
+        "image/jpeg",
+
+        "image/png",
+
+        "image/webp"
+
+    ];
+
+
     if (
-        !file.type.startsWith(
-            "image/"
+        !allowedTypes.includes(
+            file.type
         )
     ) {
 
         showProfileError(
-            "Please select a valid image file."
+            "Only JPG, PNG and WebP images are allowed."
         );
 
 
@@ -1384,7 +1692,7 @@ async function uploadProfilePhoto() {
 
 
     /*-----------------------------------------------------
-        FILE SIZE
+        VALIDATE FILE SIZE
     -----------------------------------------------------*/
 
     const MAX_IMAGE_SIZE =
@@ -1397,7 +1705,7 @@ async function uploadProfilePhoto() {
     ) {
 
         showProfileError(
-            "Profile photo must be 5 MB or smaller."
+            "Image must be smaller than 5 MB."
         );
 
 
@@ -1416,7 +1724,9 @@ async function uploadProfilePhoto() {
             getStudentToken();
 
 
-        if (!token) {
+        if (
+            !token
+        ) {
 
             verifyLogin();
 
@@ -1434,6 +1744,11 @@ async function uploadProfilePhoto() {
             file
         );
 
+
+        /*
+            The avatar upload endpoint is
+            handled by the main Worker.
+        */
 
         const response =
             await fetch(
@@ -1530,12 +1845,17 @@ async function uploadProfilePhoto() {
 
 
         /*
-            Immediately synchronize both
-            profile image and header avatar
-            when the API returns a browser URL.
+            The upload worker stores the R2 object key.
+
+            If the API provides an actual browser URL,
+            use it immediately.
+
+            If it only provides an R2 object key,
+            do NOT assign that key to img.src because
+            it is not a browser URL.
         */
 
-        const avatarUrl =
+        const returnedAvatarUrl =
 
             result.avatar_url ||
 
@@ -1548,33 +1868,40 @@ async function uploadProfilePhoto() {
 
         if (
             isBrowserImageUrl(
-                avatarUrl
+                returnedAvatarUrl
             )
         ) {
 
             setAvatar(
-                avatarUrl
+                returnedAvatarUrl
             );
 
         }
 
 
         showProfileMessage(
+
             result.message ||
+
             "Profile photo uploaded successfully."
+
         );
 
 
         /*
-            Database remains the source
-            of truth after upload.
+            Reload from database.
+
+            This keeps the database as the
+            source of truth.
         */
 
         await loadProfile();
 
     }
 
-    catch (error) {
+    catch (
+        error
+    ) {
 
         console.error(
             "Profile Photo Error:",
@@ -1590,14 +1917,8 @@ async function uploadProfilePhoto() {
 
     finally {
 
-        if (
-            profileUpload
-        ) {
-
-            profileUpload.value =
-                "";
-
-        }
+        profileUpload.value =
+            "";
 
     }
 
@@ -1612,8 +1933,34 @@ function setAvatar(
     url
 ) {
 
+    /*
+        No stored image:
+        keep the HTML placeholder.
+    */
+
     if (
         !url
+    ) {
+
+        return;
+
+    }
+
+
+    /*
+        Only assign values that can actually
+        be loaded by the browser.
+
+        R2 object keys such as:
+            images/students/123.jpg
+
+        are NOT treated as image URLs.
+    */
+
+    if (
+        !isBrowserImageUrl(
+            url
+        )
     ) {
 
         return;
@@ -1644,7 +1991,7 @@ function setAvatar(
 
 
 /*=========================================================
-    AVATAR URL VALIDATION
+    BROWSER IMAGE URL CHECK
 =========================================================*/
 
 function isBrowserImageUrl(
@@ -1682,6 +2029,12 @@ function isBrowserImageUrl(
 
         url.startsWith(
             "data:image/"
+        )
+
+        ||
+
+        url.startsWith(
+            "blob:"
         )
 
         ||
@@ -1737,7 +2090,7 @@ function logout(
 
 
 /*=========================================================
-    INPUT HELPERS
+    INPUT VALUE
 =========================================================*/
 
 function getInputValue(
@@ -1760,6 +2113,10 @@ function getInputValue(
 }
 
 
+/*=========================================================
+    SET INPUT VALUE
+=========================================================*/
+
 function setInputValue(
     element,
     value
@@ -1781,7 +2138,7 @@ function setInputValue(
 
 
 /*=========================================================
-    SELECT HELPER
+    SET SELECT VALUE
 =========================================================*/
 
 function setSelectValue(
@@ -1798,7 +2155,7 @@ function setSelectValue(
     }
 
 
-    const normalizedValue =
+    const target =
         String(
             value ?? ""
         )
@@ -1806,9 +2163,17 @@ function setSelectValue(
         .toLowerCase();
 
 
+    /*
+        Empty database value means:
+        leave the select on its placeholder.
+    */
+
     if (
-        !normalizedValue
+        !target
     ) {
+
+        element.value =
+            "";
 
         return;
 
@@ -1841,12 +2206,12 @@ function setSelectValue(
                 return (
 
                     optionValue ===
-                    normalizedValue
+                    target
 
                     ||
 
                     optionText ===
-                    normalizedValue
+                    target
 
                 );
 
@@ -1867,7 +2232,83 @@ function setSelectValue(
 
 
 /*=========================================================
-    FULL NAME
+    NORMALIZE GENDER
+=========================================================*/
+
+function normalizeGender(
+    value
+) {
+
+    const normalized =
+        String(
+            value ?? ""
+        )
+        .trim();
+
+
+    /*
+        HTML placeholder values should
+        become an empty database value.
+    */
+
+    if (
+        !normalized ||
+        normalizeLabel(
+            normalized
+        ) ===
+        "select gender"
+    ) {
+
+        return "";
+
+    }
+
+
+    return normalized;
+
+}
+
+
+/*=========================================================
+    NORMALIZE STUDY LEVEL
+=========================================================*/
+
+function normalizeStudyLevel(
+    value
+) {
+
+    const normalized =
+        String(
+            value ?? ""
+        )
+        .trim();
+
+
+    /*
+        HTML placeholder values should
+        become an empty database value.
+    */
+
+    if (
+        !normalized ||
+        normalizeLabel(
+            normalized
+        ) ===
+        "select study stage"
+    ) {
+
+        return "";
+
+    }
+
+
+    return normalized;
+
+}
+
+
+/*=========================================================
+    BUILD FULL NAME
 =========================================================*/
 
 function buildFullName(
@@ -1882,11 +2323,14 @@ function buildFullName(
         lastName
 
     ]
-    .filter(
+    .map(
         value =>
-            Boolean(
-                value
-            )
+            String(
+                value ?? ""
+            ).trim()
+    )
+    .filter(
+        Boolean
     )
     .join(
         " "
@@ -1896,7 +2340,7 @@ function buildFullName(
 
 
 /*=========================================================
-    NUMBER FORMAT
+    FORMAT NUMBER
 =========================================================*/
 
 function formatNumber(
@@ -1928,7 +2372,13 @@ function formatNumber(
 
 
 /*=========================================================
-    MEMBER SINCE
+    FORMAT MEMBER SINCE
+
+    Desired display:
+
+        July 23, 2026
+
+    The database keeps the full timestamp.
 =========================================================*/
 
 function formatMemberSince(
@@ -1950,15 +2400,25 @@ function formatMemberSince(
         ).trim();
 
 
+    if (
+        !value
+    ) {
+
+        return "Not Available";
+
+    }
+
+
     /*
-        Cloudflare D1 commonly returns:
+        D1 may return:
 
-        2026-07-23 13:04:50
+            2026-07-23 13:04:50
 
-        Normalize the SQL timestamp.
+        Normalize the SQL timestamp before
+        creating the Date object.
     */
 
-    const normalizedValue =
+    const normalized =
         value.replace(
             " ",
             "T"
@@ -1967,7 +2427,7 @@ function formatMemberSince(
 
     const parsedDate =
         new Date(
-            normalizedValue
+            normalized
         );
 
 
@@ -1977,7 +2437,59 @@ function formatMemberSince(
         )
     ) {
 
-        return "Not Available";
+        /*
+            Last-resort support for a simple
+            YYYY-MM-DD database value.
+        */
+
+        const match =
+            value.match(
+                /^(\d{4})-(\d{2})-(\d{2})/
+            );
+
+
+        if (
+            !match
+        ) {
+
+            return "Not Available";
+
+        }
+
+
+        return new Date(
+
+            Number(
+                match[1]
+            ),
+
+            Number(
+                match[2]
+            ) - 1,
+
+            Number(
+                match[3]
+            )
+
+        )
+        .toLocaleDateString(
+
+            "en-US",
+
+            {
+
+                year:
+                    "numeric",
+
+                month:
+                    "long",
+
+                day:
+                    "numeric"
+
+            }
+
+        );
 
     }
 
@@ -1992,7 +2504,10 @@ function formatMemberSince(
                 "numeric",
 
             month:
-                "long"
+                "long",
+
+            day:
+                "numeric"
 
         }
 
@@ -2002,7 +2517,11 @@ function formatMemberSince(
 
 
 /*=========================================================
-    DATE FORMAT FOR INPUTS
+    FORMAT DATE INPUT
+
+    Converts database dates into:
+
+        YYYY-MM-DD
 =========================================================*/
 
 function formatInputDate(
@@ -2025,8 +2544,8 @@ function formatInputDate(
 
 
     /*
-        Already correct for
-        <input type="date">
+        Already correct for:
+            <input type="date">
     */
 
     if (
@@ -2041,66 +2560,43 @@ function formatInputDate(
     }
 
 
-    const normalizedValue =
-        value.replace(
-            " ",
-            "T"
-        );
+    /*
+        Extract the calendar date directly
+        when the database contains a timestamp.
 
+        This avoids timezone shifting.
+    */
 
-    const parsedDate =
-        new Date(
-            normalizedValue
+    const match =
+        value.match(
+            /^(\d{4})-(\d{2})-(\d{2})/
         );
 
 
     if (
-        Number.isNaN(
-            parsedDate.getTime()
-        )
+        match
     ) {
 
-        return "";
+        return (
+
+            `${match[1]}-` +
+
+            `${match[2]}-` +
+
+            `${match[3]}`
+
+        );
 
     }
 
 
-    /*
-        Local calendar components prevent
-        timezone date shifting.
-    */
-
-    const year =
-        parsedDate.getFullYear();
-
-
-    const month =
-        String(
-            parsedDate.getMonth() + 1
-        )
-        .padStart(
-            2,
-            "0"
-        );
-
-
-    const day =
-        String(
-            parsedDate.getDate()
-        )
-        .padStart(
-            2,
-            "0"
-        );
-
-
-    return `${year}-${month}-${day}`;
+    return "";
 
 }
 
 
 /*=========================================================
-    PROFILE MESSAGE
+    PROFILE SUCCESS MESSAGE
 =========================================================*/
 
 function showProfileMessage(
@@ -2121,7 +2617,7 @@ function showProfileMessage(
 
 
 /*=========================================================
-    PROFILE ERROR
+    PROFILE ERROR MESSAGE
 =========================================================*/
 
 function showProfileError(
@@ -2148,13 +2644,6 @@ function showProfileError(
 /*=========================================================
     EVENT LISTENERS
 =========================================================*/
-
-/*
-    The current .profile-form is a DIV,
-    not a <form>, so Save is handled
-    directly through .save-btn.
-*/
-
 
 /*---------------------------------------------------------
     SAVE
@@ -2189,7 +2678,7 @@ if (
 
 
 /*---------------------------------------------------------
-    HEADER UPLOAD PHOTO
+    HEADER PHOTO
 ---------------------------------------------------------*/
 
 if (
@@ -2205,23 +2694,7 @@ if (
 
 
 /*---------------------------------------------------------
-    PROFILE IMAGE
----------------------------------------------------------*/
-
-if (
-    profileImage
-) {
-
-    profileImage.addEventListener(
-        "click",
-        openProfileUpload
-    );
-
-}
-
-
-/*---------------------------------------------------------
-    PROFILE FILE INPUT
+    PROFILE PHOTO INPUT
 ---------------------------------------------------------*/
 
 if (
@@ -2264,8 +2737,8 @@ async function initializeProfile() {
 
 
 /*
-    Safe whether this script is loaded
-    before or after DOM readiness.
+    Works whether profile.js is loaded
+    before or after DOMContentLoaded.
 */
 
 if (
@@ -2274,11 +2747,15 @@ if (
 ) {
 
     document.addEventListener(
+
         "DOMContentLoaded",
+
         initializeProfile,
+
         {
             once: true
         }
+
     );
 
 }
