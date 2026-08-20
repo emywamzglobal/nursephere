@@ -15,6 +15,7 @@ import paymentHandler from "./workers/payment.js";
 import parserHandler from "./workers/parser.js";
 import progressHandler from "./workers/progress.js";
 import documentsHandler from "./workers/documents.js";
+import profileHandler from "./workers/profile.js";
 export default {
 
     async fetch(request, env, ctx) {
@@ -242,6 +243,38 @@ if (
         response.headers.set(key, value);
 
     });
+
+    return response;
+
+}
+
+// -----------------------------
+// Student Profile
+// -----------------------------
+if (
+    url.pathname === "/api/profile" &&
+    (
+        request.method === "GET" ||
+        request.method === "PUT"
+    )
+) {
+
+    const response =
+        await profileHandler(
+            request,
+            env
+        );
+
+    Object.entries(corsHeaders).forEach(
+        ([key, value]) => {
+
+            response.headers.set(
+                key,
+                value
+            );
+
+        }
+    );
 
     return response;
 
