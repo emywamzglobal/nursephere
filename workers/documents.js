@@ -1,14 +1,39 @@
 // ======================================================
 // Nursephere Documents Worker
 // File: workers/documents.js
+//
+// DATABASE-DRIVEN DOCUMENT ACCESS
+//
+// Student
+//     ↓
+// subscriptions.student_id
+//     ↓
+// subscriptions.plan_id
+//     ↓
+// subscription_plans.id
+//     ↓
+// plan_features.plan_id
+//     ↓
+// features.id
+//
+// Feature:
+//     feature_key = "documents"
+//
+// Access levels:
+//     none
+//     view
+//     full
+//     download
+//
+// No plan names or plan durations are hardcoded.
 // ======================================================
 
 import jwt from "@tsndr/cloudflare-worker-jwt";
 
 
-/*=========================================================
-        DOCUMENTS WORKER
-=========================================================*/
+// ======================================================
+// DOCUMENTS WORKER
+// ======================================================
 
 export default async function documentsHandler(
     request,
@@ -17,9 +42,13 @@ export default async function documentsHandler(
 
     try {
 
-        /*=================================================
-                VERIFY JWT
-        =================================================*/
+        const url =
+            new URL(request.url);
+
+
+        // =================================================
+        // AUTHENTICATION
+        // =================================================
 
         const authHeader =
             request.headers.get(
@@ -36,6 +65,7 @@ export default async function documentsHandler(
 
                 {
                     success: false,
+
                     message:
                         "Unauthorized."
                 },
@@ -66,6 +96,7 @@ export default async function documentsHandler(
 
                 {
                     success: false,
+
                     message:
                         "Invalid or expired session."
                 },
@@ -79,16 +110,20 @@ export default async function documentsHandler(
         }
 
 
-        /*=================================================
-                GET STUDENT ID
-        =================================================*/
+        // =================================================
+        // GET STUDENT ID FROM JWT
+        // =================================================
+
+        const decoded =
+            jwt.decode(token);
+
 
         const payload =
-            jwt.decode(token).payload;
+            decoded?.payload;
 
 
         const studentId =
-            payload.studentId;
+            payload?.studentId;
 
 
         if (!studentId) {
@@ -97,6 +132,7 @@ export default async function documentsHandler(
 
                 {
                     success: false,
+
                     message:
                         "Student identity missing."
                 },
@@ -110,9 +146,9 @@ export default async function documentsHandler(
         }
 
 
-        /*=================================================
-                VERIFY STUDENT
-        =================================================*/
+        // =================================================
+        // VERIFY STUDENT EXISTS
+        // =================================================
 
         const student =
             await env.DB.prepare(
@@ -120,10 +156,7 @@ export default async function documentsHandler(
                 `
                 SELECT
 
-                    id,
-                    subscription_status,
-                    subscription_plan_id,
-                    subscription_expires_at
+                    id
 
                 FROM students
 
@@ -133,7 +166,9 @@ export default async function documentsHandler(
                 `
 
             )
-            .bind(studentId)
+            .bind(
+                studentId
+            )
             .first();
 
 
@@ -143,6 +178,7 @@ export default async function documentsHandler(
 
                 {
                     success: false,
+
                     message:
                         "Student not found."
                 },
@@ -156,88 +192,103 @@ export default async function documentsHandler(
         }
 
 
-        /*=================================================
-                VERIFY ANNUAL PLAN
-        =================================================*/
+        // =================================================
+        // DATABASE-DRIVEN DOCUMENT ACCESS
+        //
+        // We do NOT check:
+        //
+        // students.subscription_status
+        // students.subscription_plan_id
+        // students.subscription_expires_at
+        //
+        // The active subscription comes from:
+        //
+        // subscriptions
+        //      ↓
+        // subscription_plans
+        //      ↓
+        // plan_features
+        //      ↓
+        // features
+        // =================================================
 
-        const yearlyPlan =
+        const entitlement =
             await env.DB.prepare(
 
                 `
                 SELECT
 
-                    id,
-                    name,
-                    code
+                    s.id AS subscription_id,
 
-                FROM subscription_plans
+                    s.plan_id,
+
+                    s.start_date,
+
+                    s.end_date,
+
+                    s.payment_status,
+
+                    s.status AS subscription_status,
+
+                    sp.status AS plan_status,
+
+                    f.feature_key,
+
+                    pf.access_level
+
+                FROM subscriptions s
+
+                INNER JOIN subscription_plans sp
+
+                    ON sp.id =
+                       s.plan_id
+
+                INNER JOIN plan_features pf
+
+                    ON pf.plan_id =
+                       s.plan_id
+
+                INNER JOIN features f
+
+                    ON f.id =
+                       pf.feature_id
 
                 WHERE
 
-                    (
-                        LOWER(code) = 'yearly'
-                        OR
-                        LOWER(code) = 'annual'
-                        OR
-                        LOWER(name) = 'yearly'
-                        OR
-                        LOWER(name) = 'annual'
-                    )
+                    s.student_id = ?
+
+                    AND s.status = 'active'
+
+                    AND sp.status = 'active'
+
+                    AND f.status = 'active'
+
+                    AND f.feature_key = 'documents'
+
+                    AND datetime(s.end_date)
+                        > datetime('now')
+
+                ORDER BY
+
+                    datetime(s.end_date) DESC,
+
+                    datetime(s.created_at) DESC
 
                 LIMIT 1
                 `
 
             )
+            .bind(
+                studentId
+            )
             .first();
 
 
-        const isAnnualPlan =
-            yearlyPlan &&
-            student.subscription_plan_id ===
-                yearlyPlan.id;
+        // =================================================
+        // NO DOCUMENT ENTITLEMENT
+        // =================================================
 
-
-        const subscriptionActive =
-            student.subscription_status ===
-                "active";
-
-
-        let annualAccess =
-            isAnnualPlan &&
-            subscriptionActive;
-
-
-        /*=================================================
-                CHECK EXPIRATION
-        =================================================*/
-
-        if (
-            annualAccess &&
-            student.subscription_expires_at
-        ) {
-
-            const expiresAt =
-                new Date(
-                    student.subscription_expires_at
-                );
-
-
-            if (
-                expiresAt <= new Date()
-            ) {
-
-                annualAccess = false;
-
-            }
-
-        }
-
-
-        /*=================================================
-                BLOCK NON-ANNUAL STUDENTS
-        =================================================*/
-
-        if (!annualAccess) {
+        if (!entitlement) {
 
             return Response.json(
 
@@ -247,10 +298,7 @@ export default async function documentsHandler(
                     access: false,
 
                     message:
-                        "Documents are available on the Annual Plan.",
-
-                    upgrade_url:
-                        "../checkout.html?plan=yearly"
+                        "You do not have access to Documents."
 
                 },
 
@@ -263,22 +311,100 @@ export default async function documentsHandler(
         }
 
 
-        /*=================================================
-                ROUTING
-        =================================================*/
+        // =================================================
+        // NORMALIZE ACCESS LEVEL
+        // =================================================
 
-        const url =
-            new URL(request.url);
+        const accessLevel =
+            String(
+                entitlement.access_level || "none"
+            )
+            .trim()
+            .toLowerCase();
 
 
-        /*=================================================
-                GET DOCUMENTS
-        =================================================*/
+        // =================================================
+        // ACCESS CHECK HELPER
+        // =================================================
+
+        function hasAccess(
+            requiredAccess
+        ) {
+
+            if (
+                accessLevel === "full"
+            ) {
+
+                return true;
+
+            }
+
+
+            if (
+                requiredAccess === "view" &&
+                accessLevel === "view"
+            ) {
+
+                return true;
+
+            }
+
+
+            if (
+                requiredAccess === "download" &&
+                accessLevel === "download"
+            ) {
+
+                return true;
+
+            }
+
+
+            return false;
+
+        }
+
+
+        // =================================================
+        // GET DOCUMENTS
+        //
+        // Required:
+        // view / full / download
+        // =================================================
 
         if (
+
             request.method === "GET" &&
+
             url.pathname === "/api/documents"
+
         ) {
+
+            if (
+                !hasAccess("view") &&
+                !hasAccess("download")
+            ) {
+
+                return Response.json(
+
+                    {
+                        success: false,
+
+                        access: false,
+
+                        message:
+                            "You do not have permission to view Documents."
+
+                    },
+
+                    {
+                        status: 403
+                    }
+
+                );
+
+            }
+
 
             const documents =
                 await env.DB.prepare(
@@ -297,11 +423,14 @@ export default async function documentsHandler(
 
                     WHERE student_id = ?
 
-                    ORDER BY created_at DESC
+                    ORDER BY
+                        datetime(created_at) DESC
                     `
 
                 )
-                .bind(studentId)
+                .bind(
+                    studentId
+                )
                 .all();
 
 
@@ -311,6 +440,9 @@ export default async function documentsHandler(
                     success: true,
 
                     access: true,
+
+                    access_level:
+                        accessLevel,
 
                     documents:
                         documents.results || []
@@ -326,14 +458,49 @@ export default async function documentsHandler(
         }
 
 
-        /*=================================================
-                UPLOAD DOCUMENT
-        =================================================*/
+        // =================================================
+        // UPLOAD DOCUMENT
+        //
+        // Required:
+        // full
+        // =================================================
 
         if (
+
             request.method === "POST" &&
+
             url.pathname === "/api/documents"
+
         ) {
+
+            if (
+                !hasAccess("full")
+            ) {
+
+                return Response.json(
+
+                    {
+                        success: false,
+
+                        access: false,
+
+                        message:
+                            "You do not have permission to upload Documents."
+
+                    },
+
+                    {
+                        status: 403
+                    }
+
+                );
+
+            }
+
+
+            // =============================================
+            // READ FORM DATA
+            // =============================================
 
             const formData =
                 await request.formData();
@@ -352,6 +519,7 @@ export default async function documentsHandler(
 
                     {
                         success: false,
+
                         message:
                             "No file was provided."
                     },
@@ -365,21 +533,29 @@ export default async function documentsHandler(
             }
 
 
-            /*=============================================
-                    BASIC FILE VALIDATION
-            =============================================*/
+            // =============================================
+            // FILE INFORMATION
+            // =============================================
 
             const fileName =
-                file.name;
+                String(
+                    file.name || ""
+                )
+                .trim();
 
 
             const fileType =
-                file.type ||
-                "application/octet-stream";
+                String(
+                    file.type ||
+                    "application/octet-stream"
+                )
+                .trim();
 
 
             const fileSize =
-                file.size;
+                Number(
+                    file.size || 0
+                );
 
 
             if (!fileName) {
@@ -388,6 +564,7 @@ export default async function documentsHandler(
 
                     {
                         success: false,
+
                         message:
                             "Invalid file name."
                     },
@@ -401,12 +578,16 @@ export default async function documentsHandler(
             }
 
 
-            if (fileSize <= 0) {
+            if (
+                !Number.isFinite(fileSize) ||
+                fileSize <= 0
+            ) {
 
                 return Response.json(
 
                     {
                         success: false,
+
                         message:
                             "The uploaded file is empty."
                     },
@@ -420,11 +601,11 @@ export default async function documentsHandler(
             }
 
 
-            /*=============================================
-                    FILE SIZE LIMIT
-                   
-                    25 MB
-            =============================================*/
+            // =============================================
+            // FILE SIZE LIMIT
+            //
+            // 25 MB
+            // =============================================
 
             const MAX_FILE_SIZE =
                 25 * 1024 * 1024;
@@ -439,6 +620,7 @@ export default async function documentsHandler(
 
                     {
                         success: false,
+
                         message:
                             "File size cannot exceed 25 MB."
                     },
@@ -452,35 +634,43 @@ export default async function documentsHandler(
             }
 
 
-            /*=============================================
-                    CREATE DOCUMENT ID
-            =============================================*/
+            // =============================================
+            // CREATE DOCUMENT ID
+            // =============================================
 
             const documentId =
                 crypto.randomUUID();
 
 
-            /*=============================================
-                    CREATE SIMPLE R2 KEY
-                   
-                    No unnecessary folder hierarchy.
-            =============================================*/
+            // =============================================
+            // SAFE R2 FILE NAME
+            // =============================================
 
             const safeFileName =
                 fileName
+
+                    .replace(
+                        /[\r\n]/g,
+                        "_"
+                    )
+
                     .replace(
                         /[^a-zA-Z0-9._-]/g,
                         "_"
                     );
 
 
+            // =============================================
+            // R2 OBJECT KEY
+            // =============================================
+
             const documentKey =
                 `${studentId}-${documentId}-${safeFileName}`;
 
 
-            /*=============================================
-                    UPLOAD TO R2
-            =============================================*/
+            // =============================================
+            // UPLOAD TO R2
+            // =============================================
 
             await env.DOCUMENTS.put(
 
@@ -498,6 +688,16 @@ export default async function documentsHandler(
                         contentDisposition:
                             `attachment; filename="${safeFileName}"`
 
+                    },
+
+                    customMetadata: {
+
+                        studentId:
+                            String(studentId),
+
+                        documentId:
+                            String(documentId)
+
                     }
 
                 }
@@ -505,52 +705,84 @@ export default async function documentsHandler(
             );
 
 
-            /*=============================================
-                    SAVE D1 METADATA
-            =============================================*/
+            // =============================================
+            // SAVE D1 METADATA
+            // =============================================
 
             const now =
                 new Date().toISOString();
 
 
-            await env.DB.prepare(
+            try {
 
-                `
-                INSERT INTO student_documents (
+                await env.DB.prepare(
 
-                    id,
-                    student_id,
-                    file_name,
-                    file_type,
-                    file_size,
-                    document_key,
-                    created_at,
-                    updated_at
+                    `
+                    INSERT INTO student_documents (
+
+                        id,
+                        student_id,
+                        file_name,
+                        file_type,
+                        file_size,
+                        document_key,
+                        created_at,
+                        updated_at
+
+                    )
+
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    `
 
                 )
+                .bind(
 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                `
+                    documentId,
+                    studentId,
+                    fileName,
+                    fileType,
+                    fileSize,
+                    documentKey,
+                    now,
+                    now
 
-            )
-            .bind(
+                )
+                .run();
 
-                documentId,
-                studentId,
-                fileName,
-                fileType,
-                fileSize,
-                documentKey,
-                now,
-                now
+            }
 
-            )
-            .run();
+            catch (databaseError) {
+
+                // -----------------------------------------
+                // CLEAN UP R2 OBJECT IF D1 INSERT FAILS
+                // -----------------------------------------
+
+                try {
+
+                    await env.DOCUMENTS.delete(
+                        documentKey
+                    );
+
+                }
+
+                catch (cleanupError) {
+
+                    console.error(
+                        "DOCUMENT R2 CLEANUP ERROR:",
+                        cleanupError
+                    );
+
+                }
 
 
-            /*=============================================
-                    SUCCESS
-            =============================================*/
+                throw databaseError;
+
+            }
+
+
+            // =============================================
+            // SUCCESS
+            // =============================================
 
             return Response.json(
 
@@ -590,14 +822,45 @@ export default async function documentsHandler(
         }
 
 
-        /*=================================================
-                DELETE DOCUMENT
-        =================================================*/
+        // =================================================
+        // DELETE DOCUMENT
+        //
+        // Required:
+        // full
+        // =================================================
 
         if (
+
             request.method === "DELETE" &&
+
             url.pathname === "/api/documents"
+
         ) {
+
+            if (
+                !hasAccess("full")
+            ) {
+
+                return Response.json(
+
+                    {
+                        success: false,
+
+                        access: false,
+
+                        message:
+                            "You do not have permission to delete Documents."
+
+                    },
+
+                    {
+                        status: 403
+                    }
+
+                );
+
+            }
+
 
             const documentId =
                 url.searchParams.get(
@@ -611,6 +874,7 @@ export default async function documentsHandler(
 
                     {
                         success: false,
+
                         message:
                             "Document ID is required."
                     },
@@ -624,11 +888,9 @@ export default async function documentsHandler(
             }
 
 
-            /*=============================================
-                    FIND DOCUMENT
-                   
-                    Ownership is checked here.
-            =============================================*/
+            // =============================================
+            // FIND OWNED DOCUMENT
+            // =============================================
 
             const document =
                 await env.DB.prepare(
@@ -652,8 +914,10 @@ export default async function documentsHandler(
 
                 )
                 .bind(
+
                     documentId,
                     studentId
+
                 )
                 .first();
 
@@ -664,6 +928,7 @@ export default async function documentsHandler(
 
                     {
                         success: false,
+
                         message:
                             "Document not found."
                     },
@@ -677,9 +942,9 @@ export default async function documentsHandler(
             }
 
 
-            /*=============================================
-                    DELETE R2 FILE
-            =============================================*/
+            // =============================================
+            // DELETE R2 OBJECT
+            // =============================================
 
             await env.DOCUMENTS.delete(
 
@@ -688,9 +953,9 @@ export default async function documentsHandler(
             );
 
 
-            /*=============================================
-                    DELETE D1 RECORD
-            =============================================*/
+            // =============================================
+            // DELETE D1 RECORD
+            // =============================================
 
             await env.DB.prepare(
 
@@ -706,15 +971,17 @@ export default async function documentsHandler(
 
             )
             .bind(
+
                 documentId,
                 studentId
+
             )
             .run();
 
 
-            /*=============================================
-                    SUCCESS
-            =============================================*/
+            // =============================================
+            // SUCCESS
+            // =============================================
 
             return Response.json(
 
@@ -735,14 +1002,46 @@ export default async function documentsHandler(
         }
 
 
-        /*=================================================
-                DOWNLOAD DOCUMENT
-        =================================================*/
+        // =================================================
+        // DOWNLOAD DOCUMENT
+        //
+        // Required:
+        // download / full
+        // =================================================
 
         if (
+
             request.method === "GET" &&
-            url.pathname === "/api/documents/download"
+
+            url.pathname ===
+                "/api/documents/download"
+
         ) {
+
+            if (
+                !hasAccess("download")
+            ) {
+
+                return Response.json(
+
+                    {
+                        success: false,
+
+                        access: false,
+
+                        message:
+                            "You do not have permission to download Documents."
+
+                    },
+
+                    {
+                        status: 403
+                    }
+
+                );
+
+            }
+
 
             const documentId =
                 url.searchParams.get(
@@ -756,6 +1055,7 @@ export default async function documentsHandler(
 
                     {
                         success: false,
+
                         message:
                             "Document ID is required."
                     },
@@ -769,9 +1069,9 @@ export default async function documentsHandler(
             }
 
 
-            /*=============================================
-                    FIND OWNED DOCUMENT
-            =============================================*/
+            // =============================================
+            // FIND OWNED DOCUMENT
+            // =============================================
 
             const document =
                 await env.DB.prepare(
@@ -797,8 +1097,10 @@ export default async function documentsHandler(
 
                 )
                 .bind(
+
                     documentId,
                     studentId
+
                 )
                 .first();
 
@@ -809,6 +1111,7 @@ export default async function documentsHandler(
 
                     {
                         success: false,
+
                         message:
                             "Document not found."
                     },
@@ -822,9 +1125,9 @@ export default async function documentsHandler(
             }
 
 
-            /*=============================================
-                    GET FROM R2
-            =============================================*/
+            // =============================================
+            // GET FILE FROM R2
+            // =============================================
 
             const object =
                 await env.DOCUMENTS.get(
@@ -840,6 +1143,7 @@ export default async function documentsHandler(
 
                     {
                         success: false,
+
                         message:
                             "Document file not found."
                     },
@@ -853,9 +1157,24 @@ export default async function documentsHandler(
             }
 
 
-            /*=============================================
-                    RETURN FILE
-            =============================================*/
+            // =============================================
+            // SAFE DOWNLOAD FILE NAME
+            // =============================================
+
+            const downloadFileName =
+                String(
+                    document.file_name || "document"
+                )
+
+                .replace(
+                    /[\r\n"]/g,
+                    "_"
+                );
+
+
+            // =============================================
+            // RETURN FILE
+            // =============================================
 
             return new Response(
 
@@ -868,10 +1187,14 @@ export default async function documentsHandler(
                     headers: {
 
                         "Content-Type":
-                            document.file_type,
+                            document.file_type ||
+                            "application/octet-stream",
 
                         "Content-Disposition":
-                            `attachment; filename="${document.file_name}"`
+                            `attachment; filename="${downloadFileName}"`,
+
+                        "Cache-Control":
+                            "private, no-store"
 
                     }
 
@@ -882,14 +1205,15 @@ export default async function documentsHandler(
         }
 
 
-        /*=================================================
-                ROUTE NOT FOUND
-        =================================================*/
+        // =================================================
+        // ROUTE NOT FOUND
+        // =================================================
 
         return Response.json(
 
             {
                 success: false,
+
                 message:
                     "Documents API route not found."
             },
@@ -903,9 +1227,9 @@ export default async function documentsHandler(
     }
 
 
-    /*=====================================================
-            ERROR HANDLER
-    =====================================================*/
+    // =====================================================
+    // ERROR HANDLER
+    // =====================================================
 
     catch (error) {
 
