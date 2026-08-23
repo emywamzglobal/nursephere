@@ -9,6 +9,14 @@
 
 import bcrypt from "bcryptjs";
 
+import {
+    sendEmail
+} from "./email.js";
+
+
+// ======================================================
+// REGISTER HANDLER
+// ======================================================
 
 export default async function registerHandler(
     request,
@@ -16,6 +24,287 @@ export default async function registerHandler(
 ) {
 
     try {
+
+        // ======================================================
+// EMAIL VERIFICATION
+//
+// GET /api/register/verify?token=TOKEN
+//
+// Validates the email-verification token,
+// marks the student as verified,
+// and marks the token as used.
+// ======================================================
+
+if (
+    request.method === "GET" &&
+    new URL(request.url).pathname ===
+        "/api/register/verify"
+) {
+
+    const url =
+        new URL(request.url);
+
+
+    const verificationToken =
+        url.searchParams.get(
+            "token"
+        );
+
+
+    if (
+        !verificationToken
+    ) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Verification token is required."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+
+    // ==================================================
+    // HASH RECEIVED TOKEN
+    // ==================================================
+
+    const tokenBuffer =
+        await crypto.subtle.digest(
+
+            "SHA-256",
+
+            new TextEncoder().encode(
+                verificationToken
+            )
+
+        );
+
+
+    const tokenHash =
+        Array.from(
+            new Uint8Array(
+                tokenBuffer
+            )
+        )
+        .map(
+            byte =>
+                byte
+                    .toString(16)
+                    .padStart(2, "0")
+        )
+        .join("");
+
+
+    // ==================================================
+    // FIND TOKEN
+    // ==================================================
+
+    const verificationRecord =
+        await env.DB.prepare(
+
+            `
+            SELECT
+
+                id,
+                student_id,
+                expires_at,
+                used_at
+
+            FROM email_verification_tokens
+
+            WHERE token_hash = ?
+
+            LIMIT 1
+            `
+
+        )
+
+        .bind(
+            tokenHash
+        )
+
+        .first();
+
+
+    if (
+        !verificationRecord
+    ) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Invalid verification token."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+
+    // ==================================================
+    // PREVENT TOKEN REUSE
+    // ==================================================
+
+    if (
+        verificationRecord.used_at
+    ) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "This verification link has already been used."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+
+    // ==================================================
+    // CHECK TOKEN EXPIRY
+    // ==================================================
+
+    const expiresAt =
+        new Date(
+            verificationRecord.expires_at
+        ).getTime();
+
+
+    if (
+        !Number.isFinite(expiresAt) ||
+        expiresAt <= Date.now()
+    ) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "This verification link has expired."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+
+    const verifiedAt =
+        new Date()
+            .toISOString();
+
+
+    // ==================================================
+    // MARK STUDENT VERIFIED
+    // ==================================================
+
+    const verificationUpdate =
+    await env.DB.prepare(
+
+        `
+        UPDATE students
+
+        SET
+
+            email_verified = 1,
+
+            updated_at = ?
+
+        WHERE id = ?
+
+        AND email_verified = 0
+        `
+
+    )
+
+    .bind(
+
+        verifiedAt,
+
+        verificationRecord.student_id
+
+    )
+
+    .run();
+
+
+if (
+    Number(
+        verificationUpdate.meta?.changes || 0
+    ) === 0
+) {
+
+    return Response.json({
+
+        success: true,
+
+        message:
+            "Email is already verified."
+
+    });
+
+}
+
+    // ==================================================
+    // MARK TOKEN USED
+    // ==================================================
+
+    await env.DB.prepare(
+
+        `
+        UPDATE email_verification_tokens
+
+        SET used_at = ?
+
+        WHERE id = ?
+        `
+
+    )
+
+    .bind(
+
+        verifiedAt,
+
+        verificationRecord.id
+
+    )
+
+    .run();
+
+
+    return Response.json({
+
+        success: true,
+
+        message:
+            "Email verified successfully."
+
+    });
+
+}
+
+        // ======================================================
+        // METHOD CHECK
+        // ======================================================
 
         if (
             request.method !== "POST"
@@ -43,12 +332,16 @@ export default async function registerHandler(
         }
 
 
+        // ======================================================
+        // READ REQUEST
+        // ======================================================
+
         const data =
             await request.json();
 
 
         // ======================================================
-        // Validate Incoming Data
+        // VALIDATE INCOMING DATA
         // ======================================================
 
         const {
@@ -173,7 +466,17 @@ export default async function registerHandler(
 
 
         // ======================================================
-        // Check Existing Student
+        // NORMALIZE EMAIL
+        // ======================================================
+
+        const normalizedEmail =
+            email
+                .trim()
+                .toLowerCase();
+
+
+        // ======================================================
+        // CHECK EXISTING STUDENT
         // ======================================================
 
         const existingStudent =
@@ -187,12 +490,14 @@ export default async function registerHandler(
                     FROM students
 
                     WHERE email = ?
+
+                    LIMIT 1
                     `
 
                 )
 
                 .bind(
-                    email.toLowerCase()
+                    normalizedEmail
                 )
 
                 .first();
@@ -225,7 +530,7 @@ export default async function registerHandler(
 
 
         // ======================================================
-        // Create Student Trial
+        // CREATE STUDENT TRIAL
         // ======================================================
 
         const studentId =
@@ -241,7 +546,7 @@ export default async function registerHandler(
 
 
         // ======================================================
-        // Generate Student Number
+        // GENERATE STUDENT NUMBER
         // ======================================================
 
         const currentYear =
@@ -266,7 +571,8 @@ export default async function registerHandler(
             .first();
 
 
-        let sequence = 1;
+        let sequence =
+            1;
 
 
         if (
@@ -305,6 +611,7 @@ export default async function registerHandler(
             new Date(
 
                 now.getTime() +
+
                 (
                     3 *
                     24 *
@@ -317,19 +624,22 @@ export default async function registerHandler(
 
 
         // ======================================================
-        // REFERRAL CODE
+        // GENERATE REFERRAL CODE
         //
         // Format:
         //
         // EMYWA-XXXXX
         //
         // The Worker generates the code.
-        // The UNIQUE INDEX in D1 guarantees uniqueness.
+        // D1 uniqueness protects the database.
         // ======================================================
 
-        let referralCode = null;
+        let referralCode =
+            null;
 
-        let referralCodeCreated = false;
+
+        let referralCodeCreated =
+            false;
 
 
         const referralCharacters =
@@ -342,7 +652,8 @@ export default async function registerHandler(
             attempt++
         ) {
 
-            let suffix = "";
+            let suffix =
+                "";
 
 
             const randomValues =
@@ -403,8 +714,10 @@ export default async function registerHandler(
                 referralCode =
                     candidate;
 
+
                 referralCodeCreated =
                     true;
+
 
                 break;
 
@@ -440,7 +753,7 @@ export default async function registerHandler(
 
 
         // ======================================================
-        // Hash Password
+        // HASH PASSWORD
         // ======================================================
 
         const passwordHash =
@@ -451,7 +764,7 @@ export default async function registerHandler(
 
 
         // ======================================================
-        // Save Student
+        // SAVE STUDENT
         // ======================================================
 
         await env.DB.prepare(
@@ -489,7 +802,7 @@ export default async function registerHandler(
 
             fullName,
 
-            email.toLowerCase(),
+            normalizedEmail,
 
             passwordHash,
 
@@ -516,9 +829,9 @@ export default async function registerHandler(
         .run();
 
 
-        /*=========================================
-            STUDENT PROGRESS
-        =========================================*/
+        // ======================================================
+        // STUDENT PROGRESS
+        // ======================================================
 
         await env.DB.prepare(
 
@@ -563,9 +876,288 @@ export default async function registerHandler(
 
         .run();
 
+        // ======================================================
+// EMAIL VERIFICATION TOKEN
+//
+// The student starts unverified.
+// Generate a cryptographically secure token,
+// store only its SHA-256 hash in D1,
+// and keep the raw token for the email link.
+//
+// Token expires after 24 hours.
+// ======================================================
+
+const verificationTokenBytes =
+    new Uint8Array(32);
+
+crypto.getRandomValues(
+    verificationTokenBytes
+);
+
+
+const verificationToken =
+    Array.from(
+        verificationTokenBytes
+    )
+    .map(
+        byte =>
+            byte.toString(16).padStart(2, "0")
+    )
+    .join("");
+
+
+const verificationTokenBuffer =
+    await crypto.subtle.digest(
+
+        "SHA-256",
+
+        new TextEncoder().encode(
+            verificationToken
+        )
+
+    );
+
+
+const verificationTokenHash =
+    Array.from(
+        new Uint8Array(
+            verificationTokenBuffer
+        )
+    )
+    .map(
+        byte =>
+            byte.toString(16).padStart(2, "0")
+    )
+    .join("");
+
+
+const verificationExpiresAt =
+    new Date(
+
+        now.getTime() +
+
+        (
+            24 *
+            60 *
+            60 *
+            1000
+        )
+
+    ).toISOString();
+
+
+await env.DB.prepare(
+
+    `
+    INSERT INTO email_verification_tokens (
+
+        id,
+        student_id,
+        token_hash,
+        expires_at,
+        used_at,
+        created_at
+
+    )
+
+    VALUES (?, ?, ?, ?, ?, ?)
+    `
+
+)
+
+.bind(
+
+    crypto.randomUUID(),
+
+    studentId,
+
+    verificationTokenHash,
+
+    verificationExpiresAt,
+
+    null,
+
+    trialStartedAt
+
+)
+
+.run();
+
+
+// ======================================================
+// EMAIL VERIFICATION EMAIL
+//
+// Email content comes from D1.
+// Email failure must NOT break registration.
+// ======================================================
+
+try {
+
+    const emailResult =
+        await sendEmail({
+
+            env,
+
+            studentId,
+
+            recipientEmail:
+                normalizedEmail,
+
+            templateKey:
+                "email_verification",
+
+            eventKey:
+                `email_verification_registration:${studentId}`,
+
+            preferenceKey:
+                "email_notifications",
+
+            variables: {
+
+                student_name:
+                    fullName,
+
+                email:
+                    normalizedEmail,
+
+                verification_token:
+                    verificationToken,
+
+                verification_url:
+                    `${new URL(request.url).origin}/api/register/verify?token=${encodeURIComponent(verificationToken)}`,
+    
+                expires_at:
+                    verificationExpiresAt,
+
+                current_year:
+                    currentYear
+
+            }
+
+        });
+
+
+    if (
+        !emailResult?.success
+    ) {
+
+        console.error(
+
+            "Nursephere email verification was not sent:",
+
+            emailResult
+
+        );
+
+    }
+
+}
+
+catch (
+    emailError
+) {
+
+    console.error(
+
+        "Nursephere email verification error:",
+
+        emailError
+
+    );
+
+}
+
 
         // ======================================================
-        // Registration Successful
+        // WELCOME EMAIL
+        //
+        // IMPORTANT:
+        //
+        // The email subject/body/CSS comes from D1.
+        // Nothing is hardcoded here.
+        //
+        // Email failure must NOT break registration.
+        // ======================================================
+
+        try {
+
+            const emailResult =
+                await sendEmail({
+
+                    env,
+
+                    studentId,
+
+                    recipientEmail:
+                        normalizedEmail,
+
+                    templateKey:
+                        "welcome_email",
+
+                    eventKey:
+                        `welcome_registration:${studentId}`,
+
+                    preferenceKey:
+                        "email_notifications",
+
+                    variables: {
+
+                        student_name:
+                            fullName,
+
+                        student_number:
+                            studentNumber,
+
+                        email:
+                            normalizedEmail,
+
+                        trial_ends:
+                            trialExpiresAt,
+
+                        referral_code:
+                            referralCode,
+
+                        current_year:
+                            currentYear
+
+                    }
+
+                });
+
+
+            if (
+                !emailResult?.success
+            ) {
+
+                console.error(
+
+                    "Nursephere welcome email was not sent:",
+
+                    emailResult
+
+                );
+
+            }
+
+        }
+
+        catch (
+            emailError
+        ) {
+
+            console.error(
+
+                "Nursephere welcome email error:",
+
+                emailError
+
+            );
+
+        }
+
+
+        // ======================================================
+        // REGISTRATION SUCCESSFUL
         // ======================================================
 
         return Response.json(
@@ -586,7 +1178,8 @@ export default async function registerHandler(
 
                     fullName,
 
-                    email,
+                    email:
+                        normalizedEmail,
 
                     trialEnds:
                         trialExpiresAt,
@@ -608,13 +1201,20 @@ export default async function registerHandler(
     }
 
 
+    // ======================================================
+    // ERROR HANDLER
+    // ======================================================
+
     catch (
         error
     ) {
 
         console.error(
+
             "Register Worker Error:",
+
             error
+
         );
 
 
@@ -625,7 +1225,7 @@ export default async function registerHandler(
                 success: false,
 
                 message:
-                    error.message
+                    "Unable to complete registration."
 
             },
 

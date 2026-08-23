@@ -8,6 +8,7 @@
 /*==================================================
     Configuration
 ==================================================*/
+
 const API_BASE =
     "https://nursephere.wamalwaemily.workers.dev/api";
 
@@ -16,14 +17,27 @@ const API_BASE =
     DOM Elements
 ==================================================*/
 
-const form = document.getElementById("registerForm");
-const fullNameInput = document.getElementById("fullname");
-const emailInput = document.getElementById("email");
-const passwordInput = document.getElementById("password");
-const confirmPasswordInput = document.getElementById("confirmPassword");
+const form =
+    document.getElementById("registerForm");
 
-const messageBox = document.getElementById("registerMessage");
-const submitButton = document.querySelector(".register-btn");
+const fullNameInput =
+    document.getElementById("fullname");
+
+const emailInput =
+    document.getElementById("email");
+
+const passwordInput =
+    document.getElementById("password");
+
+const confirmPasswordInput =
+    document.getElementById("confirmPassword");
+
+const messageBox =
+    document.getElementById("registerMessage");
+
+const submitButton =
+    document.querySelector(".register-btn");
+
 
 /*==================================================
     Safety Check
@@ -35,6 +49,7 @@ if (!form) {
 
 }
 
+
 /*==================================================
     Message Functions
 ==================================================*/
@@ -44,19 +59,24 @@ function showMessage(message, type = "info") {
     if (!messageBox) return;
 
     messageBox.textContent = message;
+
     messageBox.className = "";
+
     messageBox.classList.add(type);
 
 }
+
 
 function clearMessage() {
 
     if (!messageBox) return;
 
     messageBox.textContent = "";
+
     messageBox.className = "";
 
 }
+
 
 /*==================================================
     Button Loading State
@@ -86,6 +106,7 @@ function setLoading(loading) {
 
 }
 
+
 /*==================================================
     Validation
 ==================================================*/
@@ -96,11 +117,13 @@ function validateFullName(name) {
 
 }
 
+
 function validateEmail(email) {
 
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
 }
+
 
 function validatePassword(password) {
 
@@ -108,7 +131,8 @@ function validatePassword(password) {
 
         return {
             valid: false,
-            message: "Password must be at least 8 characters."
+            message:
+                "Password must be at least 8 characters."
         };
 
     }
@@ -117,7 +141,8 @@ function validatePassword(password) {
 
         return {
             valid: false,
-            message: "Password must contain at least one uppercase letter."
+            message:
+                "Password must contain at least one uppercase letter."
         };
 
     }
@@ -126,7 +151,8 @@ function validatePassword(password) {
 
         return {
             valid: false,
-            message: "Password must contain at least one lowercase letter."
+            message:
+                "Password must contain at least one lowercase letter."
         };
 
     }
@@ -135,149 +161,259 @@ function validatePassword(password) {
 
         return {
             valid: false,
-            message: "Password must contain at least one number."
+            message:
+                "Password must contain at least one number."
         };
 
     }
 
     return {
-
         valid: true
-
     };
 
 }
+
 
 /*==================================================
     Registration Submit
 ==================================================*/
 
-form.addEventListener("submit", async function (event) {
+form.addEventListener(
+    "submit",
+    async function (event) {
 
-    event.preventDefault();
+        event.preventDefault();
 
-    clearMessage();
+        clearMessage();
 
-    const fullName = fullNameInput.value.trim();
-    const email = emailInput.value.trim().toLowerCase();
-    const password = passwordInput.value;
-    const confirmPassword = confirmPasswordInput.value;
 
-    if (!fullName || !email || !password || !confirmPassword) {
+        const fullName =
+            fullNameInput.value.trim();
 
-        showMessage("Please complete all required fields.", "error");
-        return;
+        const email =
+            emailInput.value.trim().toLowerCase();
 
-    }
+        const password =
+            passwordInput.value;
 
-    if (!validateFullName(fullName)) {
+        const confirmPassword =
+            confirmPasswordInput.value;
 
-        showMessage("Please enter your full name.", "error");
-        fullNameInput.focus();
-        return;
 
-    }
+        /*------------------------------------------
+            Required Fields
+        ------------------------------------------*/
 
-    if (!validateEmail(email)) {
+        if (
+            !fullName ||
+            !email ||
+            !password ||
+            !confirmPassword
+        ) {
 
-        showMessage("Please enter a valid email address.", "error");
-        emailInput.focus();
-        return;
+            showMessage(
+                "Please complete all required fields.",
+                "error"
+            );
 
-    }
+            return;
 
-    const passwordValidation = validatePassword(password);
+        }
 
-    if (!passwordValidation.valid) {
 
-        showMessage(passwordValidation.message, "error");
-        passwordInput.focus();
-        return;
+        /*------------------------------------------
+            Full Name
+        ------------------------------------------*/
 
-    }
+        if (!validateFullName(fullName)) {
 
-    if (password !== confirmPassword) {
+            showMessage(
+                "Please enter your full name.",
+                "error"
+            );
 
-        showMessage("Passwords do not match.", "error");
-        confirmPasswordInput.focus();
-        return;
+            fullNameInput.focus();
 
-    }
+            return;
 
-    const registrationData = {
+        }
 
-        fullName,
-        email,
-        password
 
-    };
+        /*------------------------------------------
+            Email
+        ------------------------------------------*/
 
-    try {
+        if (!validateEmail(email)) {
 
-        setLoading(true);
+            showMessage(
+                "Please enter a valid email address.",
+                "error"
+            );
 
-        const response = await fetch(`${API_BASE}/register`, {
+            emailInput.focus();
 
-            method: "POST",
+            return;
 
-            headers: {
+        }
 
-                "Content-Type": "application/json"
 
-            },
+        /*------------------------------------------
+            Password
+        ------------------------------------------*/
 
-            body: JSON.stringify(registrationData)
+        const passwordValidation =
+            validatePassword(password);
 
-        });
 
-        const result = await response.json();
+        if (!passwordValidation.valid) {
 
-        if (!response.ok) {
+            showMessage(
+                passwordValidation.message,
+                "error"
+            );
 
-            throw new Error(
+            passwordInput.focus();
 
-                result.message ||
+            return;
 
-                "Registration failed."
+        }
+
+
+        /*------------------------------------------
+            Password Confirmation
+        ------------------------------------------*/
+
+        if (password !== confirmPassword) {
+
+            showMessage(
+                "Passwords do not match.",
+                "error"
+            );
+
+            confirmPasswordInput.focus();
+
+            return;
+
+        }
+
+
+        /*------------------------------------------
+            Registration Payload
+        ------------------------------------------*/
+
+        const registrationData = {
+
+            fullName,
+            email,
+            password
+
+        };
+
+
+        /*------------------------------------------
+            API Request
+        ------------------------------------------*/
+
+        try {
+
+            setLoading(true);
+
+
+            const response =
+                await fetch(
+                    `${API_BASE}/register`,
+                    {
+
+                        method: "POST",
+
+                        headers: {
+
+                            "Content-Type":
+                                "application/json"
+
+                        },
+
+                        body:
+                            JSON.stringify(
+                                registrationData
+                            )
+
+                    }
+                );
+
+
+            const result =
+                await response.json();
+
+
+            /*--------------------------------------
+                API Error
+            --------------------------------------*/
+
+            if (!response.ok) {
+
+                throw new Error(
+
+                    result.message ||
+                    "Registration failed."
+
+                );
+
+            }
+
+
+            /*--------------------------------------
+                Success
+            --------------------------------------*/
+
+            showMessage(
+
+                "Registration successful! Redirecting to login...",
+
+                "success"
+
+            );
+
+
+            form.reset();
+
+
+            setTimeout(() => {
+
+                window.location.href =
+                    "login.html";
+
+            }, 3000);
+
+        }
+
+
+        /*------------------------------------------
+            Network / Unexpected Error
+        ------------------------------------------*/
+
+        catch (error) {
+
+            showMessage(
+
+                error.message,
+
+                "error"
 
             );
 
         }
 
-        showMessage(
 
-            "Registration successful! Redirecting to login...",
+        /*------------------------------------------
+            Restore Button
+        ------------------------------------------*/
 
-            "success"
+        finally {
 
-        );
+            setLoading(false);
 
-        form.reset();
-
-        setTimeout(() => {
-
-            window.location.href = "login.html";
-
-        }, 3000);
+        }
 
     }
-
-    catch (error) {
-
-        showMessage(
-
-            error.message,
-
-            "error"
-
-        );
-
-    }
-
-    finally {
-
-        setLoading(false);
-
-    }
-
-});
+);

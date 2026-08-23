@@ -21,6 +21,14 @@
 
 import jwt from "@tsndr/cloudflare-worker-jwt";
 
+import {
+    sendEmail
+} from "./email.js";
+
+
+// ======================================================
+// REFERRAL HANDLER
+// ======================================================
 
 export default async function referralHandler(
     request,
@@ -36,15 +44,660 @@ export default async function referralHandler(
             url.pathname;
 
 
-        /*=========================================================
-            STUDENT REFERRAL
+        // ======================================================
+        // AUTHENTICATION HELPER
+        // ======================================================
 
-            GET /api/referral
+        const authenticateStudent =
+            async () => {
 
-            Authentication comes from the JWT.
+                const authHeader =
+                    request.headers.get(
+                        "Authorization"
+                    );
 
-            The browser does NOT determine the student identity.
-        =========================================================*/
+
+                if (
+                    !authHeader ||
+                    !authHeader.startsWith(
+                        "Bearer "
+                    )
+                ) {
+
+                    return {
+
+                        error:
+                            Response.json({
+
+                                success: false,
+
+                                message:
+                                    "Unauthorized."
+
+                            }, {
+
+                                status: 401
+
+                            })
+
+                    };
+
+                }
+
+
+                const token =
+                    authHeader.substring(7);
+
+
+                const valid =
+                    await jwt.verify(
+                        token,
+                        env.JWT_SECRET
+                    );
+
+
+                if (!valid) {
+
+                    return {
+
+                        error:
+                            Response.json({
+
+                                success: false,
+
+                                message:
+                                    "Invalid or expired session."
+
+                            }, {
+
+                                status: 401
+
+                            })
+
+                    };
+
+                }
+
+
+                const decoded =
+                    jwt.decode(token);
+
+
+                const payload =
+                    decoded?.payload;
+
+
+                const studentId =
+                    payload?.studentId;
+
+
+                if (!studentId) {
+
+                    return {
+
+                        error:
+                            Response.json({
+
+                                success: false,
+
+                                message:
+                                    "Student identity missing."
+
+                            }, {
+
+                                status: 401
+
+                            })
+
+                    };
+
+                }
+
+
+                const student =
+                    await env.DB.prepare(
+
+                        `
+                        SELECT
+
+                            id,
+                            full_name,
+                            email,
+                            referral_code
+
+                        FROM students
+
+                        WHERE id = ?
+
+                        LIMIT 1
+                        `
+
+                    )
+
+                    .bind(
+                        studentId
+                    )
+
+                    .first();
+
+
+                if (!student) {
+
+                    return {
+
+                        error:
+                            Response.json({
+
+                                success: false,
+
+                                message:
+                                    "Student not found."
+
+                            }, {
+
+                                status: 404
+
+                            })
+
+                    };
+
+                }
+
+
+                return {
+
+                    studentId,
+
+                    student
+
+                };
+
+            };
+
+
+        // ======================================================
+        // POST /api/referral
+        //
+        // CREATE REFERRAL INVITATION
+        // ======================================================
+
+        if (
+
+            request.method === "POST" &&
+
+            pathname ===
+                "/api/referral"
+
+        ) {
+
+            const auth =
+                await authenticateStudent();
+
+
+            if (
+                auth.error
+            ) {
+
+                return auth.error;
+
+            }
+
+
+            const {
+                studentId,
+                student
+            } = auth;
+
+
+            // ==================================================
+            // READ REQUEST
+            // ==================================================
+
+            let data;
+
+            try {
+
+                data =
+                    await request.json();
+
+            }
+
+            catch {
+
+                return Response.json({
+
+                    success: false,
+
+                    message:
+                        "Invalid request body."
+
+                }, {
+
+                    status: 400
+
+                });
+
+            }
+
+
+            const referredEmail =
+                String(
+                    data?.referredEmail ||
+                    data?.email ||
+                    ""
+                )
+                    .trim()
+                    .toLowerCase();
+
+
+            const examId =
+                data?.examId
+                    ? String(
+                        data.examId
+                    ).trim()
+                    : null;
+
+
+            // ==================================================
+            // VALIDATE EMAIL
+            // ==================================================
+
+            const emailPattern =
+                /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+
+            if (
+                !referredEmail ||
+                !emailPattern.test(
+                    referredEmail
+                )
+            ) {
+
+                return Response.json({
+
+                    success: false,
+
+                    message:
+                        "A valid referral email is required."
+
+                }, {
+
+                    status: 400
+
+                });
+
+            }
+
+
+            // ==================================================
+            // PREVENT SELF-REFERRAL
+            // ==================================================
+
+            if (
+                referredEmail ===
+                String(
+                    student.email || ""
+                )
+                    .trim()
+                    .toLowerCase()
+            ) {
+
+                return Response.json({
+
+                    success: false,
+
+                    message:
+                        "You cannot refer yourself."
+
+                }, {
+
+                    status: 400
+
+                });
+
+            }
+
+
+            // ==================================================
+            // VERIFY EXAM IF PROVIDED
+            // ==================================================
+
+            if (
+                examId
+            ) {
+
+                const exam =
+                    await env.DB.prepare(
+
+                        `
+                        SELECT id
+
+                        FROM exams
+
+                        WHERE id = ?
+
+                        LIMIT 1
+                        `
+
+                    )
+
+                    .bind(
+                        examId
+                    )
+
+                    .first();
+
+
+                if (!exam) {
+
+                    return Response.json({
+
+                        success: false,
+
+                        message:
+                            "Selected exam was not found."
+
+                    }, {
+
+                        status: 404
+
+                    });
+
+                }
+
+            }
+
+
+            // ==================================================
+            // CHECK EXISTING REFERRAL
+            //
+            // referrals.referred_email is UNIQUE.
+            // ==================================================
+
+            const existingReferral =
+                await env.DB.prepare(
+
+                    `
+                    SELECT
+
+                        id,
+                        status,
+                        referrer_student_id
+
+                    FROM referrals
+
+                    WHERE referred_email = ?
+
+                    LIMIT 1
+                    `
+
+                )
+
+                .bind(
+                    referredEmail
+                )
+
+                .first();
+
+
+            if (
+                existingReferral
+            ) {
+
+                if (
+                    existingReferral.referrer_student_id ===
+                    studentId
+                ) {
+
+                    return Response.json({
+
+                        success: false,
+
+                        message:
+                            "You have already referred this email."
+
+                    }, {
+
+                        status: 409
+
+                    });
+
+                }
+
+
+                return Response.json({
+
+                    success: false,
+
+                    message:
+                        "This email has already been referred."
+
+                }, {
+
+                    status: 409
+
+                });
+
+            }
+
+
+            // ==================================================
+            // CHECK WHETHER EMAIL ALREADY HAS AN ACCOUNT
+            // ==================================================
+
+            const referredStudent =
+                await env.DB.prepare(
+
+                    `
+                    SELECT id
+
+                    FROM students
+
+                    WHERE email = ?
+
+                    LIMIT 1
+                    `
+
+                )
+
+                .bind(
+                    referredEmail
+                )
+
+                .first();
+
+
+            // ==================================================
+            // CREATE REFERRAL
+            // ==================================================
+
+            const referralId =
+                crypto.randomUUID();
+
+
+            const now =
+                new Date()
+                    .toISOString();
+
+
+            await env.DB.prepare(
+
+                `
+                INSERT INTO referrals (
+
+                    id,
+                    referral_code,
+                    referrer_student_id,
+                    referred_student_id,
+                    referred_email,
+                    exam_id,
+                    status,
+                    first_subscription_id,
+                    first_subscription_date,
+                    reward_qualified,
+                    notes,
+                    created_at,
+                    updated_at
+
+                )
+
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                `
+
+            )
+
+            .bind(
+
+                referralId,
+
+                student.referral_code,
+
+                studentId,
+
+                referredStudent?.id || null,
+
+                referredEmail,
+
+                examId,
+
+                "Pending",
+
+                null,
+
+                null,
+
+                0,
+
+                null,
+
+                now,
+
+                now
+
+            )
+
+            .run();
+
+
+            // ==================================================
+            // REFERRAL REGISTERED EMAIL
+            //
+            // The template is loaded from D1.
+            // ==================================================
+
+            try {
+
+                const emailResult =
+                    await sendEmail({
+
+                        env,
+
+                        studentId,
+
+                        recipientEmail:
+                            student.email,
+
+                        templateKey:
+                            "referral_registered",
+
+                        eventKey:
+                            `referral_registered:${referralId}`,
+
+                        preferenceKey:
+                            "referral_notifications",
+
+                        variables: {
+
+                            student_name:
+                                student.full_name,
+
+                            referral_email:
+                                referredEmail,
+
+                            registered_at:
+                                now,
+
+                            current_year:
+                                new Date()
+                                    .getFullYear()
+
+                        }
+
+                    });
+
+
+                if (
+                    !emailResult?.success
+                ) {
+
+                    console.error(
+
+                        "Referral registered email was not sent:",
+
+                        emailResult
+
+                    );
+
+                }
+
+            }
+
+            catch (
+                emailError
+            ) {
+
+                console.error(
+
+                    "Referral registered email error:",
+
+                    emailError
+
+                );
+
+            }
+
+
+            // ==================================================
+            // RESPONSE
+            // ==================================================
+
+            return Response.json({
+
+                success: true,
+
+                message:
+                    "Referral registered successfully.",
+
+                referral: {
+
+                    id:
+                        referralId,
+
+                    email:
+                        referredEmail,
+
+                    status:
+                        "Pending",
+
+                    created_at:
+                        now
+
+                }
+
+            }, {
+
+                status: 201
+
+            });
+
+        }
+
+
+        // ======================================================
+        // GET /api/referral
+        //
+        // EXISTING REFERRAL DASHBOARD LOGIC
+        // ======================================================
 
         if (
 
@@ -55,158 +708,28 @@ export default async function referralHandler(
 
         ) {
 
-            /*=====================================================
-                AUTHENTICATION
-            =====================================================*/
-
-            const authHeader =
-                request.headers.get(
-                    "Authorization"
-                );
+            const auth =
+                await authenticateStudent();
 
 
             if (
-
-                !authHeader ||
-
-                !authHeader.startsWith(
-                    "Bearer "
-                )
-
+                auth.error
             ) {
 
-                return Response.json({
-
-                    success: false,
-
-                    message:
-                        "Unauthorized."
-
-                }, {
-
-                    status: 401
-
-                });
+                return auth.error;
 
             }
 
 
-            const token =
-                authHeader.substring(7);
+            const {
+                studentId,
+                student
+            } = auth;
 
 
-            const valid =
-                await jwt.verify(
-                    token,
-                    env.JWT_SECRET
-                );
-
-
-            if (!valid) {
-
-                return Response.json({
-
-                    success: false,
-
-                    message:
-                        "Invalid or expired session."
-
-                }, {
-
-                    status: 401
-
-                });
-
-            }
-
-
-            /*=====================================================
-                READ VERIFIED JWT IDENTITY
-            =====================================================*/
-
-            const decoded =
-                jwt.decode(token);
-
-
-            const payload =
-                decoded?.payload;
-
-
-            const studentId =
-                payload?.studentId;
-
-
-            if (!studentId) {
-
-                return Response.json({
-
-                    success: false,
-
-                    message:
-                        "Student identity missing."
-
-                }, {
-
-                    status: 401
-
-                });
-
-            }
-
-
-            /*=====================================================
-                VERIFY STUDENT EXISTS
-            =====================================================*/
-
-            const student =
-                await env.DB.prepare(
-
-                    `
-                    SELECT
-
-                        id,
-
-                        full_name,
-
-                        referral_code
-
-                    FROM students
-
-                    WHERE id = ?
-
-                    LIMIT 1
-                    `
-
-                )
-
-                .bind(
-                    studentId
-                )
-
-                .first();
-
-
-            if (!student) {
-
-                return Response.json({
-
-                    success: false,
-
-                    message:
-                        "Student not found."
-
-                }, {
-
-                    status: 404
-
-                });
-
-            }
-
-
-            /*=====================================================
-                REFERRAL COUNTS
-            =====================================================*/
+            // ==================================================
+            // REFERRAL COUNTS
+            // ==================================================
 
             const referralCountResult =
                 await env.DB.prepare(
@@ -270,9 +793,9 @@ export default async function referralHandler(
                 );
 
 
-            /*=====================================================
-                REWARD WALLET
-            =====================================================*/
+            // ==================================================
+            // REWARD WALLET
+            // ==================================================
 
             const rewardResult =
                 await env.DB.prepare(
@@ -314,9 +837,9 @@ export default async function referralHandler(
                 rewardResult.results || [];
 
 
-            /*=====================================================
-                AVAILABLE REWARD
-            =====================================================*/
+            // ==================================================
+            // AVAILABLE REWARD
+            // ==================================================
 
             const availableReward =
                 rewards.find(
@@ -330,9 +853,9 @@ export default async function referralHandler(
                 ) || null;
 
 
-            /*=====================================================
-                REWARD LADDER
-            =====================================================*/
+            // ==================================================
+            // REWARD LADDER
+            // ==================================================
 
             const ladderResult =
                 await env.DB.prepare(
@@ -369,9 +892,9 @@ export default async function referralHandler(
                 ladderResult.results || [];
 
 
-            /*=====================================================
-                NEXT REWARD MILESTONE
-            =====================================================*/
+            // ==================================================
+            // NEXT REWARD MILESTONE
+            // ==================================================
 
             const nextReward =
                 rewardLadder.find(
@@ -386,9 +909,9 @@ export default async function referralHandler(
                 ) || null;
 
 
-            /*=====================================================
-                PROGRESS
-            =====================================================*/
+            // ==================================================
+            // PROGRESS
+            // ==================================================
 
             let progress = null;
 
@@ -446,9 +969,9 @@ export default async function referralHandler(
             }
 
 
-            /*=====================================================
-                REFERRAL ACTIVITY
-            =====================================================*/
+            // ==================================================
+            // REFERRAL ACTIVITY
+            // ==================================================
 
             const activityResult =
                 await env.DB.prepare(
@@ -506,18 +1029,240 @@ export default async function referralHandler(
             const activity =
                 activityResult.results || [];
 
+                // ==================================================
+// REFERRAL SUCCESSFUL EMAIL
+//
+// Sent when a referred student successfully
+// activates their subscription.
+//
+// Uses the referral_reward template.
+// event_key prevents duplicate emails.
+// ==================================================
 
-            /*=====================================================
-                REWARDS EARNED
-            =====================================================*/
+for (
+    const referral
+    of activity
+) {
+
+    if (
+        String(
+            referral.status || ""
+        ).toLowerCase() !==
+        "successful"
+    ) {
+
+        continue;
+
+    }
+
+
+    try {
+
+        const emailResult =
+            await sendEmail({
+
+                env,
+
+                studentId,
+
+                recipientEmail:
+                    student.email,
+
+                templateKey:
+                    "referral_reward",
+
+                eventKey:
+                    `referral_reward:${referral.id}`,
+
+                preferenceKey:
+                    "referral_notifications",
+
+                variables: {
+
+                    student_name:
+                        student.full_name,
+
+                    referral_email:
+                        referral.referred_email,
+
+                    activated_at:
+                        referral.first_subscription_date ||
+                        referral.updated_at,
+
+                    current_year:
+                        new Date()
+                            .getFullYear()
+
+                }
+
+            });
+
+
+        if (
+            !emailResult?.success
+        ) {
+
+            console.error(
+
+                "Referral successful email was not sent:",
+
+                emailResult
+
+            );
+
+        }
+
+    }
+
+    catch (
+        emailError
+    ) {
+
+        console.error(
+
+            "Referral successful email error:",
+
+            emailError
+
+        );
+
+    }
+
+}
+
+
+            // ==================================================
+            // REWARD EARNED EMAILS
+            //
+            // Only rewards that actually exist in
+            // referral_rewards are eligible.
+            //
+            // event_key makes this idempotent.
+            // ==================================================
+
+            for (
+                const reward
+                of rewards
+            ) {
+
+                if (
+                    String(
+                        reward.reward_status || ""
+                    ).toLowerCase() !==
+                    "available"
+                ) {
+
+                    continue;
+
+                }
+
+
+                const rewardLabel =
+
+                    reward.reward_type ===
+                    "discount"
+
+                        ? `${reward.reward_value}% discount`
+
+                        : `${reward.reward_value} free month${Number(
+                            reward.reward_value
+                        ) === 1 ? "" : "s"}`;
+
+
+                try {
+
+                    const emailResult =
+                        await sendEmail({
+
+                            env,
+
+                            studentId,
+
+                            recipientEmail:
+                                student.email,
+
+                            templateKey:
+                                "referral_reward_earned",
+
+                            eventKey:
+                                `referral_reward_earned:${reward.id}`,
+
+                            preferenceKey:
+                                "referral_notifications",
+
+                            variables: {
+
+                                student_name:
+                                    student.full_name,
+
+                                reward:
+                                    rewardLabel,
+
+                                reward_balance:
+                                    rewards.filter(
+
+                                        item =>
+
+                                            String(
+                                                item.reward_status || ""
+                                            ).toLowerCase() ===
+                                            "available"
+
+                                    ).length,
+
+                                current_year:
+                                    new Date()
+                                        .getFullYear()
+
+                            }
+
+                        });
+
+
+                    if (
+                        !emailResult?.success
+                    ) {
+
+                        console.error(
+
+                            "Referral reward email was not sent:",
+
+                            emailResult
+
+                        );
+
+                    }
+
+                }
+
+                catch (
+                    emailError
+                ) {
+
+                    console.error(
+
+                        "Referral reward email error:",
+
+                        emailError
+
+                    );
+
+                }
+
+            }
+
+
+            // ==================================================
+            // REWARDS EARNED
+            // ==================================================
 
             const rewardsEarned =
                 rewards.length;
 
 
-            /*=====================================================
-                RETURN REFERRAL DATA
-            =====================================================*/
+            // ==================================================
+            // RETURN REFERRAL DATA
+            // ==================================================
 
             return Response.json({
 
@@ -559,9 +1304,9 @@ export default async function referralHandler(
         }
 
 
-        /*=========================================================
-            METHOD NOT ALLOWED
-        =========================================================*/
+        // ======================================================
+        // METHOD NOT ALLOWED
+        // ======================================================
 
         return Response.json({
 
@@ -579,7 +1324,13 @@ export default async function referralHandler(
     }
 
 
-    catch (error) {
+    // ======================================================
+    // ERROR HANDLER
+    // ======================================================
+
+    catch (
+        error
+    ) {
 
         console.error(
             "Referral Worker Error:",

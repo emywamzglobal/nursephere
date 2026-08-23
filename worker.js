@@ -85,6 +85,38 @@ return response;
 
 }
 
+// -----------------------------
+// Verify Student Email
+// -----------------------------
+if (
+
+    url.pathname === "/api/register/verify" &&
+
+    request.method === "GET"
+
+) {
+
+    const response =
+        await registerHandler(
+            request,
+            env
+        );
+
+    Object.entries(corsHeaders).forEach(
+        ([key, value]) => {
+
+            response.headers.set(
+                key,
+                value
+            );
+
+        }
+    );
+
+    return response;
+
+}
+
  // -----------------------------
         // Login Student
         // -----------------------------
@@ -359,7 +391,8 @@ if (
 // -----------------------------
 if (
     url.pathname === "/api/referral" &&
-    request.method === "GET"
+     request.method === "GET" ||
+    request.method === "POST"
 ) {
 
     const response =
