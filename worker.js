@@ -17,6 +17,7 @@ import progressHandler from "./workers/progress.js";
 import documentsHandler from "./workers/documents.js";
 import profileHandler from "./workers/profile.js";
 import referralHandler from "./workers/referral.js";
+import passwordResetHandler from "./workers/password-reset.js";
 export default {
 
     async fetch(request, env, ctx) {
@@ -103,6 +104,47 @@ if (
         );
 
     Object.entries(corsHeaders).forEach(
+        ([key, value]) => {
+
+            response.headers.set(
+                key,
+                value
+            );
+
+        }
+    );
+
+    return response;
+
+}
+
+// ======================================================
+// PASSWORD RESET
+// ======================================================
+
+if (
+
+    (
+        url.pathname ===
+            "/api/password-reset/request"
+
+        ||
+
+        url.pathname ===
+            "/api/password-reset/confirm"
+    )
+
+) {
+
+    const response =
+        await passwordResetHandler(
+            request,
+            env
+        );
+
+    Object.entries(
+        corsHeaders
+    ).forEach(
         ([key, value]) => {
 
             response.headers.set(

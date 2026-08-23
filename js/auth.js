@@ -11,8 +11,16 @@
     - Session Storage
     - Login Persistence
     - Return Navigation
+    - Password Reset Request
 
 =========================================================*/
+
+// =========================================================
+// API CONFIGURATION
+// =========================================================
+
+const API_BASE =
+    "https://nursephere.wamalwaemily.workers.dev/api";
 
 // =========================================================
 // STORAGE KEYS
@@ -813,3 +821,339 @@ function completeRegistration(
     redirectAfterLogin();
 
 }
+
+
+/*=========================================================
+    FORGOT PASSWORD
+=========================================================*/
+
+document.addEventListener(
+
+    "DOMContentLoaded",
+
+    function () {
+
+        const forgotPasswordForm =
+
+            document.getElementById(
+
+                "forgotPasswordForm"
+
+            );
+
+
+        if (
+            !forgotPasswordForm
+        ) {
+
+            return;
+
+        }
+
+
+        const emailInput =
+
+            document.getElementById(
+                "email"
+            );
+
+
+        const submitButton =
+
+            forgotPasswordForm.querySelector(
+
+                ".forgot-btn"
+
+            );
+
+
+        let messageBox =
+
+            document.getElementById(
+
+                "forgotPasswordMessage"
+
+            );
+
+
+        /*-----------------------------------------------
+            Create Message Element If Missing
+        ------------------------------------------------*/
+
+        if (
+            !messageBox
+        ) {
+
+            messageBox =
+                document.createElement(
+                    "div"
+                );
+
+            messageBox.id =
+                "forgotPasswordMessage";
+
+            messageBox.className =
+                "message";
+
+            messageBox.setAttribute(
+                "role",
+                "alert"
+            );
+
+            messageBox.setAttribute(
+                "aria-live",
+                "polite"
+            );
+
+            forgotPasswordForm.insertBefore(
+
+                messageBox,
+
+                submitButton
+
+            );
+
+        }
+
+
+        /*-----------------------------------------------
+            Show Message
+        ------------------------------------------------*/
+
+        function showForgotPasswordMessage(
+
+            message,
+
+            type = "error"
+
+        ) {
+
+            messageBox.textContent =
+                message;
+
+            messageBox.className =
+                `message ${type}`;
+
+            messageBox.style.display =
+                "block";
+
+        }
+
+
+        /*-----------------------------------------------
+            Loading State
+        ------------------------------------------------*/
+
+        function setForgotPasswordLoading(
+
+            loading
+
+        ) {
+
+            if (
+                !submitButton
+            ) {
+
+                return;
+
+            }
+
+
+            submitButton.disabled =
+                loading;
+
+
+            submitButton.innerHTML =
+
+                loading
+
+                    ? `
+                        <i class="fas fa-spinner fa-spin"></i>
+                        Sending...
+                      `
+
+                    : `
+                        <i class="fas fa-paper-plane"></i>
+                        Send Reset Link
+                      `;
+
+        }
+
+
+        /*-----------------------------------------------
+            Submit
+        ------------------------------------------------*/
+
+        forgotPasswordForm.addEventListener(
+
+            "submit",
+
+            async function (event) {
+
+                event.preventDefault();
+
+
+                const email =
+
+                    emailInput.value
+                        .trim()
+                        .toLowerCase();
+
+
+                if (
+                    !email
+                ) {
+
+                    showForgotPasswordMessage(
+
+                        "Please enter your email address."
+
+                    );
+
+                    emailInput.focus();
+
+                    return;
+
+                }
+
+
+                const emailPattern =
+
+                    /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+
+                if (
+                    !emailPattern.test(
+                        email
+                    )
+                ) {
+
+                    showForgotPasswordMessage(
+
+                        "Please enter a valid email address."
+
+                    );
+
+                    emailInput.focus();
+
+                    return;
+
+                }
+
+
+                try {
+
+                    setForgotPasswordLoading(
+                        true
+                    );
+
+
+                    const response =
+
+                        await fetch(
+
+                            `${API_BASE}/password-reset/request`,
+
+                            {
+
+                                method:
+                                    "POST",
+
+                                headers: {
+
+                                    "Content-Type":
+                                        "application/json"
+
+                                },
+
+                                body:
+
+                                    JSON.stringify({
+
+                                        email:
+                                            email
+
+                                    })
+
+                            }
+
+                        );
+
+
+                    const result =
+
+                        await response.json();
+
+
+                    if (
+                        !response.ok
+                    ) {
+
+                        throw new Error(
+
+                            result.message ||
+
+                            "Unable to send password reset link."
+
+                        );
+
+                    }
+
+
+                    showForgotPasswordMessage(
+
+                        result.message ||
+
+                        "If an account exists for this email, a password reset link has been sent.",
+
+                        "success"
+
+                    );
+
+
+                    forgotPasswordForm.reset();
+
+                }
+
+
+                catch (
+                    error
+                ) {
+
+                    console.error(
+
+                        "Forgot Password Error:",
+
+                        error
+
+                    );
+
+
+                    showForgotPasswordMessage(
+
+                        error.message ||
+
+                        "Unable to send password reset link."
+
+                    );
+
+                }
+
+
+                finally {
+
+                    setForgotPasswordLoading(
+
+                        false
+
+                    );
+
+                }
+
+            }
+
+        );
+
+    }
+
+);
