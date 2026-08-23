@@ -19,7 +19,7 @@
 // API CONFIGURATION
 // =========================================================
 
-const API_BASE =
+const AUTH_API_BASE =
     "https://nursephere.wamalwaemily.workers.dev/api";
 
 // =========================================================
@@ -1052,7 +1052,7 @@ document.addEventListener(
 
                         await fetch(
 
-                            `${API_BASE}/password-reset/request`,
+                            `${AUTH_API_BASE}/password-reset/request`,
 
                             {
 
