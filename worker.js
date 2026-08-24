@@ -12,7 +12,6 @@ import adminHandler from "./workers/admin.js";
 import { handleGetExams } from "./workers/exams.js";
 import jwt from "@tsndr/cloudflare-worker-jwt";
 import paymentHandler from "./workers/payment.js";
-import parserHandler from "./workers/parser.js";
 import progressHandler from "./workers/progress.js";
 import documentsHandler from "./workers/documents.js";
 import profileHandler from "./workers/profile.js";
