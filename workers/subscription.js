@@ -94,166 +94,170 @@ export default async function subscriptionHandler(
 
 
         /*=========================================================
-            PUBLIC:
-            GET SINGLE ACTIVE PLAN
+    PUBLIC:
+    GET SINGLE ACTIVE PLAN
 
-            GET /api/subscription-plans/:id
-        =========================================================*/
+    GET /api/subscription-plans/:id
+=========================================================*/
 
-        if (
+if (
 
-            request.method === "GET" &&
+    request.method === "GET" &&
 
-            pathname.startsWith(
-                "/api/subscription-plans/"
+    pathname.startsWith(
+        "/api/subscription-plans/"
+    )
+
+) {
+
+    const planId =
+        pathname
+            .split("/")
+            .pop();
+
+
+    if (!planId) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Subscription plan ID is required."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+
+    const plan =
+        await env.DB.prepare(
+
+            `
+            SELECT
+
+                id,
+                name,
+                price,
+                currency,
+                duration_days,
+                description,
+                display_order,
+                status
+
+            FROM subscription_plans
+
+            WHERE (
+                id = ?
+                OR LOWER(name) = LOWER(?)
             )
 
-        ) {
+            AND status = 'active'
 
-            const planId =
-                pathname
-                    .split("/")
-                    .pop();
+            LIMIT 1
+            `
 
+        )
 
-            if (!planId) {
+        .bind(
+            planId,
+            planId
+        )
 
-                return Response.json({
-
-                    success: false,
-
-                    message:
-                        "Subscription plan ID is required."
-
-                }, {
-
-                    status: 400
-
-                });
-
-            }
+        .first();
 
 
-            const plan =
-                await env.DB.prepare(
+    if (!plan) {
 
-                    `
-                    SELECT
+        return Response.json({
 
-                        id,
-                        name,
-                        price,
-                        currency,
-                        duration_days,
-                        description,
-                        display_order,
-                        status
+            success: false,
 
-                    FROM subscription_plans
+            message:
+                "Subscription plan not found."
 
-                    WHERE id = ?
+        }, {
 
-                    AND status = 'active'
+            status: 404
 
-                    LIMIT 1
-                    `
+        });
 
-                )
-
-                .bind(planId)
-
-                .first();
+    }
 
 
-            if (!plan) {
+    const featureResult =
+        await env.DB.prepare(
 
-                return Response.json({
+            `
+            SELECT
 
-                    success: false,
+                f.id,
+                f.feature_key,
+                f.feature_name,
+                f.description,
+                f.category,
+                pf.access_level
 
-                    message:
-                        "Subscription plan not found."
+            FROM plan_features pf
 
-                }, {
+            INNER JOIN features f
 
-                    status: 404
+                ON f.id =
+                   pf.feature_id
 
-                });
+            WHERE pf.plan_id = ?
 
-            }
+            AND f.status = 'active'
 
+            ORDER BY
+                f.category ASC,
+                f.feature_name ASC
+            `
 
-            const featureResult =
-                await env.DB.prepare(
+        )
 
-                    `
-                    SELECT
+        .bind(plan.id)
 
-                        f.id,
-                        f.feature_key,
-                        f.feature_name,
-                        f.description,
-                        f.category,
-                        pf.access_level
-
-                    FROM plan_features pf
-
-                    INNER JOIN features f
-
-                        ON f.id =
-                           pf.feature_id
-
-                    WHERE pf.plan_id = ?
-
-                    AND f.status = 'active'
-
-                    ORDER BY
-                        f.category ASC,
-                        f.feature_name ASC
-                    `
-
-                )
-
-                .bind(plan.id)
-
-                .all();
+        .all();
 
 
-            const features =
-                featureResult.results || [];
+    const features =
+        featureResult.results || [];
 
 
-            const permissions = {};
+    const permissions = {};
 
 
-            for (
-                const feature
-                of features
-            ) {
+    for (
+        const feature
+        of features
+    ) {
 
-                permissions[
-                    feature.feature_key
-                ] =
-                    feature.access_level;
+        permissions[
+            feature.feature_key
+        ] =
+            feature.access_level;
 
-            }
-
-
-            return Response.json({
-
-                success: true,
-
-                plan,
-
-                features,
-
-                permissions
-
-            });
-
-        }
+    }
 
 
+    return Response.json({
+
+        success: true,
+
+        plan,
+
+        features,
+
+        permissions
+
+    });
+
+}
         /*=========================================================
             STUDENT SUBSCRIPTION
 
