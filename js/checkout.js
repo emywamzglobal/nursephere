@@ -296,14 +296,26 @@ async function initializeCheckout() {
 
 async function loadStudent() {
 
-    const storedStudent =
+    const studentId =
         localStorage.getItem(
-            "student"
+            "studentId"
+        );
+
+    const studentName =
+        localStorage.getItem(
+            "studentName"
+        );
+
+    const studentEmail =
+        localStorage.getItem(
+            "studentEmail"
         );
 
 
     if (
-        !storedStudent
+        !studentId ||
+        !studentName ||
+        !studentEmail
     ) {
 
         throw new Error(
@@ -313,71 +325,28 @@ async function loadStudent() {
     }
 
 
-    let student;
+    checkoutState.student = {
 
+        id:
+            studentId,
 
-    try {
+        fullName:
+            studentName,
 
-        student =
-            JSON.parse(
-                storedStudent
-            );
+        email:
+            studentEmail
 
-    }
-
-    catch {
-
-        localStorage.removeItem(
-            "student"
-        );
-
-        throw new Error(
-            "Your student session is invalid. Please log in again."
-        );
-
-    }
-
-
-    if (
-        !student ||
-        typeof student !== "object"
-    ) {
-
-        throw new Error(
-            "Student information is unavailable."
-        );
-
-    }
-
-
-    checkoutState.student =
-        student;
+    };
 
 
     fullNameInput.value =
-        student.fullName ||
-        student.full_name ||
-        "";
+        studentName;
 
 
     emailInput.value =
-        student.email ||
-        "";
-
-
-    if (
-        !fullNameInput.value ||
-        !emailInput.value
-    ) {
-
-        throw new Error(
-            "Your student account information is incomplete."
-        );
-
-    }
+        studentEmail;
 
 }
-
 
 /*=========================================================
     LOAD PLAN
@@ -1225,7 +1194,7 @@ function showSuccess(
 
 
 /*=========================================================
-    SESSION
+    CLEAR STUDENT SESSION
 =========================================================*/
 
 function clearStudentSession() {
@@ -1235,21 +1204,27 @@ function clearStudentSession() {
     );
 
     localStorage.removeItem(
-        "student"
+        "studentId"
+    );
+
+    localStorage.removeItem(
+        "studentName"
+    );
+
+    localStorage.removeItem(
+        "studentEmail"
+    );
+
+    localStorage.removeItem(
+        "subscriptionStatus"
+    );
+
+    localStorage.removeItem(
+        "trialActive"
     );
 
 }
 
-
-function redirectToLogin() {
-
-    clearStudentSession();
-
-    window.location.replace(
-        "login.html"
-    );
-
-}
 
 
 /*=========================================================
