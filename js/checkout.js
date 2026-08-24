@@ -1,34 +1,45 @@
-// ======================================================
-// NurseSphere Checkout Controller
-// File: js/checkout.js
-// ======================================================
+/*=========================================================
+    NurseSphere Checkout Controller
+    File: js/checkout.js
+
+    - Plan loading
+    - Student loading
+    - PayPal Hosted Fields
+    - Payment order creation
+    - Payment capture
+    - Subscription activation
+=========================================================*/
 
 "use strict";
 
-// ======================================================
-// CONFIGURATION
-// ======================================================
 
-const API_BASE = "/api";
+/*=========================================================
+    CONFIGURATION
+=========================================================*/
 
-const ENDPOINTS = {
+const CHECKOUT_API_BASE =
+    "https://nursephere.wamalwaemily.workers.dev/api";
 
-    plans:
-        `${API_BASE}/subscription-plans`,
+
+const CHECKOUT_ENDPOINTS = {
+
+    plan:
+        `${CHECKOUT_API_BASE}/subscription-plans`,
 
     createOrder:
-        `${API_BASE}/payments/create-order`,
+        `${CHECKOUT_API_BASE}/payments/create-order`,
 
     captureOrder:
-        `${API_BASE}/payments/capture-order`
+        `${CHECKOUT_API_BASE}/payments/capture-order`
 
 };
 
-// ======================================================
-// APPLICATION STATE
-// ======================================================
 
-const state = {
+/*=========================================================
+    STATE
+=========================================================*/
+
+const checkoutState = {
 
     token: null,
 
@@ -38,317 +49,622 @@ const state = {
 
     plan: null,
 
-    useTrial: false,
-
     orderId: null,
 
     hostedFields: null,
 
-    isSubmitting: false
+    isSubmitting: false,
+
+    initialized: false
 
 };
 
-// ======================================================
-// DOM ELEMENTS
-// ======================================================
 
-const fullNameInput =
-    document.getElementById("fullName");
-
-const emailInput =
-    document.getElementById("email");
-
-const planName =
-    document.getElementById("planName");
-
-const planDescription =
-    document.getElementById("planDescription");
-
-const planDuration =
-    document.getElementById("planDuration");
-
-const planPrice =
-    document.getElementById("planPrice");
-
-const totalPrice =
-    document.getElementById("totalPrice");
-
-const payButton =
-    document.getElementById("payButton");
+/*=========================================================
+    DOM
+=========================================================*/
 
 const checkoutForm =
-    document.getElementById("checkoutForm");
+    document.getElementById(
+        "checkoutForm"
+    );
 
-// ======================================================
-// INITIALIZATION
-// ======================================================
+const fullNameInput =
+    document.getElementById(
+        "fullName"
+    );
+
+const emailInput =
+    document.getElementById(
+        "email"
+    );
+
+const planName =
+    document.getElementById(
+        "planName"
+    );
+
+const planDescription =
+    document.getElementById(
+        "planDescription"
+    );
+
+const planDuration =
+    document.getElementById(
+        "planDuration"
+    );
+
+const planPrice =
+    document.getElementById(
+        "planPrice"
+    );
+
+const totalPrice =
+    document.getElementById(
+        "totalPrice"
+    );
+
+const payButton =
+    document.getElementById(
+        "payButton"
+    );
+
+
+/*=========================================================
+    DOM VALIDATION
+=========================================================*/
+
+function validatePageElements() {
+
+    const elements = {
+
+        checkoutForm,
+
+        fullNameInput,
+
+        emailInput,
+
+        planName,
+
+        planDescription,
+
+        planDuration,
+
+        planPrice,
+
+        totalPrice,
+
+        payButton
+
+    };
+
+
+    for (
+        const [name, element]
+        of Object.entries(elements)
+    ) {
+
+        if (!element) {
+
+            console.error(
+                `Missing checkout element: ${name}`
+            );
+
+            return false;
+
+        }
+
+    }
+
+
+    return true;
+
+}
+
+
+/*=========================================================
+    INITIALIZATION
+=========================================================*/
 
 document.addEventListener(
-
     "DOMContentLoaded",
-
     initializeCheckout
-
 );
 
-// ======================================================
-// INITIALIZE CHECKOUT
-// ======================================================
+
+/*=========================================================
+    INITIALIZE
+=========================================================*/
 
 async function initializeCheckout() {
 
+    if (
+        !validatePageElements()
+    ) {
+
+        return;
+
+    }
+
+
+    setPaymentButtonState(
+        true,
+        "Loading Checkout..."
+    );
+
+
     try {
 
-        payButton.disabled = true;
-
-        state.token =
-            localStorage.getItem("studentToken");
-
-        if (!state.token) {
-
-            alert(
-                "Your session has expired. Please log in again."
+        checkoutState.token =
+            localStorage.getItem(
+                "studentToken"
             );
 
-            location.href = "login.html";
+
+        if (
+            !checkoutState.token
+        ) {
+
+            redirectToLogin();
 
             return;
 
         }
+
 
         const params =
             new URLSearchParams(
                 window.location.search
             );
 
-        state.planId =
-            params.get("plan");
 
-        state.useTrial =
-            params.get("trial") === "true";
+        checkoutState.planId =
+            params.get(
+                "plan"
+            );
 
-        if (!state.planId) {
 
-            alert(
+        if (
+            !checkoutState.planId
+        ) {
+
+            showError(
                 "No subscription plan was selected."
             );
 
-            location.href = "pricing.html";
+            window.location.replace(
+                "pricing.html"
+            );
 
             return;
 
         }
 
+
         await loadStudent();
+
 
         await loadPlan();
 
-        await initializeHostedFields();
+
+        /*
+            Important:
+
+            Hosted Fields must only be initialized
+            after the PayPal SDK is available.
+        */
+
+        await waitForPayPal();
+
+
+        await initializePayPalHostedFields();
+
+
+        checkoutState.initialized =
+            true;
+
 
     }
 
     catch (error) {
 
-        console.error(error);
+        console.error(
+            "CHECKOUT INITIALIZATION ERROR:",
+            error
+        );
 
-        alert(
 
-            error.message ||
-
+        showError(
+            error?.message ||
             "Unable to initialize checkout."
+        );
 
+
+        setPaymentButtonState(
+            true,
+            "Payment Unavailable"
         );
 
     }
 
 }
 
-// ======================================================
-// LOAD STUDENT
-// ======================================================
+
+/*=========================================================
+    LOAD STUDENT
+=========================================================*/
 
 async function loadStudent() {
 
-    const student = JSON.parse(
+    const storedStudent =
+        localStorage.getItem(
+            "student"
+        );
 
-        localStorage.getItem("student")
 
-    );
-
-    if (!student) {
+    if (
+        !storedStudent
+    ) {
 
         throw new Error(
-
-            "Student information is unavailable."
-
+            "Student information is unavailable. Please log in again."
         );
 
     }
 
-    state.student = student;
+
+    let student;
+
+
+    try {
+
+        student =
+            JSON.parse(
+                storedStudent
+            );
+
+    }
+
+    catch {
+
+        localStorage.removeItem(
+            "student"
+        );
+
+        throw new Error(
+            "Your student session is invalid. Please log in again."
+        );
+
+    }
+
+
+    if (
+        !student ||
+        typeof student !== "object"
+    ) {
+
+        throw new Error(
+            "Student information is unavailable."
+        );
+
+    }
+
+
+    checkoutState.student =
+        student;
+
 
     fullNameInput.value =
-        student.fullName || "";
+        student.fullName ||
+        student.full_name ||
+        "";
+
 
     emailInput.value =
-        student.email || "";
+        student.email ||
+        "";
+
+
+    if (
+        !fullNameInput.value ||
+        !emailInput.value
+    ) {
+
+        throw new Error(
+            "Your student account information is incomplete."
+        );
+
+    }
 
 }
 
-// ======================================================
-// LOAD SUBSCRIPTION PLAN
-// ======================================================
+
+/*=========================================================
+    LOAD PLAN
+=========================================================*/
 
 async function loadPlan() {
 
     const response =
         await fetch(
 
-            `${ENDPOINTS.plans}/${state.planId}`,
+            `${CHECKOUT_ENDPOINTS.plan}/${encodeURIComponent(
+                checkoutState.planId
+            )}`,
 
             {
 
-                method: "GET",
+                method:
+                    "GET",
 
                 headers: {
 
-                    Authorization:
-                        `Bearer ${state.token}`
+                    "Authorization":
+                        `Bearer ${checkoutState.token}`,
 
-                }
+                    "Accept":
+                        "application/json"
+
+                },
+
+                cache:
+                    "no-store"
 
             }
 
         );
 
+
     const result =
-        await response.json();
+        await parseResponse(
+            response
+        );
+
 
     if (
-
-        !response.ok ||
-
-        !result.success
-
+        !result.plan
     ) {
 
         throw new Error(
-
-            result.message ||
-
-            "Unable to load subscription."
-
+            "The selected subscription plan could not be loaded."
         );
 
     }
 
-    state.plan =
+
+    checkoutState.plan =
         result.plan;
 
-    renderPlanSummary();
+
+    renderPlan();
 
 }
 
-// ======================================================
-// RENDER ORDER SUMMARY
-// ======================================================
 
-function renderPlanSummary() {
+/*=========================================================
+    RENDER PLAN
+=========================================================*/
+
+function renderPlan() {
+
+    const plan =
+        checkoutState.plan;
+
 
     planName.textContent =
-        state.plan.name;
+        plan.name ||
+        "Subscription";
+
 
     planDescription.textContent =
-        state.plan.description;
+        plan.description ||
+        "Subscription access";
+
+
+    const duration =
+        Number(
+            plan.duration_days
+        );
+
 
     planDuration.textContent =
-        `${state.plan.duration_days} Days`;
+        Number.isFinite(duration) &&
+        duration > 0
+
+            ? `${duration} Days`
+
+            : "--";
+
 
     const price =
         Number(
-            state.plan.price
-        ).toFixed(2);
+            plan.price
+        );
+
+
+    if (
+        !Number.isFinite(price) ||
+        price < 0
+    ) {
+
+        throw new Error(
+            "The selected subscription has an invalid price."
+        );
+
+    }
+
+
+    const currency =
+        plan.currency ||
+        "USD";
+
 
     planPrice.textContent =
-        `$${price}`;
+        formatCurrency(
+            price,
+            currency
+        );
+
 
     totalPrice.textContent =
-        `$${price}`;
+        formatCurrency(
+            price,
+            currency
+        );
 
 }
 
-// ======================================================
-// INITIALIZE PAYPAL HOSTED FIELDS
-// ======================================================
 
-async function initializeHostedFields() {
+/*=========================================================
+    WAIT FOR PAYPAL SDK
+=========================================================*/
 
-    if (!window.paypal) {
+function waitForPayPal() {
+
+    return new Promise(
+        (resolve, reject) => {
+
+            const started =
+                Date.now();
+
+
+            const timeout =
+                15000;
+
+
+            function check() {
+
+                if (
+                    window.paypal &&
+                    window.paypal.HostedFields
+                ) {
+
+                    resolve();
+
+                    return;
+
+                }
+
+
+                if (
+                    Date.now() -
+                    started >=
+                    timeout
+                ) {
+
+                    reject(
+
+                        new Error(
+                            "PayPal secure card fields could not be loaded."
+                        )
+
+                    );
+
+                    return;
+
+                }
+
+
+                window.setTimeout(
+                    check,
+                    100
+                );
+
+            }
+
+
+            check();
+
+        }
+    );
+
+}
+
+
+/*=========================================================
+    PAYPAL HOSTED FIELDS
+=========================================================*/
+
+async function initializePayPalHostedFields() {
+
+    if (
+        !window.paypal ||
+        !window.paypal.HostedFields
+    ) {
 
         throw new Error(
-
-            "PayPal SDK failed to load."
-
-        );
-
-    }
-
-    if (!paypal.HostedFields) {
-
-        throw new Error(
-
             "PayPal Hosted Fields are unavailable."
-
         );
 
     }
 
-    const eligibility =
-        await paypal.HostedFields.isEligible();
 
-    if (!eligibility) {
+    const eligible =
+        await window.paypal.HostedFields.isEligible();
+
+
+    if (
+        !eligible
+    ) {
 
         throw new Error(
-
-            "Hosted Fields are not supported on this device."
-
+            "Secure card payments are unavailable."
         );
 
     }
 
-    state.hostedFields =
-        await paypal.HostedFields.render({
+
+    /*
+        This is the important part.
+
+        The actual HTML card containers are:
+
+        #card-number
+        #expiration-date
+        #cvv
+
+        Hosted Fields injects the secure PayPal
+        card inputs into those existing elements.
+    */
+
+    checkoutState.hostedFields =
+        await window.paypal.HostedFields.render({
 
             createOrder,
 
             styles: {
 
-                "input": {
+                input: {
 
-                    "font-size": "16px",
+                    "font-size":
+                        "16px",
 
                     "font-family":
                         "Arial, sans-serif",
 
-                    "color": "#1f2937"
+                    color:
+                        "#1f2937"
 
                 },
 
                 ":focus": {
 
-                    "color": "#111827"
+                    color:
+                        "#111827"
 
                 },
 
                 ".invalid": {
 
-                    "color": "#dc2626"
+                    color:
+                        "#dc2626"
 
                 },
 
                 ".valid": {
 
-                    "color": "#16a34a"
+                    color:
+                        "#16a34a"
 
                 }
 
@@ -363,17 +679,17 @@ async function initializeHostedFields() {
 
                 },
 
-                cvv: {
-
-                    selector:
-                        "#cvv"
-
-                },
-
                 expirationDate: {
 
                     selector:
                         "#expiration-date"
+
+                },
+
+                cvv: {
+
+                    selector:
+                        "#cvv"
 
                 }
 
@@ -381,247 +697,358 @@ async function initializeHostedFields() {
 
         });
 
-    payButton.disabled = false;
+
+    if (
+        !checkoutState.hostedFields
+    ) {
+
+        throw new Error(
+            "Unable to initialize secure card fields."
+        );
+
+    }
+
 
     checkoutForm.addEventListener(
-
         "submit",
-
         handleCheckout
+    );
 
+
+    payButton.addEventListener(
+        "click",
+        handleCheckout
+    );
+
+
+    setPaymentButtonState(
+        false,
+        "Complete Secure Payment"
     );
 
 }
 
-// ======================================================
-// CREATE PAYPAL ORDER
-// ======================================================
+
+/*=========================================================
+    CREATE PAYPAL ORDER
+=========================================================*/
 
 async function createOrder() {
+
+    if (
+        !checkoutState.token
+    ) {
+
+        redirectToLogin();
+
+        throw new Error(
+            "Authentication required."
+        );
+
+    }
+
+
+    if (
+        !checkoutState.planId
+    ) {
+
+        throw new Error(
+            "No subscription plan was selected."
+        );
+
+    }
+
 
     const response =
         await fetch(
 
-            ENDPOINTS.createOrder,
+            CHECKOUT_ENDPOINTS.createOrder,
 
             {
 
-                method: "POST",
+                method:
+                    "POST",
 
                 headers: {
 
                     "Content-Type":
                         "application/json",
 
-                    Authorization:
-                        `Bearer ${state.token}`
+                    "Authorization":
+                        `Bearer ${checkoutState.token}`,
+
+                    "Accept":
+                        "application/json"
 
                 },
 
-                body: JSON.stringify({
+                body:
+                    JSON.stringify({
 
-                    planId:
-                        state.planId,
+                        planId:
+                            checkoutState.planId
 
-                    useTrial:
-                        state.useTrial
-
-                })
+                    })
 
             }
 
         );
 
+
     const result =
-        await response.json();
+        await parseResponse(
+            response
+        );
+
 
     if (
-
-        !response.ok ||
-
-        !result.success
-
+        !result.orderId
     ) {
 
         throw new Error(
-
-            result.message ||
-
-            "Unable to create PayPal order."
-
+            "PayPal did not return a payment order."
         );
 
     }
 
-    state.orderId =
+
+    checkoutState.orderId =
         result.orderId;
+
 
     return result.orderId;
 
 }
 
-// ======================================================
-// HANDLE CHECKOUT SUBMISSION
-// ======================================================
 
-async function handleCheckout(event) {
+/*=========================================================
+    SUBMIT PAYMENT
+=========================================================*/
 
-    event.preventDefault();
+async function handleCheckout(
+    event
+) {
 
-    if (state.isSubmitting) {
+    if (
+        event
+    ) {
+
+        event.preventDefault();
+
+    }
+
+
+    if (
+        checkoutState.isSubmitting
+    ) {
 
         return;
 
     }
 
-    state.isSubmitting = true;
 
-    payButton.disabled = true;
+    if (
+        !checkoutState.initialized ||
+        !checkoutState.hostedFields
+    ) {
 
-    payButton.textContent =
-        "Processing Payment...";
+        showError(
+            "Secure card payment is not ready yet."
+        );
+
+        return;
+
+    }
+
+
+    checkoutState.isSubmitting =
+        true;
+
+
+    setPaymentButtonState(
+        true,
+        "Processing Payment..."
+    );
+
 
     try {
 
-        await state.hostedFields.submit({
-
-            cardholderName:
-                state.student.fullName
-
-        });
-
-        const response =
-            await fetch(
-
-                ENDPOINTS.captureOrder,
-
-                {
-
-                    method: "POST",
-
-                    headers: {
-
-                        "Content-Type":
-                            "application/json",
-
-                        Authorization:
-                            `Bearer ${state.token}`
-
-                    },
-
-                    body: JSON.stringify({
-
-                        orderId:
-                            state.orderId,
-
-                        planId:
-                            state.planId,
-
-                        useTrial:
-                            state.useTrial
-
-                    })
-
-                }
-
-            );
-
         const result =
-            await response.json();
+            await checkoutState.hostedFields.submit({
+
+                cardholderName:
+                    checkoutState.student.fullName ||
+                    checkoutState.student.full_name ||
+                    ""
+
+            });
+
 
         if (
+            result?.orderID
+        ) {
 
-            !response.ok ||
+            checkoutState.orderId =
+                result.orderID;
 
-            !result.success
+        }
 
+
+        if (
+            !checkoutState.orderId
         ) {
 
             throw new Error(
-
-                result.message ||
-
-                "Payment could not be completed."
-
+                "Payment order was not created."
             );
 
         }
 
-        alert(
 
-            "Subscription activated successfully!"
-
-        );
-
-        location.href =
-            "dashboard.html";
+        await capturePayment();
 
     }
 
     catch (error) {
 
-        console.error(error);
-
-        alert(
-
-            error.message ||
-
-            "Payment failed."
-
+        console.error(
+            "PAYMENT ERROR:",
+            error
         );
+
+
+        showError(
+            getPaymentErrorMessage(
+                error
+            )
+        );
+
+
+        checkoutState.orderId =
+            null;
 
     }
 
     finally {
 
-        state.isSubmitting = false;
+        checkoutState.isSubmitting =
+            false;
 
-        payButton.disabled = false;
 
-        payButton.textContent =
-            "Complete Secure Payment";
+        if (
+            checkoutState.initialized
+        ) {
+
+            setPaymentButtonState(
+                false,
+                "Complete Secure Payment"
+            );
+
+        }
 
     }
 
 }
 
-// ======================================================
-// SESSION HELPERS
-// ======================================================
 
-function logoutStudent() {
+/*=========================================================
+    CAPTURE PAYMENT
+=========================================================*/
 
-    localStorage.removeItem("studentToken");
+async function capturePayment() {
 
-    localStorage.removeItem("student");
+    const response =
+        await fetch(
 
-    location.href = "login.html";
+            CHECKOUT_ENDPOINTS.captureOrder,
 
-}
+            {
 
-// ======================================================
-// AUTHENTICATION ERROR HANDLER
-// ======================================================
+                method:
+                    "POST",
 
-function handleAuthenticationError() {
+                headers: {
 
-    alert(
+                    "Content-Type":
+                        "application/json",
 
-        "Your session has expired. Please log in again."
+                    "Authorization":
+                        `Bearer ${checkoutState.token}`,
 
+                    "Accept":
+                        "application/json"
+
+                },
+
+                body:
+                    JSON.stringify({
+
+                        orderId:
+                            checkoutState.orderId,
+
+                        planId:
+                            checkoutState.planId
+
+                    })
+
+            }
+
+        );
+
+
+    const result =
+        await parseResponse(
+            response
+        );
+
+
+    if (
+        !result.success
+    ) {
+
+        throw new Error(
+            result.message ||
+            "Payment could not be completed."
+        );
+
+    }
+
+
+    showSuccess(
+        "Subscription activated successfully."
     );
 
-    logoutStudent();
+
+    setPaymentButtonState(
+        true,
+        "Payment Successful"
+    );
+
+
+    window.setTimeout(
+        () => {
+
+            window.location.replace(
+                "dashboard.html"
+            );
+
+        },
+        700
+    );
 
 }
 
-// ======================================================
-// GLOBAL FETCH ERROR HANDLER
-// ======================================================
 
-async function parseResponse(response) {
+/*=========================================================
+    API RESPONSE
+=========================================================*/
 
-    let result = {};
+async function parseResponse(
+    response
+) {
+
+    let result = null;
+
 
     try {
 
@@ -632,90 +1059,341 @@ async function parseResponse(response) {
 
     catch {
 
-        result = {
-
-            success: false,
-
-            message:
-                "Unexpected server response."
-
-        };
+        result = null;
 
     }
 
-    if (response.status === 401) {
 
-        handleAuthenticationError();
+    if (
+        response.status === 401
+    ) {
+
+        clearStudentSession();
+
+        redirectToLogin();
+
+        throw new Error(
+            "Your session has expired. Please log in again."
+        );
+
+    }
+
+
+    if (
+        !response.ok
+    ) {
 
         throw new Error(
 
-            "Authentication required."
+            result?.message ||
+            "The request could not be completed."
 
         );
 
     }
 
+
     if (
+        !result
+    ) {
 
-        !response.ok ||
+        throw new Error(
+            "Unexpected server response."
+        );
 
-        !result.success
+    }
 
+
+    if (
+        result.success === false
     ) {
 
         throw new Error(
 
             result.message ||
-
-            "Request failed."
+            "The request could not be completed."
 
         );
 
     }
 
+
     return result;
 
 }
 
-// ======================================================
-// FORMAT USD
-// ======================================================
 
-function formatCurrency(amount) {
+/*=========================================================
+    BUTTON STATE
+=========================================================*/
 
-    return Number(amount).toLocaleString(
+function setPaymentButtonState(
+    disabled,
+    text
+) {
+
+    if (
+        !payButton
+    ) {
+
+        return;
+
+    }
+
+
+    payButton.disabled =
+        disabled;
+
+
+    if (
+        text ===
+        "Complete Secure Payment"
+    ) {
+
+        payButton.innerHTML = `
+
+            <i class="fas fa-lock"></i>
+
+            Complete Secure Payment
+
+        `;
+
+        return;
+
+    }
+
+
+    if (
+        text ===
+        "Payment Successful"
+    ) {
+
+        payButton.innerHTML = `
+
+            <i class="fas fa-check-circle"></i>
+
+            Payment Successful
+
+        `;
+
+        return;
+
+    }
+
+
+    payButton.innerHTML = `
+
+        <i class="fas fa-spinner fa-spin"></i>
+
+        ${escapeHtml(text)}
+
+    `;
+
+}
+
+
+/*=========================================================
+    ERROR
+=========================================================*/
+
+function showError(
+    message
+) {
+
+    window.alert(
+        message ||
+        "Something went wrong. Please try again."
+    );
+
+}
+
+
+/*=========================================================
+    SUCCESS
+=========================================================*/
+
+function showSuccess(
+    message
+) {
+
+    window.alert(
+        message ||
+        "Payment completed successfully."
+    );
+
+}
+
+
+/*=========================================================
+    SESSION
+=========================================================*/
+
+function clearStudentSession() {
+
+    localStorage.removeItem(
+        "studentToken"
+    );
+
+    localStorage.removeItem(
+        "student"
+    );
+
+}
+
+
+function redirectToLogin() {
+
+    clearStudentSession();
+
+    window.location.replace(
+        "login.html"
+    );
+
+}
+
+
+/*=========================================================
+    PAYMENT ERROR
+=========================================================*/
+
+function getPaymentErrorMessage(
+    error
+) {
+
+    const message =
+        error?.message ||
+        "";
+
+
+    if (
+        /declined/i.test(
+            message
+        )
+    ) {
+
+        return (
+            "Your card was declined. " +
+            "Please check your card details or use another card."
+        );
+
+    }
+
+
+    if (
+        /invalid card/i.test(
+            message
+        )
+    ) {
+
+        return (
+            "Please check your card details and try again."
+        );
+
+    }
+
+
+    return (
+        message ||
+        "Payment could not be completed. Please try again."
+    );
+
+}
+
+
+/*=========================================================
+    CURRENCY
+=========================================================*/
+
+function formatCurrency(
+    amount,
+    currency = "USD"
+) {
+
+    const value =
+        Number(
+            amount
+        );
+
+
+    if (
+        !Number.isFinite(value)
+    ) {
+
+        return "$0.00";
+
+    }
+
+
+    return new Intl.NumberFormat(
 
         "en-US",
 
         {
 
-            style: "currency",
+            style:
+                "currency",
 
-            currency: "USD"
+            currency
 
         }
 
+    ).format(
+        value
     );
 
 }
 
-// ======================================================
-// PAGE SAFETY
-// ======================================================
+
+/*=========================================================
+    HTML ESCAPE
+=========================================================*/
+
+function escapeHtml(
+    value
+) {
+
+    return String(
+        value
+    )
+        .replace(
+            /&/g,
+            "&amp;"
+        )
+        .replace(
+            /</g,
+            "&lt;"
+        )
+        .replace(
+            />/g,
+            "&gt;"
+        )
+        .replace(
+            /"/g,
+            "&quot;"
+        )
+        .replace(
+            /'/g,
+            "&#039;"
+        );
+
+}
+
+
+/*=========================================================
+    PAGE EXIT PROTECTION
+=========================================================*/
 
 window.addEventListener(
 
     "beforeunload",
 
-    () => {
+    (event) => {
 
         if (
-
-            state.isSubmitting
-
+            checkoutState.isSubmitting
         ) {
 
-            payButton.disabled = true;
+            event.preventDefault();
 
         }
 
@@ -723,6 +1401,7 @@ window.addEventListener(
 
 );
 
-// ======================================================
-// END OF FILE
-// ======================================================
+
+/*=========================================================
+    END
+=========================================================*/

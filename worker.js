@@ -445,18 +445,27 @@ if (
 // Student Payments
 // -----------------------------
 if (
-
-    url.pathname.startsWith("/api/payments")
-
+    url.pathname.startsWith("/api/payments") ||
+    url.pathname === "/api/subscription-plans" ||
+    url.pathname.startsWith("/api/subscription-plans/")
 ) {
 
-    const response = await paymentHandler(request, env);
+    const response =
+        await paymentHandler(
+            request,
+            env
+        );
 
-    Object.entries(corsHeaders).forEach(([key, value]) => {
+    Object.entries(corsHeaders).forEach(
+        ([key, value]) => {
 
-        response.headers.set(key, value);
+            response.headers.set(
+                key,
+                value
+            );
 
-    });
+        }
+    );
 
     return response;
 

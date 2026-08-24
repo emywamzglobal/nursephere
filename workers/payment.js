@@ -1,123 +1,135 @@
 // ======================================================
-// NurseSphere Payment Worker
+// NURSEPHERE PAYMENT WORKER
 // File: workers/payment.js
-// Purpose:
-// Subscription Plans
-// PayPal Advanced Card Processing
-// Payments
-// Trials
-// Subscription Activation
+//
+// RESPONSIBILITIES
+// - Subscription plan retrieval
+// - PayPal Live order creation
+// - PayPal Live order capture
+// - Payment verification
+// - Subscription activation
+// - Payment recording
+//
+// ARCHITECTURE
+// - worker.js handles imports, routing and CORS
+// - This file handles payment business logic only
+// - Customers pay by card through PayPal
+// - Customers do NOT need a PayPal account
 // ======================================================
 
 import jwt from "@tsndr/cloudflare-worker-jwt";
 
 // ======================================================
+// CONSTANTS
+// ======================================================
+
+const PAYPAL_CURRENCY = "USD";
+
+// ======================================================
+// ERROR CLASS
+// ======================================================
+
+class PaymentError extends Error {
+
+    constructor(message, status = 400) {
+
+        super(message);
+
+        this.name = "PaymentError";
+
+        this.status = status;
+
+    }
+
+}
+
+// ======================================================
 // MAIN HANDLER
 // ======================================================
 
-export default async function paymentHandler(request, env) {
+export default async function paymentHandler(
+    request,
+    env
+) {
 
     try {
 
         const url = new URL(request.url);
+
         const pathname = url.pathname;
 
-        // -------------------------------------------------
-        // Validate Environment
-        // -------------------------------------------------
+        validateEnvironment(env);
 
-        const required = [
-
-            "DB",
-            "JWT_SECRET"
-
-        ];
-
-        for (const key of required) {
-
-            if (!env[key]) {
-
-                throw new Error(
-
-                    `Missing environment binding: ${key}`
-
-                );
-
-            }
-
-        }
-
-        // -------------------------------------------------
-        // Subscription Plans
-        // -------------------------------------------------
+        // ==================================================
+        // GET ALL SUBSCRIPTION PLANS
+        // ==================================================
 
         if (
-
             request.method === "GET" &&
             pathname === "/api/subscription-plans"
-
         ) {
 
             return await getSubscriptionPlans(env);
 
         }
 
-        if (
+        // ==================================================
+        // GET SINGLE SUBSCRIPTION PLAN
+        // ==================================================
 
+        if (
             request.method === "GET" &&
             pathname.startsWith("/api/subscription-plans/")
-
         ) {
 
             return await getSubscriptionPlan(
-                request,
+                pathname,
                 env
             );
 
         }
 
-        // -------------------------------------------------
-        // Payments
-        // -------------------------------------------------
+        // ==================================================
+        // CREATE PAYPAL ORDER
+        // ==================================================
 
         if (
-
             request.method === "POST" &&
             pathname === "/api/payments/create-order"
-
         ) {
 
-            return await createOrder(
+            return await createPayPalOrder(
                 request,
                 env
             );
 
         }
+
+        // ==================================================
+        // CAPTURE PAYPAL ORDER
+        // ==================================================
 
         if (
-
             request.method === "POST" &&
             pathname === "/api/payments/capture-order"
-
         ) {
 
-            return await captureOrder(
+            return await capturePayPalOrder(
                 request,
                 env
             );
 
         }
 
-        // -------------------------------------------------
-        // Unknown Endpoint
-        // -------------------------------------------------
+        // ==================================================
+        // NOT FOUND
+        // ==================================================
 
-        return jsonResponse({
+        return json({
 
             success: false,
 
-            message:
-                "Endpoint not found."
+            message: "Endpoint not found."
 
         }, 404);
 
@@ -126,24 +138,65 @@ export default async function paymentHandler(request, env) {
     catch (error) {
 
         console.error(
-
-            "Payment Worker:",
-
+            "Payment worker error:",
             error
-
         );
 
-        return jsonResponse({
+        if (
+            error instanceof PaymentError
+        ) {
+
+            return json({
+
+                success: false,
+
+                message:
+                    error.message
+
+            }, error.status);
+
+        }
+
+        return json({
 
             success: false,
 
             message:
-
-                error.message ||
-
-                "Internal server error."
+                "Unable to process payment request."
 
         }, 500);
+
+    }
+
+}
+
+// ======================================================
+// ENVIRONMENT VALIDATION
+// ======================================================
+
+function validateEnvironment(env) {
+
+    const required = [
+
+        "DB",
+        "JWT_SECRET",
+        "PAYPAL_API_BASE",
+        "PAYPAL_CLIENT_ID",
+        "PAYPAL_CLIENT_SECRET"
+
+    ];
+
+    for (
+        const key of required
+    ) {
+
+        if (!env[key]) {
+
+            throw new Error(
+                `Missing environment binding: ${key}`
+            );
+
+        }
 
     }
 
@@ -153,7 +206,10 @@ export default async function paymentHandler(request, env) {
 // JSON RESPONSE
 // ======================================================
 
-function jsonResponse(data, status = 200) {
+function json(
+    data,
+    status = 200
+) {
 
     return new Response(
 
@@ -166,7 +222,10 @@ function jsonResponse(data, status = 200) {
             headers: {
 
                 "Content-Type":
-                    "application/json"
+                    "application/json",
+
+                "Cache-Control":
+                    "no-store"
 
             }
 
@@ -177,7 +236,7 @@ function jsonResponse(data, status = 200) {
 }
 
 // ======================================================
-// CURRENT UTC TIME
+// CURRENT TIME
 // ======================================================
 
 function now() {
@@ -187,42 +246,35 @@ function now() {
 }
 
 // ======================================================
-// GENERATE UNIQUE IDS
+// UNIQUE ID
 // ======================================================
 
-function generateId(prefix) {
+function id(prefix) {
 
     return `${prefix}_${crypto.randomUUID()}`;
 
 }
 
 // ======================================================
-// CALCULATE EXPIRY DATE
+// READ JSON
 // ======================================================
 
-function calculateExpiryDate(days) {
+async function readBody(request) {
 
-    const expiry = new Date();
+    try {
 
-    expiry.setUTCDate(
+        return await request.json();
 
-        expiry.getUTCDate() +
+    }
 
-        Number(days)
+    catch {
 
-    );
+        throw new PaymentError(
+            "Invalid request body.",
+            400
+        );
 
-    return expiry.toISOString();
-
-}
-
-// ======================================================
-// CALCULATE TRIAL EXPIRY
-// ======================================================
-
-function calculateTrialExpiry() {
-
-    return calculateExpiryDate(3);
+    }
 
 }
 
@@ -230,83 +282,115 @@ function calculateTrialExpiry() {
 // AUTHENTICATE STUDENT
 // ======================================================
 
-async function authenticateStudent(request, env) {
+async function authenticateStudent(
+    request,
+    env
+) {
 
     const authorization =
         request.headers.get("Authorization");
 
     if (
-
         !authorization ||
-
         !authorization.startsWith("Bearer ")
-
     ) {
 
-        throw new Error(
-
-            "Authentication required."
-
+        throw new PaymentError(
+            "Authentication required.",
+            401
         );
 
     }
 
     const token =
-        authorization.substring(7);
+        authorization
+            .substring(7)
+            .trim();
 
-    const verified =
-        await jwt.verify(
+    if (!token) {
 
-            token,
-
-            env.JWT_SECRET
-
-        );
-
-    if (!verified) {
-
-        throw new Error(
-
-            "Invalid authentication token."
-
+        throw new PaymentError(
+            "Authentication required.",
+            401
         );
 
     }
 
-    const decoded =
-        jwt.decode(token);
+    let verified = false;
+
+    try {
+
+        verified =
+            await jwt.verify(
+                token,
+                env.JWT_SECRET
+            );
+
+    }
+
+    catch {
+
+        verified = false;
+
+    }
+
+    if (!verified) {
+
+        throw new PaymentError(
+            "Invalid or expired session.",
+            401
+        );
+
+    }
+
+    let decoded;
+
+    try {
+
+        decoded =
+            jwt.decode(token);
+
+    }
+
+    catch {
+
+        throw new PaymentError(
+            "Invalid authentication token.",
+            401
+        );
+
+    }
+
+    const payload =
+        decoded?.payload || {};
 
     const studentId =
-
-        decoded.payload.studentId ||
-
-        decoded.payload.id;
+        payload.studentId ||
+        payload.id ||
+        payload.sub;
 
     if (!studentId) {
 
-        throw new Error(
-
-            "Invalid authentication payload."
-
+        throw new PaymentError(
+            "Invalid authentication token.",
+            401
         );
 
     }
 
     const student =
-        await env.DB.prepare(
+        await env.DB.prepare(`
 
-            `
             SELECT
 
                 id,
                 student_number,
                 full_name,
                 email,
-
                 account_status,
 
-                trial_used,
                 trial_active,
+                trial_used,
                 trial_started_at,
                 trial_expires_at,
 
@@ -319,30 +403,27 @@ async function authenticateStudent(request, env) {
             WHERE id = ?
 
             LIMIT 1
-            `
 
-        )
-
+        `)
         .bind(studentId)
-
         .first();
 
     if (!student) {
 
-        throw new Error(
-
-            "Student account not found."
-
+        throw new PaymentError(
+            "Student account not found.",
+            404
         );
 
     }
 
-    if (student.account_status !== "active") {
+    if (
+        student.account_status !== "active"
+    ) {
 
-        throw new Error(
-
-            "Student account is inactive."
-
+        throw new PaymentError(
+            "Student account is inactive.",
+            403
         );
 
     }
@@ -352,137 +433,118 @@ async function authenticateStudent(request, env) {
 }
 
 // ======================================================
-// GET ALL SUBSCRIPTION PLANS
-// GET /api/subscription-plans
+// GET SUBSCRIPTION PLANS
 // ======================================================
 
 async function getSubscriptionPlans(env) {
 
-    const plans =
-        await env.DB.prepare(
+    const result =
+        await env.DB.prepare(`
 
-            `
             SELECT
 
                 id,
                 name,
-                description,
                 price,
                 duration_days,
-                display_order
+                description,
+                display_order,
+                status,
+                currency
 
             FROM subscription_plans
 
             WHERE status = 'active'
 
             ORDER BY
-
                 display_order ASC,
-
                 price ASC
-            `
 
-        )
-
+        `)
         .all();
 
-    return jsonResponse({
+    return json({
 
         success: true,
 
         plans:
-
-            plans.results || []
+            result.results || []
 
     });
 
 }
 
 // ======================================================
-// GET SUBSCRIPTION PLAN
-// GET /api/subscription-plans/:id
+// GET SINGLE SUBSCRIPTION PLAN
 // ======================================================
 
-async function getSubscriptionPlan(request, env) {
+async function getSubscriptionPlan(
+    pathname,
+    env
+) {
 
-    const url =
-        new URL(request.url);
-
-    const segments =
-        url.pathname.split("/");
+    const parts =
+        pathname.split("/");
 
     const planId =
-        segments[segments.length - 1];
+        parts[parts.length - 1];
 
     if (!planId) {
 
-        return jsonResponse({
-
-            success: false,
-
-            message:
-                "Subscription plan ID is required."
-
-        }, 400);
+        throw new PaymentError(
+            "Subscription plan ID is required.",
+            400
+        );
 
     }
 
     const plan =
-        await env.DB.prepare(
+        await env.DB.prepare(`
 
-            `
             SELECT
 
                 id,
                 name,
-                description,
                 price,
                 duration_days,
-                status
+                description,
+                display_order,
+                status,
+                currency
 
             FROM subscription_plans
 
             WHERE id = ?
 
             LIMIT 1
-            `
 
-        )
-
+        `)
         .bind(planId)
-
         .first();
 
     if (!plan) {
 
-        return jsonResponse({
-
-            success: false,
-
-            message:
-                "Subscription plan not found."
-
-        }, 404);
+        throw new PaymentError(
+            "Subscription plan not found.",
+            404
+        );
 
     }
 
-    if (plan.status !== "active") {
+    if (
+        plan.status !== "active"
+    ) {
 
-        return jsonResponse({
-
-            success: false,
-
-            message:
-                "Subscription plan is unavailable."
-
-        }, 400);
+        throw new PaymentError(
+            "Subscription plan is unavailable.",
+            400
+        );
 
     }
 
     const features =
-        await env.DB.prepare(
+        await env.DB.prepare(`
 
-            `
             SELECT
 
                 f.id,
@@ -493,20 +555,17 @@ async function getSubscriptionPlan(request, env) {
 
             INNER JOIN features f
 
-                ON pf.feature_id = f.id
+                ON f.id = pf.feature_id
 
             WHERE pf.plan_id = ?
 
             ORDER BY f.name ASC
-            `
 
-        )
-
+        `)
         .bind(plan.id)
-
         .all();
 
-    return jsonResponse({
+    return json({
 
         success: true,
 
@@ -518,14 +577,17 @@ async function getSubscriptionPlan(request, env) {
             name:
                 plan.name,
 
-            description:
-                plan.description,
-
             price:
                 Number(plan.price),
 
             duration_days:
-                plan.duration_days,
+                Number(plan.duration_days),
+
+            description:
+                plan.description,
+
+            currency:
+                plan.currency,
 
             features:
                 features.results || []
@@ -537,70 +599,77 @@ async function getSubscriptionPlan(request, env) {
 }
 
 // ======================================================
-// GET PAYPAL ACCESS TOKEN
+// PAYPAL ACCESS TOKEN
 // ======================================================
 
 async function getPayPalAccessToken(env) {
 
-    if (
+    const credentials =
+        btoa(
+            `${env.PAYPAL_CLIENT_ID}:${env.PAYPAL_CLIENT_SECRET}`
+        );
 
-        !env.PAYPAL_CLIENT_ID ||
-        !env.PAYPAL_CLIENT_SECRET ||
-        !env.PAYPAL_API_BASE
+    const response =
+        await fetch(
 
-    ) {
+            `${env.PAYPAL_API_BASE}/v1/oauth2/token`,
+
+            {
+
+                method: "POST",
+
+                headers: {
+
+                    "Authorization":
+                        `Basic ${credentials}`,
+
+                    "Content-Type":
+                        "application/x-www-form-urlencoded",
+
+                    "Accept":
+                        "application/json"
+
+                },
+
+                body:
+                    "grant_type=client_credentials"
+
+            }
+
+        );
+
+    let data;
+
+    try {
+
+        data =
+            await response.json();
+
+    }
+
+    catch {
 
         throw new Error(
-
-            "PayPal environment variables are missing."
-
+            "Invalid response from PayPal."
         );
 
     }
 
-    const credentials = btoa(
-
-        `${env.PAYPAL_CLIENT_ID}:${env.PAYPAL_CLIENT_SECRET}`
-
-    );
-
-    const response = await fetch(
-
-        `${env.PAYPAL_API_BASE}/v1/oauth2/token`,
-
-        {
-
-            method: "POST",
-
-            headers: {
-
-                Authorization: `Basic ${credentials}`,
-
-                "Content-Type":
-                    "application/x-www-form-urlencoded"
-
-            },
-
-            body: "grant_type=client_credentials"
-
-        }
-
-    );
-
-    const data = await response.json();
-
     if (
-
         !response.ok ||
-
-        !data.access_token
-
+        !data?.access_token
     ) {
 
+        console.error(
+            "PayPal authentication failed:",
+            {
+                status:
+                    response.status
+            }
+        );
+
         throw new Error(
-
-            "Unable to obtain PayPal access token."
-
+            "Unable to connect to PayPal."
         );
 
     }
@@ -610,11 +679,168 @@ async function getPayPalAccessToken(env) {
 }
 
 // ======================================================
-// CREATE PAYPAL ORDER
-// POST /api/payments/create-order
+// LOAD ACTIVE PLAN
 // ======================================================
 
-async function createOrder(request, env) {
+async function loadPlan(
+    planId,
+    env
+) {
+
+    if (
+        typeof planId !== "string" ||
+        !planId.trim()
+    ) {
+
+        throw new PaymentError(
+            "Subscription plan is required.",
+            400
+        );
+
+    }
+
+    const plan =
+        await env.DB.prepare(`
+
+            SELECT
+
+                id,
+                name,
+                price,
+                duration_days,
+                description,
+                currency,
+                status
+
+            FROM subscription_plans
+
+            WHERE id = ?
+
+            LIMIT 1
+
+        `)
+        .bind(planId.trim())
+        .first();
+
+    if (!plan) {
+
+        throw new PaymentError(
+            "Subscription plan not found.",
+            404
+        );
+
+    }
+
+    if (
+        plan.status !== "active"
+    ) {
+
+        throw new PaymentError(
+            "Subscription plan is unavailable.",
+            400
+        );
+
+    }
+
+    const price =
+        Number(plan.price);
+
+    if (
+        !Number.isFinite(price) ||
+        price <= 0
+    ) {
+
+        throw new PaymentError(
+            "Subscription plan has an invalid price.",
+            500
+        );
+
+    }
+
+    if (
+        Number(plan.duration_days) <= 0
+    ) {
+
+        throw new PaymentError(
+            "Subscription plan has an invalid duration.",
+            500
+        );
+
+    }
+
+    if (
+        plan.currency !== PAYPAL_CURRENCY
+    ) {
+
+        throw new PaymentError(
+            "Subscription plan currency is not supported.",
+            400
+        );
+
+    }
+
+    return {
+
+        ...plan,
+
+        price
+
+    };
+
+}
+
+// ======================================================
+// CHECK EXISTING SUBSCRIPTION
+// ======================================================
+
+async function ensureNoActiveSubscription(
+    studentId,
+    env
+) {
+
+    const subscription =
+        await env.DB.prepare(`
+
+            SELECT
+
+                id,
+                status,
+                payment_status
+
+            FROM subscriptions
+
+            WHERE student_id = ?
+
+            AND status IN (
+                'pending',
+                'active'
+            )
+
+            LIMIT 1
+
+        `)
+        .bind(studentId)
+        .first();
+
+    if (subscription) {
+
+        throw new PaymentError(
+            "An active or pending subscription already exists.",
+            400
+        );
+
+    }
+
+}
+
+// ======================================================
+// CREATE PAYPAL ORDER
+// ======================================================
+
+async function createPayPalOrder(
+    request,
+    env
+) {
 
     const student =
         await authenticateStudent(
@@ -623,260 +849,277 @@ async function createOrder(request, env) {
         );
 
     const body =
-        await request.json();
-
-    const {
-
-        planId,
-
-        useTrial = false
-
-    } = body;
-
-    if (!planId) {
-
-        return jsonResponse({
-
-            success: false,
-
-            message:
-                "Subscription plan is required."
-
-        }, 400);
-
-    }
+        await readBody(request);
 
     const plan =
-        await env.DB.prepare(
+        await loadPlan(
+            body.planId,
+            env
+        );
 
-            `
-            SELECT
+    // --------------------------------------------------
+    // Trial is NOT part of paid checkout.
+    // The dashboard/account system owns trial access.
+    // --------------------------------------------------
 
-                id,
-                name,
-                price,
-                duration_days,
-                status
-
-            FROM subscription_plans
-
-            WHERE id = ?
-
-            LIMIT 1
-            `
-
-        )
-
-        .bind(planId)
-
-        .first();
-
-    if (!plan) {
-
-        return jsonResponse({
-
-            success: false,
-
-            message:
-                "Subscription plan not found."
-
-        }, 404);
-
-    }
-
-    if (plan.status !== "active") {
-
-        return jsonResponse({
-
-            success: false,
-
-            message:
-                "Selected subscription plan is unavailable."
-
-        }, 400);
-
-    }
-
-    if (
-
-        useTrial &&
-
-        student.trial_used
-
-    ) {
-
-        return jsonResponse({
-
-            success: false,
-
-            message:
-                "Free trial has already been used."
-
-        }, 400);
-
-    }
-
-    const existingSubscription =
-        await env.DB.prepare(
-
-            `
-            SELECT id
-
-            FROM subscriptions
-
-            WHERE student_id = ?
-
-            AND status IN ('active','pending')
-
-            LIMIT 1
-            `
-
-        )
-
-        .bind(student.id)
-
-        .first();
-
-    if (existingSubscription) {
-
-        return jsonResponse({
-
-            success: false,
-
-            message:
-                "An active subscription already exists."
-
-        }, 400);
-
-    }
+    await ensureNoActiveSubscription(
+        student.id,
+        env
+    );
 
     const accessToken =
         await getPayPalAccessToken(env);
 
-    const amount =
-        Number(plan.price).toFixed(2);
+    const orderPayload = {
 
-    const orderResponse =
+        intent:
+            "CAPTURE",
+
+        purchase_units: [
+
+            {
+
+                reference_id:
+                    plan.id,
+
+                description:
+                    plan.name,
+
+                custom_id:
+                    `${student.id}:${plan.id}`,
+
+                amount: {
+
+                    currency_code:
+                        PAYPAL_CURRENCY,
+
+                    value:
+                        plan.price.toFixed(2)
+
+                }
+
+            }
+
+        ]
+
+    };
+
+    const response =
         await fetch(
 
             `${env.PAYPAL_API_BASE}/v2/checkout/orders`,
 
             {
+
                 method: "POST",
 
                 headers: {
 
-                    Authorization:
+                    "Authorization":
                         `Bearer ${accessToken}`,
 
                     "Content-Type":
-                        "application/json"
+                        "application/json",
+
+                    "Accept":
+                        "application/json",
+
+                    "Prefer":
+                        "return=representation"
 
                 },
 
-                body: JSON.stringify({
-
-                    intent: "CAPTURE",
-
-                    purchase_units: [
-
-                        {
-
-                            reference_id:
-                                plan.id,
-
-                            description:
-                                plan.name,
-
-                            amount: {
-
-                                currency_code: "USD",
-
-                                value: amount
-
-                            }
-
-                        }
-
-                    ]
-
-                })
+                body:
+                    JSON.stringify(
+                        orderPayload
+                    )
 
             }
 
         );
 
-    const order =
-        await orderResponse.json();
+    let data;
 
-        
-    if (
+    try {
 
-        !orderResponse.ok ||
-
-        !order.id
-
-    ) {
-
-        console.error(
-
-            "PayPal Order Error:",
-
-            order
-
-        );
-
-        return jsonResponse({
-
-            success: false,
-
-            message:
-                "Unable to create PayPal order."
-
-        }, 500);
+        data =
+            await response.json();
 
     }
 
-    return jsonResponse({
+    catch {
+
+        throw new Error(
+            "Invalid response from PayPal."
+        );
+
+    }
+
+    if (
+        !response.ok ||
+        !data?.id
+    ) {
+
+        console.error(
+            "PayPal order creation failed:",
+            {
+                status:
+                    response.status,
+
+                name:
+                    data?.name
+            }
+        );
+
+        throw new PaymentError(
+            "Unable to create payment order.",
+            400
+        );
+
+    }
+
+    return json({
 
         success: true,
 
         orderId:
-            order.id,
-
-        plan: {
-
-            id:
-                plan.id,
-
-            name:
-                plan.name,
-
-            price:
-                Number(plan.price),
-
-            duration_days:
-                plan.duration_days
-
-        },
-
-        trial: {
-
-            enabled:
-                Boolean(useTrial)
-
-        }
+            data.id
 
     });
 
 }
 
 // ======================================================
-// CAPTURE PAYPAL ORDER
-// POST /api/payments/capture-order
+// VERIFY PAYPAL ORDER
 // ======================================================
 
-async function captureOrder(request, env) {
+async function verifyPayPalOrder(
+    order,
+    plan,
+    student
+) {
+
+    if (
+        !order ||
+        !order.id
+    ) {
+
+        throw new PaymentError(
+            "Invalid PayPal order.",
+            400
+        );
+
+    }
+
+    if (
+        order.intent !== "CAPTURE"
+    ) {
+
+        throw new PaymentError(
+            "Invalid PayPal payment intent.",
+            400
+        );
+
+    }
+
+    const purchaseUnit =
+        order.purchase_units?.[0];
+
+    if (!purchaseUnit) {
+
+        throw new PaymentError(
+            "PayPal order contains no purchase information.",
+            400
+        );
+
+    }
+
+    if (
+        purchaseUnit.reference_id !==
+        plan.id
+    ) {
+
+        throw new PaymentError(
+            "Payment does not match the selected plan.",
+            400
+        );
+
+    }
+
+    if (
+        purchaseUnit.custom_id !==
+        `${student.id}:${plan.id}`
+    ) {
+
+        throw new PaymentError(
+            "Payment does not belong to this account.",
+            400
+        );
+
+    }
+
+    const amount =
+        purchaseUnit.amount;
+
+    if (
+        !amount
+    ) {
+
+        throw new PaymentError(
+            "PayPal order amount is missing.",
+            400
+        );
+
+    }
+
+    if (
+        amount.currency_code !==
+        PAYPAL_CURRENCY
+    ) {
+
+        throw new PaymentError(
+            "Payment currency is invalid.",
+            400
+        );
+
+    }
+
+    const orderAmount =
+        Number(amount.value);
+
+    if (
+        !Number.isFinite(orderAmount)
+    ) {
+
+        throw new PaymentError(
+            "Payment amount is invalid.",
+            400
+        );
+
+    }
+
+    if (
+        orderAmount.toFixed(2) !==
+        plan.price.toFixed(2)
+    ) {
+
+        throw new PaymentError(
+            "Payment amount does not match the subscription price.",
+            400
+        );
+
+    }
+
+}
+
+// ======================================================
+// CAPTURE PAYPAL ORDER
+// ======================================================
+
+async function capturePayPalOrder(
+    request,
+    env
+) {
 
     const student =
         await authenticateStudent(
@@ -885,100 +1128,93 @@ async function captureOrder(request, env) {
         );
 
     const body =
-        await request.json();
+        await readBody(request);
 
-    const {
+    const orderId =
+        typeof body.orderId === "string"
+            ? body.orderId.trim()
+            : "";
 
-        orderId,
+    const planId =
+        typeof body.planId === "string"
+            ? body.planId.trim()
+            : "";
 
-        planId,
+    if (
+        !orderId ||
+        !planId
+    ) {
 
-        useTrial = false
-
-    } = body;
-
-    if (!orderId || !planId) {
-
-        return jsonResponse({
-
-            success: false,
-
-            message:
-                "Order ID and subscription plan are required."
-
-        }, 400);
+        throw new PaymentError(
+            "Order ID and subscription plan are required.",
+            400
+        );
 
     }
 
     const plan =
-        await env.DB.prepare(
+        await loadPlan(
+            planId,
+            env
+        );
 
-            `
+    // --------------------------------------------------
+    // FIRST: check whether this PayPal capture was
+    // already processed.
+    // --------------------------------------------------
+
+    const existingPayment =
+        await env.DB.prepare(`
+
             SELECT
 
                 id,
-                name,
-                price,
-                duration_days,
-                status
+                subscription_id,
+                payment_status,
+                amount,
+                currency
 
-            FROM subscription_plans
+            FROM payments
 
-            WHERE id = ?
+            WHERE gateway_transaction_id = ?
 
             LIMIT 1
-            `
 
-        )
-
-        .bind(planId)
-
+        `)
+        .bind(orderId)
         .first();
 
-    if (!plan) {
+    // gateway_transaction_id is the PayPal capture ID,
+    // not normally the order ID. This check is therefore
+    // supplemental. The capture response is checked below.
 
-        return jsonResponse({
-
-            success: false,
-
-            message:
-                "Subscription plan not found."
-
-        }, 404);
-
-    }
-
-    if (plan.status !== "active") {
-
-        return jsonResponse({
-
-            success: false,
-
-            message:
-                "Selected subscription plan is unavailable."
-
-        }, 400);
-
-    }
+    // --------------------------------------------------
+    // AUTHORIZED PAYPAL API
+    // --------------------------------------------------
 
     const accessToken =
         await getPayPalAccessToken(env);
 
-    const captureResponse =
+    // --------------------------------------------------
+    // GET ORDER
+    // --------------------------------------------------
+
+    const orderResponse =
         await fetch(
 
-            `${env.PAYPAL_API_BASE}/v2/checkout/orders/${orderId}/capture`,
+            `${env.PAYPAL_API_BASE}/v2/checkout/orders/${encodeURIComponent(orderId)}`,
 
             {
 
-                method: "POST",
+                method:
+                    "GET",
 
                 headers: {
 
-                    Authorization:
+                    "Authorization":
                         `Bearer ${accessToken}`,
 
-                    "Content-Type":
+                    "Accept":
                         "application/json"
 
                 }
@@ -987,165 +1223,315 @@ async function captureOrder(request, env) {
 
         );
 
-    const capture =
-        await captureResponse.json();
+    let order;
+
+    try {
+
+        order =
+            await orderResponse.json();
+
+    }
+
+    catch {
+
+        throw new Error(
+            "Invalid response from PayPal."
+        );
+
+    }
 
     if (
-
-        !captureResponse.ok ||
-
-        capture.status !== "COMPLETED"
-
+        !orderResponse.ok
     ) {
 
         console.error(
+            "PayPal order lookup failed:",
+            {
+                status:
+                    orderResponse.status
+            }
+        );
 
-            "PayPal Capture Error:",
+        throw new PaymentError(
+            "Unable to verify payment order.",
+            400
+        );
 
-            capture
+    }
+
+    await verifyPayPalOrder(
+        order,
+        plan,
+        student
+    );
+
+    // --------------------------------------------------
+    // CAPTURE
+    // --------------------------------------------------
+
+    const captureResponse =
+        await fetch(
+
+            `${env.PAYPAL_API_BASE}/v2/checkout/orders/${encodeURIComponent(orderId)}/capture`,
+
+            {
+
+                method:
+                    "POST",
+
+                headers: {
+
+                    "Authorization":
+                        `Bearer ${accessToken}`,
+
+                    "Content-Type":
+                        "application/json",
+
+                    "Accept":
+                        "application/json",
+
+                    "Prefer":
+                        "return=representation"
+
+                }
+
+            }
 
         );
 
-        return jsonResponse({
+    let capture;
 
-            success: false,
+    try {
 
-            message:
-                "Payment capture failed."
-
-        }, 400);
+        capture =
+            await captureResponse.json();
 
     }
 
-    const captureInfo =
-        capture.purchase_units?.[0]
-            ?.payments?.captures?.[0];
+    catch {
 
-    if (!captureInfo) {
-
-        return jsonResponse({
-
-            success: false,
-
-            message:
-                "Unable to verify captured payment."
-
-        }, 400);
+        throw new Error(
+            "Invalid response from PayPal."
+        );
 
     }
 
-    const expectedAmount =
-        Number(plan.price).toFixed(2);
+    // --------------------------------------------------
+    // PAYPAL MAY REPORT ALREADY-CAPTURED
+    // --------------------------------------------------
 
     if (
-
-        Number(captureInfo.amount.value).toFixed(2) !==
-
-        expectedAmount
-
+        !captureResponse.ok
     ) {
 
-        return jsonResponse({
+        console.error(
+            "PayPal capture failed:",
+            {
+                status:
+                    captureResponse.status,
 
-            success: false,
-
-            message:
-                "Captured amount does not match subscription price."
-
-        }, 400);
-
-    }
-
-    const existingSubscription =
-        await env.DB.prepare(
-
-            `
-            SELECT id
-
-            FROM subscriptions
-
-            WHERE student_id = ?
-
-            AND status = 'active'
-
-            LIMIT 1
-            `
-
-        )
-
-        .bind(student.id)
-
-        .first();
-
-    if (existingSubscription) {
-
-        return jsonResponse({
-
-            success: false,
-
-            message:
-                "Student already has an active subscription."
-
-        }, 400);
-
-    }    const subscriptionId =
-        generateId("sub");
-
-    const paymentId =
-        generateId("pay");
-
-    const currentTime =
-        now();
-
-    const startDate =
-        currentTime;
-
-    const endDate =
-        calculateExpiryDate(
-            plan.duration_days
+                name:
+                    capture?.name
+            }
         );
 
-    let trialUsed =
-        student.trial_used;
-
-    let trialActive =
-        student.trial_active;
-
-    let trialStartedAt =
-        student.trial_started_at;
-
-    let trialExpiresAt =
-        student.trial_expires_at;
-
-    if (useTrial) {
-
-        trialUsed = 1;
-
-        trialActive = 1;
-
-        trialStartedAt =
-            currentTime;
-
-        trialExpiresAt =
-            calculateTrialExpiry();
+        throw new PaymentError(
+            "Payment could not be completed.",
+            400
+        );
 
     }
 
-    await env.DB.prepare(
+    if (
+        capture.status !== "COMPLETED"
+    ) {
 
-        `
+        throw new PaymentError(
+            "Payment was not completed.",
+            400
+        );
+
+    }
+
+    // --------------------------------------------------
+    // CAPTURE RECORD
+    // --------------------------------------------------
+
+    const purchaseUnit =
+        capture.purchase_units?.[0];
+
+    const captureInfo =
+        purchaseUnit
+            ?.payments
+            ?.captures?.[0];
+
+    if (
+        !captureInfo
+    ) {
+
+        throw new PaymentError(
+            "Unable to verify captured payment.",
+            400
+        );
+
+    }
+
+    if (
+        captureInfo.status !== "COMPLETED"
+    ) {
+
+        throw new PaymentError(
+            "Payment capture was not completed.",
+            400
+        );
+
+    }
+
+    if (
+        captureInfo.amount?.currency_code !==
+        PAYPAL_CURRENCY
+    ) {
+
+        throw new PaymentError(
+            "Captured payment currency is invalid.",
+            400
+        );
+
+    }
+
+    const capturedAmount =
+        Number(
+            captureInfo.amount?.value
+        );
+
+    if (
+        !Number.isFinite(capturedAmount)
+    ) {
+
+        throw new PaymentError(
+            "Captured payment amount is invalid.",
+            400
+        );
+
+    }
+
+    if (
+        capturedAmount.toFixed(2) !==
+        plan.price.toFixed(2)
+    ) {
+
+        throw new PaymentError(
+            "Captured payment amount does not match the subscription price.",
+            400
+        );
+
+    }
+
+    // --------------------------------------------------
+    // IDEMPOTENCY CHECK USING PAYPAL CAPTURE ID
+    // --------------------------------------------------
+
+    const existingCapture =
+        await env.DB.prepare(`
+
+            SELECT
+
+                id,
+                subscription_id,
+                payment_status
+
+            FROM payments
+
+            WHERE gateway_transaction_id = ?
+
+            LIMIT 1
+
+        `)
+        .bind(captureInfo.id)
+        .first();
+
+    if (existingCapture) {
+
+        return json({
+
+            success: true,
+
+            message:
+                "Payment has already been processed.",
+
+            subscription: {
+
+                id:
+                    existingCapture.subscription_id,
+
+                status:
+                    "active"
+
+            },
+
+            payment: {
+
+                id:
+                    existingCapture.id,
+
+                status:
+                    existingCapture.payment_status
+
+            }
+
+        });
+
+    }
+
+    // --------------------------------------------------
+    // RECHECK ACCOUNT BEFORE DATABASE WRITE
+    // --------------------------------------------------
+
+    await ensureNoActiveSubscription(
+        student.id,
+        env
+    );
+
+    // --------------------------------------------------
+    // CREATE SUBSCRIPTION
+    // --------------------------------------------------
+
+    const subscriptionId =
+        id("sub");
+
+    const paymentId =
+        id("pay");
+
+    const timestamp =
+        now();
+
+    const endDate =
+        new Date(
+            Date.now() +
+            (
+                Number(plan.duration_days) *
+                24 *
+                60 *
+                60 *
+                1000
+            )
+        ).toISOString();
+
+    // --------------------------------------------------
+    // CREATE SUBSCRIPTION AS ACTIVE
+    // --------------------------------------------------
+
+    await env.DB.prepare(`
+
         INSERT INTO subscriptions (
 
             id,
             student_id,
             plan_id,
-
             start_date,
             end_date,
-
             payment_status,
             status,
-
             created_at,
             updated_at
 
@@ -1154,15 +1540,12 @@ async function captureOrder(request, env) {
         VALUES (
 
             ?, ?, ?,
-            ?, ?,
-            ?, ?,
-            ?, ?
+            ?, ?, ?,
+            ?, ?, ?
 
         )
-        `
 
-    )
-
+    `)
     .bind(
 
         subscriptionId,
@@ -1171,7 +1554,7 @@ async function captureOrder(request, env) {
 
         plan.id,
 
-        startDate,
+        timestamp,
 
         endDate,
 
@@ -1179,156 +1562,247 @@ async function captureOrder(request, env) {
 
         "active",
 
-        currentTime,
+        timestamp,
 
-        currentTime
+        timestamp
 
     )
-
     .run();
 
-    await env.DB.prepare(
+    // --------------------------------------------------
+    // CREATE PAYMENT RECORD
+    // --------------------------------------------------
 
-        `
-        INSERT INTO payments (
+    try {
 
-            id,
+        await env.DB.prepare(`
 
-            student_id,
+            INSERT INTO payments (
 
-            subscription_id,
+                id,
+                student_id,
+                subscription_id,
+                gateway,
+                gateway_transaction_id,
+                transaction_reference,
+                amount,
+                currency,
+                payment_method,
+                payment_status,
+                gateway_response,
+                paid_at,
+                created_at,
+                updated_at
 
-            gateway,
+            )
 
-            gateway_transaction_id,
+            VALUES (
 
-            transaction_reference,
+                ?, ?, ?, ?,
+                ?, ?, ?, ?,
+                ?, ?, ?, ?,
+                ?, ?
 
-            amount,
+            )
 
-            currency,
+        `)
+        .bind(
 
-            payment_method,
+            paymentId,
 
-            payment_status,
+            student.id,
 
-            gateway_response,
+            subscriptionId,
 
-            paid_at,
+            "paypal",
 
-            created_at,
+            captureInfo.id,
 
-            updated_at
+            orderId,
+
+            capturedAmount,
+
+            PAYPAL_CURRENCY,
+
+            "card",
+
+            "paid",
+
+            JSON.stringify({
+
+                orderId:
+                    orderId,
+
+                captureId:
+                    captureInfo.id,
+
+                status:
+                    capture.status
+
+            }),
+
+            timestamp,
+
+            timestamp,
+
+            timestamp
 
         )
+        .run();
 
-        VALUES (
+    }
 
-            ?, ?, ?,
+    catch (error) {
 
-            ?, ?, ?,
+        console.error(
+            "Payment record creation failed:",
+            error
+        );
 
-            ?, ?, ?,
+        // Remove the subscription if payment
+        // recording fails.
 
-            ?, ?, ?, ?, ?
+        try {
+
+            await env.DB.prepare(`
+
+                DELETE FROM subscriptions
+
+                WHERE id = ?
+
+            `)
+            .bind(subscriptionId)
+            .run();
+
+        }
+
+        catch (rollbackError) {
+
+            console.error(
+                "Subscription rollback failed:",
+                rollbackError
+            );
+
+        }
+
+        throw new Error(
+            "Payment was received but could not be recorded. Please contact support."
+        );
+
+    }
+
+    // --------------------------------------------------
+    // UPDATE STUDENT
+    // --------------------------------------------------
+
+    try {
+
+        await env.DB.prepare(`
+
+            UPDATE students
+
+            SET
+
+                subscription_status = ?,
+
+                subscription_plan_id = ?,
+
+                subscription_expires_at = ?,
+
+                updated_at = ?
+
+            WHERE id = ?
+
+        `)
+        .bind(
+
+            "active",
+
+            plan.id,
+
+            endDate,
+
+            timestamp,
+
+            student.id
 
         )
-        `
+        .run();
 
-    )
+    }
 
-    .bind(
+    catch (error) {
 
-        paymentId,
+        console.error(
+            "Student subscription update failed:",
+            error
+        );
 
-        student.id,
+        // Roll back local records if the student
+        // account could not be updated.
 
-        subscriptionId,
+        try {
 
-        "paypal",
+            await env.DB.prepare(`
 
-        captureInfo.id,
+                DELETE FROM payments
 
-        orderId,
+                WHERE id = ?
 
-        Number(captureInfo.amount.value),
+            `)
+            .bind(paymentId)
+            .run();
 
-        captureInfo.amount.currency_code,
+        }
 
-        "card",
+        catch (rollbackError) {
 
-        "paid",
+            console.error(
+                "Payment rollback failed:",
+                rollbackError
+            );
 
-        JSON.stringify(capture),
+        }
 
-        currentTime,
+        try {
 
-        currentTime,
+            await env.DB.prepare(`
 
-        currentTime
+                DELETE FROM subscriptions
 
-    )
+                WHERE id = ?
 
-    .run();
+            `)
+            .bind(subscriptionId)
+            .run();
 
-        await env.DB.prepare(
+        }
 
-        `
-        UPDATE students
+        catch (rollbackError) {
 
-        SET
+            console.error(
+                "Subscription rollback failed:",
+                rollbackError
+            );
 
-            subscription_status = ?,
+        }
 
-            subscription_plan_id = ?,
+        throw new Error(
+            "Payment was received but the subscription could not be activated. Please contact support."
+        );
 
-            subscription_expires_at = ?,
+    }
 
-            trial_used = ?,
+    // --------------------------------------------------
+    // SUCCESS
+    // --------------------------------------------------
 
-            trial_active = ?,
-
-            trial_started_at = ?,
-
-            trial_expires_at = ?,
-
-            updated_at = ?
-
-        WHERE id = ?
-        `
-
-    )
-
-    .bind(
-
-        "active",
-
-        plan.id,
-
-        endDate,
-
-        trialUsed,
-
-        trialActive,
-
-        trialStartedAt,
-
-        trialExpiresAt,
-
-        currentTime,
-
-        student.id
-
-    )
-
-    .run();
-
-    return jsonResponse({
+    return json({
 
         success: true,
 
         message:
-            "Subscription activated successfully.",
+            "Payment completed successfully.",
 
         subscription: {
 
@@ -1341,7 +1815,8 @@ async function captureOrder(request, env) {
             planName:
                 plan.name,
 
-            startDate,
+            startDate:
+                timestamp,
 
             endDate,
 
@@ -1364,32 +1839,16 @@ async function captureOrder(request, env) {
             orderId,
 
             amount:
-                Number(captureInfo.amount.value),
+                capturedAmount,
 
             currency:
-                captureInfo.amount.currency_code,
+                PAYPAL_CURRENCY,
+
+            method:
+                "card",
 
             status:
                 "paid"
-
-        },
-
-        trial: {
-
-            enabled:
-                Boolean(useTrial),
-
-            used:
-                Boolean(trialUsed),
-
-            active:
-                Boolean(trialActive),
-
-            startedAt:
-                trialStartedAt,
-
-            expiresAt:
-                trialExpiresAt
 
         }
 
