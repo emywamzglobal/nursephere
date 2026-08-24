@@ -2,16 +2,26 @@
     NurseSphere Checkout Controller
     File: js/checkout.js
 
-    - Plan loading
-    - Student loading
-    - PayPal Checkout Buttons
-    - Payment order creation
-    - Payment capture
-    - Subscription activation
+    PayPal Checkout / PayPal Buttons
+
+    Responsibilities:
+    - Authenticate student
+    - Read plan ID from URL
+    - Load student information
+    - Load selected subscription plan
+    - Render plan information
+    - Initialize PayPal Buttons
+    - Create PayPal order through NurseSphere backend
+    - Let PayPal handle payment UI
+    - Capture payment through NurseSphere backend
+    - Activate subscription
+    - Handle errors and session expiration
 
     IMPORTANT:
-    PayPal handles the payment UI.
-    NurseSphere never receives or stores card details.
+    - No card fields exist in NurseSphere HTML.
+    - NurseSphere never receives card number, CVV, or expiry.
+    - Browser sends only planId to create-order.
+    - Backend remains authoritative for price/currency.
 =========================================================*/
 
 "use strict";
@@ -45,27 +55,38 @@ const CHECKOUT_ENDPOINTS = {
 
 const checkoutState = {
 
-    token: null,
+    token:
+        null,
 
-    student: null,
+    student:
+        null,
 
-    planId: null,
+    planId:
+        null,
 
-    plan: null,
+    plan:
+        null,
 
-    orderId: null,
+    orderId:
+        null,
 
-    isSubmitting: false,
+    isSubmitting:
+        false,
 
-    initialized: false,
+    initialized:
+        false,
 
-    paypalRendered: false
+    paypalRendered:
+        false,
+
+    paymentCompleted:
+        false
 
 };
 
 
 /*=========================================================
-    DOM
+    DOM ELEMENTS
 =========================================================*/
 
 const checkoutForm =
@@ -116,9 +137,9 @@ const totalPrice =
     );
 
 
-const payButton =
+const paypalContainer =
     document.getElementById(
-        "payButton"
+        "paypal-button-container"
     );
 
 
@@ -146,14 +167,16 @@ function validatePageElements() {
 
         totalPrice,
 
-        payButton
+        paypalContainer
 
     };
 
 
     for (
         const [name, element]
-        of Object.entries(elements)
+        of Object.entries(
+            elements
+        )
     ) {
 
         if (!element) {
@@ -179,8 +202,11 @@ function validatePageElements() {
 =========================================================*/
 
 document.addEventListener(
+
     "DOMContentLoaded",
+
     initializeCheckout
+
 );
 
 
@@ -199,8 +225,7 @@ async function initializeCheckout() {
     }
 
 
-    setPayButtonPlaceholder(
-        true,
+    setPaypalLoadingState(
         "Loading Checkout..."
     );
 
@@ -229,7 +254,7 @@ async function initializeCheckout() {
 
 
         /*=====================================================
-            PLAN ID
+            PLAN ID FROM URL
         =====================================================*/
 
         const params =
@@ -278,14 +303,14 @@ async function initializeCheckout() {
 
 
         /*=====================================================
-            WAIT FOR PAYPAL
+            PAYPAL SDK
         =====================================================*/
 
         await waitForPayPal();
 
 
         /*=====================================================
-            RENDER PAYPAL BUTTONS
+            PAYPAL BUTTONS
         =====================================================*/
 
         await initializePayPalButtons();
@@ -293,6 +318,7 @@ async function initializeCheckout() {
 
         checkoutState.initialized =
             true;
+
 
     }
 
@@ -310,10 +336,7 @@ async function initializeCheckout() {
         );
 
 
-        setPayButtonPlaceholder(
-            true,
-            "Payment Unavailable"
-        );
+        setPaypalUnavailableState();
 
     }
 
@@ -470,6 +493,7 @@ function renderPlan() {
 
 
     planDuration.textContent =
+
         Number.isFinite(duration) &&
         duration > 0
 
@@ -524,6 +548,7 @@ function renderPlan() {
 function waitForPayPal() {
 
     return new Promise(
+
         (resolve, reject) => {
 
             const started =
@@ -537,9 +562,12 @@ function waitForPayPal() {
             function check() {
 
                 if (
+
                     window.paypal &&
+
                     typeof window.paypal.Buttons ===
                         "function"
+
                 ) {
 
                     resolve();
@@ -550,9 +578,11 @@ function waitForPayPal() {
 
 
                 if (
+
                     Date.now() -
                     started >=
                     timeout
+
                 ) {
 
                     reject(
@@ -579,6 +609,7 @@ function waitForPayPal() {
             check();
 
         }
+
     );
 
 }
@@ -603,38 +634,43 @@ async function initializePayPalButtons() {
     }
 
 
-    /*
-        The existing HTML contains a normal button:
+    if (
+        !paypalContainer
+    ) {
 
-            #payButton
-
-        PayPal Buttons require a container.
-
-        We replace that button with a PayPal
-        rendering container.
-    */
-
-    const paypalContainer =
-        document.createElement(
-            "div"
+        throw new Error(
+            "PayPal checkout container is missing."
         );
 
-
-    paypalContainer.id =
-        "paypal-button-container";
+    }
 
 
-    paypalContainer.className =
-        "paypal-button-container";
+    /*
+        Make sure the container starts clean.
+    */
+
+    paypalContainer.innerHTML =
+        "";
 
 
-    payButton.replaceWith(
-        paypalContainer
-    );
+    paypalContainer.style.pointerEvents =
+        "auto";
 
+
+    paypalContainer.style.opacity =
+        "1";
+
+
+    /*=====================================================
+        CREATE PAYPAL BUTTON INSTANCE
+    =====================================================*/
 
     const buttons =
         window.paypal.Buttons({
+
+            /*=================================================
+                BUTTON STYLE
+            =================================================*/
 
             style: {
 
@@ -659,6 +695,17 @@ async function initializePayPalButtons() {
 
             createOrder:
                 async function () {
+
+                    if (
+                        checkoutState.paymentCompleted
+                    ) {
+
+                        throw new Error(
+                            "This payment has already been completed."
+                        );
+
+                    }
+
 
                     if (
                         checkoutState.isSubmitting
@@ -703,7 +750,7 @@ async function initializePayPalButtons() {
 
 
             /*=================================================
-                APPROVE PAYMENT
+                PAYMENT APPROVED
             =================================================*/
 
             onApprove:
@@ -767,11 +814,16 @@ async function initializePayPalButtons() {
 
 
             /*=================================================
-                CANCEL
+                PAYMENT CANCELLED
             =================================================*/
 
             onCancel:
                 function () {
+
+                    console.info(
+                        "PayPal checkout cancelled."
+                    );
+
 
                     checkoutState.orderId =
                         null;
@@ -784,15 +836,11 @@ async function initializePayPalButtons() {
                     restorePaypalButtons();
 
 
-                    showError(
-                        "Payment was cancelled."
-                    );
-
                 },
 
 
             /*=================================================
-                ERROR
+                PAYPAL ERROR
             =================================================*/
 
             onError:
@@ -839,25 +887,35 @@ async function initializePayPalButtons() {
     }
 
 
-    const eligible =
-        typeof buttons.isEligible ===
-            "function"
-
-            ? buttons.isEligible()
-
-            : true;
-
+    /*=====================================================
+        CHECK ELIGIBILITY
+    =====================================================*/
 
     if (
-        !eligible
+        typeof buttons.isEligible ===
+            "function"
     ) {
 
-        throw new Error(
-            "PayPal Checkout is currently unavailable."
-        );
+        const eligible =
+            buttons.isEligible();
+
+
+        if (
+            !eligible
+        ) {
+
+            throw new Error(
+                "PayPal Checkout is currently unavailable for this payment."
+            );
+
+        }
 
     }
 
+
+    /*=====================================================
+        RENDER
+    =====================================================*/
 
     await buttons.render(
         "#paypal-button-container"
@@ -870,6 +928,14 @@ async function initializePayPalButtons() {
 
     checkoutState.initialized =
         true;
+
+
+    paypalContainer.style.pointerEvents =
+        "auto";
+
+
+    paypalContainer.style.opacity =
+        "1";
 
 }
 
@@ -908,14 +974,21 @@ async function createOrder() {
 
 
     /*
-        IMPORTANT:
+        SECURITY RULE:
 
-        Only the plan ID is sent by the browser.
+        The browser sends ONLY planId.
+
+        The browser does NOT send:
+
+        - price
+        - currency
+        - duration
+        - amount
+        - PayPal client secret
+        - card information
 
         The backend must determine the authoritative
-        price, currency and plan details from the database.
-
-        The browser NEVER sends the price.
+        subscription price and currency from the database.
     */
 
     const response =
@@ -1008,6 +1081,24 @@ async function capturePayment() {
     }
 
 
+    if (
+        !checkoutState.token
+    ) {
+
+        throw new Error(
+            "Authentication required."
+        );
+
+    }
+
+
+    /*
+        Capture is performed by the NurseSphere backend.
+
+        The browser does NOT capture the PayPal payment
+        directly and does NOT receive card details.
+    */
+
     const response =
         await fetch(
 
@@ -1068,59 +1159,28 @@ async function capturePayment() {
 
 
     /*
-        Backend has confirmed payment and
+        Backend has confirmed the payment and
         subscription activation.
     */
 
-    showSuccess(
-        "Subscription activated successfully."
-    );
+    checkoutState.paymentCompleted =
+        true;
 
 
     checkoutState.isSubmitting =
         false;
 
 
-    /*
-        Disable further payment attempts.
-    */
-
-    const container =
-        document.getElementById(
-            "paypal-button-container"
-        );
+    showSuccess(
+        "Subscription activated successfully."
+    );
 
 
-    if (
-        container
-    ) {
-
-        container.innerHTML = `
-
-            <div
-                class="payment-success"
-                style="
-                    padding:16px;
-                    text-align:center;
-                    border-radius:8px;
-                    background:#ecfdf5;
-                    color:#166534;
-                    font-weight:600;
-                "
-            >
-
-                <i class="fas fa-check-circle"></i>
-
-                Payment Successful
-
-            </div>
-
-        `;
-
-    }
+    showPaymentSuccess();
 
 
     window.setTimeout(
+
         () => {
 
             window.location.replace(
@@ -1128,7 +1188,9 @@ async function capturePayment() {
             );
 
         },
+
         700
+
     );
 
 }
@@ -1140,14 +1202,8 @@ async function capturePayment() {
 
 function setPaypalProcessingState() {
 
-    const container =
-        document.getElementById(
-            "paypal-button-container"
-        );
-
-
     if (
-        !container
+        !paypalContainer
     ) {
 
         return;
@@ -1155,11 +1211,11 @@ function setPaypalProcessingState() {
     }
 
 
-    container.style.pointerEvents =
+    paypalContainer.style.pointerEvents =
         "none";
 
 
-    container.style.opacity =
+    paypalContainer.style.opacity =
         "0.6";
 
 }
@@ -1171,14 +1227,8 @@ function setPaypalProcessingState() {
 
 function restorePaypalButtons() {
 
-    const container =
-        document.getElementById(
-            "paypal-button-container"
-        );
-
-
     if (
-        !container
+        checkoutState.paymentCompleted
     ) {
 
         return;
@@ -1186,18 +1236,170 @@ function restorePaypalButtons() {
     }
 
 
-    container.style.pointerEvents =
+    if (
+        !paypalContainer
+    ) {
+
+        return;
+
+    }
+
+
+    paypalContainer.style.pointerEvents =
         "auto";
 
 
-    container.style.opacity =
+    paypalContainer.style.opacity =
         "1";
 
 }
 
 
 /*=========================================================
-    PARSE API RESPONSE
+    PAYMENT SUCCESS UI
+=========================================================*/
+
+function showPaymentSuccess() {
+
+    if (
+        !paypalContainer
+    ) {
+
+        return;
+
+    }
+
+
+    paypalContainer.innerHTML = `
+
+        <div
+            class="payment-success"
+            style="
+                padding:16px;
+                text-align:center;
+                border-radius:8px;
+                background:#ecfdf5;
+                color:#166534;
+                font-weight:600;
+            "
+        >
+
+            <i class="fas fa-check-circle"></i>
+
+            Payment Successful
+
+        </div>
+
+    `;
+
+
+    paypalContainer.style.pointerEvents =
+        "none";
+
+
+    paypalContainer.style.opacity =
+        "1";
+
+}
+
+
+/*=========================================================
+    PAYPAL UNAVAILABLE
+=========================================================*/
+
+function setPaypalUnavailableState() {
+
+    if (
+        !paypalContainer
+    ) {
+
+        return;
+
+    }
+
+
+    paypalContainer.innerHTML = `
+
+        <div
+            class="payment-unavailable"
+            style="
+                padding:16px;
+                text-align:center;
+                border-radius:8px;
+                background:#f3f4f6;
+                color:#6b7280;
+                font-weight:600;
+            "
+        >
+
+            <i class="fas fa-circle-exclamation"></i>
+
+            Payment Unavailable
+
+        </div>
+
+    `;
+
+
+    paypalContainer.style.pointerEvents =
+        "none";
+
+
+    paypalContainer.style.opacity =
+        "1";
+
+}
+
+
+/*=========================================================
+    PAYPAL LOADING STATE
+=========================================================*/
+
+function setPaypalLoadingState(
+    message
+) {
+
+    if (
+        !paypalContainer
+    ) {
+
+        return;
+
+    }
+
+
+    paypalContainer.innerHTML = `
+
+        <div
+            class="payment-loading"
+            style="
+                padding:16px;
+                text-align:center;
+                color:#6b7280;
+                font-weight:600;
+            "
+        >
+
+            <i class="fas fa-spinner fa-spin"></i>
+
+            ${escapeHtml(
+                message ||
+                "Loading Checkout..."
+            )}
+
+        </div>
+
+    `;
+
+
+    paypalContainer.style.pointerEvents =
+        "none";
+
+}
+
+
+/*=========================================================
+    API RESPONSE PARSER
 =========================================================*/
 
 async function parseResponse(
@@ -1223,11 +1425,17 @@ async function parseResponse(
     }
 
 
+    /*=====================================================
+        AUTHENTICATION
+    =====================================================*/
+
     if (
-        response.status === 401
+        response.status ===
+        401
     ) {
 
         clearStudentSession();
+
 
         redirectToLogin();
 
@@ -1239,6 +1447,10 @@ async function parseResponse(
     }
 
 
+    /*=====================================================
+        HTTP ERROR
+    =====================================================*/
+
     if (
         !response.ok
     ) {
@@ -1246,12 +1458,17 @@ async function parseResponse(
         throw new Error(
 
             result?.message ||
+
             "The request could not be completed."
 
         );
 
     }
 
+
+    /*=====================================================
+        EMPTY RESPONSE
+    =====================================================*/
 
     if (
         !result
@@ -1264,6 +1481,10 @@ async function parseResponse(
     }
 
 
+    /*=====================================================
+        APPLICATION ERROR
+    =====================================================*/
+
     if (
         result.success === false
     ) {
@@ -1271,6 +1492,7 @@ async function parseResponse(
         throw new Error(
 
             result.message ||
+
             "The request could not be completed."
 
         );
@@ -1284,40 +1506,7 @@ async function parseResponse(
 
 
 /*=========================================================
-    PAY BUTTON PLACEHOLDER
-=========================================================*/
-
-function setPayButtonPlaceholder(
-    disabled,
-    text
-) {
-
-    if (
-        !payButton
-    ) {
-
-        return;
-
-    }
-
-
-    payButton.disabled =
-        disabled;
-
-
-    payButton.innerHTML = `
-
-        <i class="fas fa-spinner fa-spin"></i>
-
-        ${escapeHtml(text)}
-
-    `;
-
-}
-
-
-/*=========================================================
-    ERROR
+    ERROR MESSAGE
 =========================================================*/
 
 function showError(
@@ -1327,6 +1516,7 @@ function showError(
     window.alert(
 
         message ||
+
         "Something went wrong. Please try again."
 
     );
@@ -1335,7 +1525,7 @@ function showError(
 
 
 /*=========================================================
-    SUCCESS
+    SUCCESS MESSAGE
 =========================================================*/
 
 function showSuccess(
@@ -1345,6 +1535,7 @@ function showSuccess(
     window.alert(
 
         message ||
+
         "Payment completed successfully."
 
     );
@@ -1353,7 +1544,7 @@ function showSuccess(
 
 
 /*=========================================================
-    CLEAR STUDENT SESSION
+    SESSION
 =========================================================*/
 
 function clearStudentSession() {
@@ -1391,6 +1582,22 @@ function clearStudentSession() {
 
 
 /*=========================================================
+    REDIRECT TO LOGIN
+=========================================================*/
+
+function redirectToLogin() {
+
+    clearStudentSession();
+
+
+    window.location.replace(
+        "login.html"
+    );
+
+}
+
+
+/*=========================================================
     PAYMENT ERROR
 =========================================================*/
 
@@ -1411,7 +1618,21 @@ function getPaymentErrorMessage(
 
         return (
             "Your payment was declined. " +
-            "Please try again or use another payment method."
+            "Please try another payment method."
+        );
+
+    }
+
+
+    if (
+        /insufficient|funds/i.test(
+            message
+        )
+    ) {
+
+        return (
+            "The payment could not be completed because " +
+            "there were insufficient funds."
         );
 
     }
@@ -1431,20 +1652,7 @@ function getPaymentErrorMessage(
 
 
     if (
-        /funds/i.test(
-            message
-        )
-    ) {
-
-        return (
-            "The payment could not be completed because there were insufficient funds."
-        );
-
-    }
-
-
-    if (
-        /unauthorized|authentication/i.test(
+        /unauthorized|authentication|session/i.test(
             message
         )
     ) {
@@ -1514,7 +1722,9 @@ function formatCurrency(
 
     catch {
 
-        return `${currency} ${value.toFixed(2)}`;
+        return (
+            `${currency} ${value.toFixed(2)}`
+        );
 
     }
 
@@ -1562,6 +1772,36 @@ function escapeHtml(
 
 
 /*=========================================================
+    FORM SUBMISSION PROTECTION
+=========================================================*/
+
+/*
+    PayPal Buttons handle the payment action.
+
+    The checkout form itself must never perform a
+    traditional browser submission.
+*/
+
+if (
+    checkoutForm
+) {
+
+    checkoutForm.addEventListener(
+
+        "submit",
+
+        (event) => {
+
+            event.preventDefault();
+
+        }
+
+    );
+
+}
+
+
+/*=========================================================
     PAGE EXIT PROTECTION
 =========================================================*/
 
@@ -1572,7 +1812,11 @@ window.addEventListener(
     (event) => {
 
         if (
-            checkoutState.isSubmitting
+
+            checkoutState.isSubmitting &&
+
+            !checkoutState.paymentCompleted
+
         ) {
 
             event.preventDefault();

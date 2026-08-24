@@ -191,79 +191,57 @@
                     </div>
 
                                         <!-- ===================================== -->
-                    <!-- Secure Card Payment -->
-                    <!-- ===================================== -->
+<!-- PAYPAL SECURE CHECKOUT -->
+<!-- ===================================== -->
 
-                    <div class="payment-section">
+<div class="payment-section">
 
-                        <h2>
+    <h2>
+        Secure Payment
+    </h2>
 
-                            Card Details
+    <p>
+        Complete your subscription securely with
+        PayPal or an eligible debit or credit card.
+    </p>
 
-                        </h2>
+    <div class="secure-payment">
 
-                        <p>
+        <i class="fas fa-lock"></i>
 
-                            Enter your debit or credit card details
-                            to complete your subscription securely.
+        Your payment is securely processed by PayPal.
+        NurseSphere does not store your card details.
 
-                        </p>
+    </div>
 
-                        <div class="secure-payment">
+    <!-- ================================= -->
+    <!-- PAYPAL BUTTONS -->
+    <!-- ================================= -->
 
-                            <i class="fas fa-lock"></i>
+    <div
+        id="paypal-button-container"
+        class="paypal-button-container">
+    </div>
 
-                            Your payment is protected with
-                            bank-grade encryption.
+    <!-- ================================= -->
+    <!-- RECEIPT NOTICE -->
+    <!-- ================================= -->
 
-                        </div>
-                        
-                        <!-- ======================== -->
-                        <!-- Accepted Cards -->
-                        <!-- ======================== -->
+    <div class="payment-notice">
 
-                        <div class="accepted-cards">
+        <i class="fas fa-envelope"></i>
 
-                            <span>
+        <span>
 
-                                Accepted Cards
+            A payment receipt will be sent automatically
+            to your registered email address after
+            successful payment.
 
-                            </span>
+        </span>
 
-                            <div class="card-icons">
+    </div>
 
-                                <i class="fab fa-cc-visa"></i>
-
-                                <i class="fab fa-cc-mastercard"></i>
-
-                                <i class="fab fa-cc-amex"></i>
-
-                                <i class="fab fa-cc-discover"></i>
-
-                            </div>
-
-                        </div>
-
-                        <!-- ======================== -->
-                        <!-- Receipt Notice -->
-                        <!-- ======================== -->
-
-                        <div class="payment-notice">
-
-                            <i class="fas fa-envelope"></i>
-
-                            <span>
-
-                                A payment receipt will be sent
-                                automatically to your registered
-                                email address after your payment
-                                is successfully completed.
-
-                            </span>
-
-                        </div>
-
-                    </div>
+</div>
 
                 </form>
 
@@ -370,19 +348,6 @@
 
                     </p>
 
-                    <button
-
-                        id="payButton"
-
-                        type="button"
-
-                        class="checkout-btn">
-
-                        <i class="fas fa-lock"></i>
-
-                        Complete Secure Payment
-
-                    </button>
 
                     <div class="checkout-security">
 
@@ -450,7 +415,7 @@
 <!-- Secure Card Payment SDK -->
 <!-- ========================================= -->
 
-<script src="https://www.paypal.com/sdk/js?client-id=BAACjWRx8gFyZz7M2i62fuHReeJZ3AW7asLeCtl6bCNiI4JOU-IuPNv83CZoaD1r2QeIA0vNme4fR5xAsg&components=hosted-fields&intent=capture&currency=USD"></script>
+<script src="https://www.paypal.com/sdk/js?client-id=BAACjWRx8gFyZz7M2i62fuHReeJZ3AW7asLeCtl6bCNiI4JOU-IuPNv83CZoaD1r2QeIA0vNme4fR5xAsg&components=buttons&intent=capture&currency=USD"></script>
 
 <!-- ========================================= -->
 <!-- Checkout Controller -->
