@@ -1,194 +1,120 @@
-/*
-=========================================================
-    NurseSphere Admin Examination Management
-    File: admin/js/exams.js
-=========================================================
-*/
-
 "use strict";
 
 /*=========================================================
-    Authentication
-=========================================================*/
-
-Auth.requireAdmin();
-
-/*=========================================================
-    State
-=========================================================*/
-
-let examinations = [];
-
-let filteredExaminations = [];
-
-/*=========================================================
-    DOM Elements
-=========================================================*/
-
-const tableBody = document.getElementById("examsTableBody");
-
-const searchInput = document.getElementById("searchInput");
-
-const addExamBtn = document.getElementById("addExamBtn");
-
-const examModal = document.getElementById("examModal");
-
-const examForm = document.getElementById("examForm");
-
-const examId = document.getElementById("examId");
-
-const examName = document.getElementById("examName");
-
-const examDescription = document.getElementById("examDescription");
-
-const examStatus = document.getElementById("examStatus");
-
-const closeModalBtn = document.getElementById("closeModal");
-
-const cancelBtn = document.getElementById("cancelBtn");
-
-/*=========================================================
-    Initialize
+    EXAM MANAGEMENT
 =========================================================*/
 
 document.addEventListener(
-
     "DOMContentLoaded",
-
-    () => {
-
-        loadExaminations();
-
-        registerEvents();
-
-    }
-
+    initializePage
 );
 
 /*=========================================================
-    Event Listeners
+    INITIALIZE
 =========================================================*/
 
-function registerEvents() {
+async function initializePage() {
 
-    if (addExamBtn) {
+    bindEvents();
 
-        addExamBtn.addEventListener(
-
-            "click",
-
-            openCreateModal
-
-        );
-
-    }
-
-    if (searchInput) {
-
-        searchInput.addEventListener(
-
-            "input",
-
-            filterExaminations
-
-        );
-
-    }
-
-    if (closeModalBtn) {
-
-        closeModalBtn.addEventListener(
-
-            "click",
-
-            closeModal
-
-        );
-
-    }
-
-    if (cancelBtn) {
-
-        cancelBtn.addEventListener(
-
-            "click",
-
-            closeModal
-
-        );
-
-    }
-
-    window.addEventListener(
-
-        "click",
-
-        function (event) {
-
-            if (event.target === examModal) {
-
-                closeModal();
-
-            }
-
-        }
-
-    );
+    await loadExams();
 
 }
 
 /*=========================================================
-    Load Examinations
+    EVENT BINDINGS
 =========================================================*/
 
-async function loadExaminations() {
+function bindEvents() {
+
+    const form =
+        document.getElementById("examForm");
+
+    const draftButton =
+        document.getElementById("saveDraftBtn");
+
+    if (form) {
+
+        form.addEventListener(
+            "submit",
+            handlePublish
+        );
+
+    }
+
+    if (draftButton) {
+
+        draftButton.addEventListener(
+            "click",
+            handleSaveDraft
+        );
+
+    }
+
+}
+
+/*=========================================================
+    LOAD EXAMS
+=========================================================*/
+
+async function loadExams() {
+
+    const tableBody =
+        document.getElementById(
+            "examsTableBody"
+        );
+
+    if (!tableBody) return;
+
+    tableBody.innerHTML = `
+        <tr>
+            <td colspan="3">
+                Loading examinations...
+            </td>
+        </tr>
+    `;
 
     try {
 
-        tableBody.innerHTML = `
-
-            <tr>
-
-                <td colspan="3" class="loading">
-
-                    Loading examinations...
-
-                </td>
-
-            </tr>
-
-        `;
-
-        const response = await API.get(
-
+        const response = await fetch(
             "/api/admin/exams"
-
         );
 
-        examinations = response.data || [];
+        const result =
+            await response.json();
 
-        filteredExaminations = [...examinations];
+        if (
+            !response.ok ||
+            !result.success
+        ) {
 
-        renderTable();
+            throw new Error(
+                result.message ||
+                "Failed to load examinations."
+            );
+
+        }
+
+        renderExams(
+            Array.isArray(result.data)
+                ? result.data
+                : []
+        );
 
     }
-
     catch (error) {
 
-        console.error(error);
+        console.error(
+            "EXAM LOAD ERROR:",
+            error
+        );
 
         tableBody.innerHTML = `
-
             <tr>
-
-                <td colspan="3" class="error">
-
+                <td colspan="3">
                     Failed to load examinations.
-
                 </td>
-
             </tr>
-
         `;
 
     }
@@ -196,155 +122,652 @@ async function loadExaminations() {
 }
 
 /*=========================================================
-    Render Table
+    RENDER EXAMS
 =========================================================*/
 
-function renderTable() {
+function renderExams(exams) {
+
+    const tableBody =
+        document.getElementById(
+            "examsTableBody"
+        );
 
     tableBody.innerHTML = "";
 
-    if (filteredExaminations.length === 0) {
+    if (!exams.length) {
 
         tableBody.innerHTML = `
-
             <tr>
-
                 <td colspan="3">
-
                     No examinations found.
-
                 </td>
-
             </tr>
-
         `;
 
         return;
 
     }
 
-    filteredExaminations.forEach(
-
+    exams.forEach(
         exam => {
 
-            tableBody.insertAdjacentHTML(
+            const row =
+                document.createElement("tr");
 
-                "beforeend",
+            const published =
+                exam.status === "active";
 
-                createRow(exam)
+            row.innerHTML = `
 
+                <td>
+
+                    <strong>
+                        ${escapeHtml(exam.name)}
+                    </strong>
+
+                    ${
+                        exam.description
+                            ? `
+                                <div class="exam-description">
+                                    ${escapeHtml(
+                                        exam.description
+                                    )}
+                                </div>
+                            `
+                            : ""
+                    }
+
+                </td>
+
+                <td>
+
+                    <span class="status-badge
+                        ${published
+                            ? "published"
+                            : "draft"}
+                    ">
+
+                        ${
+                            published
+                                ? "Published"
+                                : "Draft"
+                        }
+
+                    </span>
+
+                </td>
+
+                <td>
+
+                    <button
+                        type="button"
+                        class="action-btn edit-btn"
+                        data-id="${exam.id}">
+
+                        Edit
+
+                    </button>
+
+                    <button
+                        type="button"
+                        class="action-btn toggle-btn"
+                        data-id="${exam.id}">
+
+                        ${
+                            published
+                                ? "Deactivate"
+                                : "Publish"
+                        }
+
+                    </button>
+
+                </td>
+
+            `;
+
+            tableBody.appendChild(row);
+
+        }
+    );
+
+    bindTableActions();
+
+}
+
+/*=========================================================
+    TABLE ACTIONS
+=========================================================*/
+
+function bindTableActions() {
+
+    document
+        .querySelectorAll(".edit-btn")
+        .forEach(button => {
+
+            button.addEventListener(
+                "click",
+                () => editExam(
+                    button.dataset.id
+                )
+            );
+
+        });
+
+    document
+        .querySelectorAll(".toggle-btn")
+        .forEach(button => {
+
+            button.addEventListener(
+                "click",
+                () => toggleExam(
+                    button.dataset.id
+                )
+            );
+
+        });
+
+}
+
+/*=========================================================
+    SAVE DRAFT
+=========================================================*/
+
+async function handleSaveDraft(event) {
+
+    if (event) {
+        event.preventDefault();
+    }
+
+    await saveExam("inactive");
+
+}
+
+/*=========================================================
+    PUBLISH
+=========================================================*/
+
+async function handlePublish(event) {
+
+    event.preventDefault();
+
+    await saveExam("active");
+
+}
+
+/*=========================================================
+    CREATE / UPDATE EXAM
+=========================================================*/
+
+async function saveExam(status) {
+
+    const examId =
+        document.getElementById(
+            "examId"
+        ).value.trim();
+
+    const name =
+        document.getElementById(
+            "examName"
+        ).value.trim();
+
+    const description =
+        document.getElementById(
+            "examDescription"
+        ).value.trim();
+
+    if (!name) {
+
+        alert(
+            "Examination name is required."
+        );
+
+        return;
+
+    }
+
+    /*
+     * The current HTML does not contain
+     * an exam-code field.
+     *
+     * The worker requires a code,
+     * so generate one automatically.
+     */
+
+    const code =
+        generateExamCode(name);
+
+    const payload = {
+
+        name,
+
+        code,
+
+        description,
+
+        display_order: 0,
+
+        status
+
+    };
+
+    try {
+
+        setFormLoading(true);
+
+        let response;
+
+        /*-----------------------------------------
+            CREATE
+        -----------------------------------------*/
+
+        if (!examId) {
+
+            response = await fetch(
+                "/api/admin/exams",
+                {
+
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body:
+                        JSON.stringify(payload)
+
+                }
             );
 
         }
 
-    );
+        /*-----------------------------------------
+            UPDATE
+        -----------------------------------------*/
+
+        else {
+
+            response = await fetch(
+                `/api/admin/exams/${examId}`,
+                {
+
+                    method: "PUT",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body:
+                        JSON.stringify(payload)
+
+                }
+            );
+
+        }
+
+        const result =
+            await response.json();
+
+        if (
+            !response.ok ||
+            !result.success
+        ) {
+
+            throw new Error(
+                result.message ||
+                "Failed to save examination."
+            );
+
+        }
+
+        alert(
+            result.message ||
+            "Examination saved successfully."
+        );
+
+        resetForm();
+
+        await loadExams();
+
+    }
+    catch (error) {
+
+        console.error(
+            "EXAM SAVE ERROR:",
+            error
+        );
+
+        alert(
+            error.message ||
+            "Failed to save examination."
+        );
+
+    }
+    finally {
+
+        setFormLoading(false);
+
+    }
 
 }
 
 /*=========================================================
-    Create Table Row
+    EDIT EXAM
 =========================================================*/
 
-function createRow(exam) {
+async function editExam(examId) {
 
-    return `
+    if (!examId) return;
 
-<tr>
+    try {
 
-    <td>
+        const response = await fetch(
+            `/api/admin/exams/${examId}`
+        );
 
-        ${escapeHtml(exam.name)}
+        const result =
+            await response.json();
 
-    </td>
+        if (
+            !response.ok ||
+            !result.success
+        ) {
 
-    <td>
+            throw new Error(
+                result.message ||
+                "Failed to load examination."
+            );
 
-        <span class="status-badge ${exam.status}">
+        }
 
-            ${capitalize(exam.status)}
+        const exam =
+            result.data;
 
-        </span>
+        document.getElementById(
+            "examId"
+        ).value =
+            exam.id || "";
 
-    </td>
+        document.getElementById(
+            "examName"
+        ).value =
+            exam.name || "";
 
-    <td class="actions">
+        document.getElementById(
+            "examDescription"
+        ).value =
+            exam.description || "";
 
-        <button
+        document.getElementById(
+            "examStatus"
+        ).value =
+            exam.status === "active"
+                ? "published"
+                : "draft";
 
-            class="btn-edit"
+        window.scrollTo({
 
-            onclick="editExam('${exam.id}')">
+            top: 0,
 
-            <i class="fas fa-pen"></i>
+            behavior: "smooth"
 
-        </button>
+        });
 
-        <button
+    }
+    catch (error) {
 
-            class="btn-delete"
+        console.error(
+            "EXAM EDIT ERROR:",
+            error
+        );
 
-            onclick="deleteExam('${exam.id}')">
+        alert(
+            error.message ||
+            "Failed to load examination."
+        );
 
-            <i class="fas fa-trash"></i>
-
-        </button>
-
-    </td>
-
-</tr>
-
-`;
+    }
 
 }
 
 /*=========================================================
-    Search
+    PUBLISH / DEACTIVATE
 =========================================================*/
 
-function filterExaminations() {
+async function toggleExam(examId) {
 
-    const keyword =
+    if (!examId) return;
 
-        searchInput.value
+    try {
+
+        const response = await fetch(
+            `/api/admin/exams/${examId}`
+        );
+
+        const result =
+            await response.json();
+
+        if (
+            !response.ok ||
+            !result.success
+        ) {
+
+            throw new Error(
+                result.message ||
+                "Failed to load examination."
+            );
+
+        }
+
+        const exam =
+            result.data;
+
+        const isPublished =
+            exam.status === "active";
+
+        const nextStatus =
+            isPublished
+                ? "inactive"
+                : "active";
+
+        const confirmation =
+            isPublished
+                ? "Deactivate this examination?"
+                : "Publish this examination?";
+
+        if (!window.confirm(
+            confirmation
+        )) {
+
+            return;
+
+        }
+
+        const updateResponse =
+            await fetch(
+                `/api/admin/exams/${examId}`,
+                {
+
+                    method: "PUT",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body: JSON.stringify({
+
+                        name:
+                            exam.name,
+
+                        code:
+                            exam.code,
+
+                        description:
+                            exam.description || "",
+
+                        image_url:
+                            exam.image_url || "",
+
+                        icon_url:
+                            exam.icon_url || "",
+
+                        color:
+                            exam.color || "",
+
+                        display_order:
+                            Number(
+                                exam.display_order
+                            ) || 0,
+
+                        status:
+                            nextStatus
+
+                    })
+
+                }
+            );
+
+        const updateResult =
+            await updateResponse.json();
+
+        if (
+            !updateResponse.ok ||
+            !updateResult.success
+        ) {
+
+            throw new Error(
+                updateResult.message ||
+                "Failed to update examination."
+            );
+
+        }
+
+        await loadExams();
+
+    }
+    catch (error) {
+
+        console.error(
+            "EXAM TOGGLE ERROR:",
+            error
+        );
+
+        alert(
+            error.message ||
+            "Failed to update examination."
+        );
+
+    }
+
+}
+
+/*=========================================================
+    RESET FORM
+=========================================================*/
+
+function resetForm() {
+
+    const form =
+        document.getElementById(
+            "examForm"
+        );
+
+    if (form) {
+
+        form.reset();
+
+    }
+
+    document.getElementById(
+        "examId"
+    ).value = "";
+
+    document.getElementById(
+        "examStatus"
+    ).value = "draft";
+
+}
+
+/*=========================================================
+    FORM LOADING
+=========================================================*/
+
+function setFormLoading(isLoading) {
+
+    const draftButton =
+        document.getElementById(
+            "saveDraftBtn"
+        );
+
+    const publishButton =
+        document.getElementById(
+            "publishBtn"
+        );
+
+    if (draftButton) {
+
+        draftButton.disabled =
+            isLoading;
+
+        draftButton.textContent =
+            isLoading
+                ? "Saving..."
+                : "Save Draft";
+
+    }
+
+    if (publishButton) {
+
+        publishButton.disabled =
+            isLoading;
+
+        publishButton.textContent =
+            isLoading
+                ? "Saving..."
+                : "Publish";
+
+    }
+
+}
+
+/*=========================================================
+    GENERATE EXAM CODE
+=========================================================*/
+
+function generateExamCode(name) {
+
+    return String(name)
 
         .trim()
 
-        .toLowerCase();
+        .toUpperCase()
 
-    filteredExaminations = examinations.filter(
+        .replace(/[^A-Z0-9]+/g, "_")
 
-        exam =>
+        .replace(/^_+|_+$/g, "")
 
-            exam.name
-
-            .toLowerCase()
-
-            .includes(keyword)
-
-    );
-
-    renderTable();
+        .slice(0, 30);
 
 }
 
 /*=========================================================
-    Helpers
+    HTML ESCAPING
 =========================================================*/
 
-function capitalize(text = "") {
+function escapeHtml(value) {
 
-    return text.charAt(0).toUpperCase() +
+    return String(value ?? "")
 
-        text.slice(1);
+        .replace(/&/g, "&amp;")
 
-}
+        .replace(/</g, "&lt;")
 
-function escapeHtml(text = "") {
+        .replace(/>/g, "&gt;")
 
-    const div = document.createElement("div");
+        .replace(/"/g, "&quot;")
 
-    div.textContent = text;
-
-    return div.innerHTML;
+        .replace(/'/g, "&#039;");
 
 }

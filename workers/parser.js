@@ -1,648 +1,849 @@
-/*
-=========================================================
-    NurseSphere Question Parser Worker
-    File: workers/parser.js
-
-    Purpose:
-    Parses uploaded Practice Question files and
-    converts them into structured questions ready
-    for preview before importing.
-
-    Supported Formats
-
-        - DOCX
-        - XLSX
-
-=========================================================
-*/
-
 "use strict";
 
 /*=========================================================
-    IMPORTS
+    PRACTICE QUESTION IMPORT PARSER
+    Supports:
+        - DOCX
+        - XLSX
 =========================================================*/
 
-import * as XLSX from "xlsx";
-import mammoth from "mammoth";
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+
+const ALLOWED_EXTENSIONS = [
+    "docx",
+    "xlsx"
+];
 
 /*=========================================================
-    WORKER
+    PUBLIC ENTRY POINT
 =========================================================*/
 
-export default {
+async function parseQuestionFile(file) {
 
-    async fetch(request, env) {
+    if (!(file instanceof File)) {
 
-        try {
-
-            const url = new URL(request.url);
-
-            const pathname = url.pathname;
-
-            const method = request.method;
-
-            /*=========================================
-                    PARSE QUESTIONS
-                    POST /api/parser
-            =========================================*/
-
-            if (
-
-                method === "POST" &&
-
-                pathname === "/api/parser"
-
-            ) {
-
-                const formData = await request.formData();
-
-                const file = formData.get("file");
-
-                if (!file) {
-
-                    return Response.json({
-
-                        success: false,
-
-                        message: "No file uploaded."
-
-                    }, {
-
-                        status: 400
-
-                    });
-
-                }
-
-                const fileName = file.name.toLowerCase();
-
-                const extension =
-
-                    fileName.substring(
-
-                        fileName.lastIndexOf(".") + 1
-
-                    );
-
-                const supportedFormats = [
-
-                    "docx",
-
-                    "xlsx"
-
-                ];
-
-                if (
-
-                    !supportedFormats.includes(extension)
-
-                ) {
-
-                    return Response.json({
-
-                        success: false,
-
-                        message:
-
-                            "Only DOCX and XLSX files are supported."
-
-                    }, {
-
-                        status: 400
-
-                    });
-
-                }
-
-                let parsedQuestions = [];
-
-                /*=====================================
-                        DOCX
-                =====================================*/
-
-                if (extension === "docx") {
-
-                    const buffer =
-
-                        await file.arrayBuffer();
-
-                    parsedQuestions =
-
-                        await parseDOCX(buffer);
-
-                }
-
-                /*=====================================
-                        XLSX
-                =====================================*/
-
-                else if (extension === "xlsx") {
-
-                    const buffer =
-
-                        await file.arrayBuffer();
-
-                    parsedQuestions =
-
-                        await parseExcel(buffer);
-
-                }
-
-                return Response.json({
-
-                    success: true,
-
-                    message:
-
-                        "Questions parsed successfully.",
-
-                    total_questions:
-
-                        parsedQuestions.length,
-
-                    questions:
-
-                        parsedQuestions
-
-                });
-
-            }
-
-            /*=========================================
-                    ENDPOINT NOT FOUND
-            =========================================*/
-
-            return Response.json({
-
-                success: false,
-
-                message: "Endpoint not found."
-
-            }, {
-
-                status: 404
-
-            });
-
-        }
-
-        catch (error) {
-
-            console.error(
-
-                "Parser Worker Error:",
-
-                error
-
-            );
-
-            return Response.json({
-
-                success: false,
-
-                message: "Internal Server Error.",
-
-                error: error.message
-
-            }, {
-
-                status: 500
-
-            });
-
-        }
+        throw new Error(
+            "Invalid question file."
+        );
 
     }
 
-};
+    if (!file.name) {
+
+        throw new Error(
+            "Question file name is required."
+        );
+
+    }
+
+    if (!file.size) {
+
+        throw new Error(
+            "The uploaded question file is empty."
+        );
+
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+
+        throw new Error(
+            "Question file must not exceed 10 MB."
+        );
+
+    }
+
+    const extension =
+        getFileExtension(file.name);
+
+    if (
+        !ALLOWED_EXTENSIONS.includes(
+            extension
+        )
+    ) {
+
+        throw new Error(
+            "Only DOCX and XLSX files are supported."
+        );
+
+    }
+
+    if (extension === "docx") {
+
+        return parseDOCX(file);
+
+    }
+
+    if (extension === "xlsx") {
+
+        return parseXLSX(file);
+
+    }
+
+    throw new Error(
+        "Unsupported question file format."
+    );
+
+}
 
 /*=========================================================
-
-    PARSER FUNCTIONS
-
-    Part 2 begins here.
-
-        ✔ parseDOCX()
-
-        ✔ parseExcel()
-
+    FILE EXTENSION
 =========================================================*/
+
+function getFileExtension(filename) {
+
+    return String(filename)
+
+        .trim()
+
+        .toLowerCase()
+
+        .split(".")
+
+        .pop();
+
+}
 
 /*=========================================================
     DOCX PARSER
 =========================================================*/
 
-async function parseDOCX(buffer) {
+async function parseDOCX(file) {
 
-    const { value } = await mammoth.extractRawText({
+    if (
+        typeof mammoth === "undefined"
+    ) {
 
-        arrayBuffer: buffer
+        throw new Error(
+            "DOCX parser is not available."
+        );
 
-    });
+    }
 
-    const text = value.replace(/\r/g, "");
+    const arrayBuffer =
+        await file.arrayBuffer();
 
-    const lines = text
+    const result =
+        await mammoth.extractRawText({
+            arrayBuffer
+        });
 
-        .split("\n")
+    if (
+        !result ||
+        typeof result.value !== "string"
+    ) {
 
-        .map(line => line.trim())
+        throw new Error(
+            "Unable to read the DOCX file."
+        );
 
-        .filter(line => line.length > 0);
+    }
+
+    const text =
+        normalizeText(result.value);
+
+    if (!text) {
+
+        throw new Error(
+            "The DOCX file contains no readable text."
+        );
+
+    }
+
+    return parseDOCXText(text);
+
+}
+
+/*=========================================================
+    DOCX TEXT NORMALIZATION
+=========================================================*/
+
+function normalizeText(text) {
+
+    return String(text)
+
+        .replace(/\r\n/g, "\n")
+
+        .replace(/\r/g, "\n")
+
+        .replace(/\u00A0/g, " ")
+
+        .replace(/[ \t]+/g, " ")
+
+        .replace(/\n{3,}/g, "\n\n")
+
+        .trim();
+
+}
+
+/*=========================================================
+    DOCX QUESTION PARSER
+=========================================================
+
+    Supported structure:
+
+    1. Question text
+    A. Option A
+    B. Option B
+    C. Option C
+    D. Option D
+    Answer: A
+    Explanation: ...
+
+=========================================================*/
+
+function parseDOCXText(text) {
+
+    const lines =
+        text
+            .split("\n")
+            .map(line => line.trim())
+            .filter(Boolean);
 
     const questions = [];
 
     let current = null;
 
+    function startQuestion(number, text) {
+
+        current = {
+
+            question_number:
+                number || null,
+
+            question:
+                text || "",
+
+            option_a: "",
+
+            option_b: "",
+
+            option_c: "",
+
+            option_d: "",
+
+            correct_answer: "",
+
+            explanation: "",
+
+            difficulty: "medium",
+
+            image_url: ""
+
+        };
+
+    }
+
+    function saveCurrent() {
+
+        if (!current) {
+
+            return;
+
+        }
+
+        const normalized =
+            normalizeQuestion(current);
+
+        if (
+            normalized
+        ) {
+
+            questions.push(
+                normalized
+            );
+
+        }
+
+        current = null;
+
+    }
+
     for (const line of lines) {
 
-        /*=========================================
-                NEW QUESTION
-        =========================================*/
+        /*-----------------------------------------------
+            QUESTION
+        -----------------------------------------------*/
 
-        if (/^\d+[\.\)]\s*/.test(line)) {
+        const questionMatch =
+            line.match(
+                /^(\d+)[.)]\s*(.+)$/i
+            );
 
-            if (current) {
+        if (questionMatch) {
 
-                questions.push(current);
+            saveCurrent();
 
-            }
+            startQuestion(
 
-            current = {
+                questionMatch[1],
 
-                question: line.replace(/^\d+[\.\)]\s*/, "").trim(),
+                questionMatch[2]
 
-                options: {
+            );
 
-                    A: "",
-
-                    B: "",
-
-                    C: "",
-
-                    D: ""
-
-                },
-
-                answer: "",
-
-                explanation: "",
-
-                image_url: ""
-
-            };
+            continue;
 
         }
 
-        /*=========================================
-                OPTION A
-        =========================================*/
+        if (!current) {
 
-        else if (/^A[\.\)]\s*/i.test(line) && current) {
-
-            current.options.A =
-
-                line.replace(/^A[\.\)]\s*/i, "").trim();
+            continue;
 
         }
 
-        /*=========================================
-                OPTION B
-        =========================================*/
+        /*-----------------------------------------------
+            OPTIONS
+        -----------------------------------------------*/
 
-        else if (/^B[\.\)]\s*/i.test(line) && current) {
+        const optionMatch =
+            line.match(
+                /^([ABCD])[.)]\s*(.+)$/i
+            );
 
-            current.options.B =
+        if (optionMatch) {
 
-                line.replace(/^B[\.\)]\s*/i, "").trim();
-
-        }
-
-        /*=========================================
-                OPTION C
-        =========================================*/
-
-        else if (/^C[\.\)]\s*/i.test(line) && current) {
-
-            current.options.C =
-
-                line.replace(/^C[\.\)]\s*/i, "").trim();
-
-        }
-
-        /*=========================================
-                OPTION D
-        =========================================*/
-
-        else if (/^D[\.\)]\s*/i.test(line) && current) {
-
-            current.options.D =
-
-                line.replace(/^D[\.\)]\s*/i, "").trim();
-
-        }
-
-        /*=========================================
-                ANSWER
-        =========================================*/
-
-        else if (/^Answer\s*:/i.test(line) && current) {
-
-            current.answer =
-
-                line
-
-                    .replace(/^Answer\s*:/i, "")
-
-                    .trim()
-
+            const option =
+                optionMatch[1]
                     .toUpperCase();
 
+            current[
+                `option_${option.toLowerCase()}`
+            ] = optionMatch[2].trim();
+
+            continue;
+
         }
 
-        /*=========================================
-                EXPLANATION
-        =========================================*/
+        /*-----------------------------------------------
+            ANSWER
+        -----------------------------------------------*/
 
-        else if (/^Explanation\s*:/i.test(line) && current) {
+        const answerMatch =
+            line.match(
+                /^(?:answer|correct\s*answer)\s*[:\-]?\s*([ABCD])\b/i
+            );
+
+        if (answerMatch) {
+
+            current.correct_answer =
+                answerMatch[1]
+                    .toUpperCase();
+
+            continue;
+
+        }
+
+        /*-----------------------------------------------
+            EXPLANATION
+        -----------------------------------------------*/
+
+        const explanationMatch =
+            line.match(
+                /^explanation\s*[:\-]?\s*(.*)$/i
+            );
+
+        if (explanationMatch) {
 
             current.explanation =
+                explanationMatch[1].trim();
 
-                line
-
-                    .replace(/^Explanation\s*:/i, "")
-
-                    .trim();
+            continue;
 
         }
 
-        /*=========================================
-                CONTINUATION
-        =========================================*/
+        /*-----------------------------------------------
+            DIFFICULTY
+        -----------------------------------------------*/
 
-        else if (current) {
+        const difficultyMatch =
+            line.match(
+                /^difficulty\s*[:\-]?\s*(easy|medium|hard)\b/i
+            );
 
-            current.question += " " + line;
+        if (difficultyMatch) {
+
+            current.difficulty =
+                difficultyMatch[1]
+                    .toLowerCase();
+
+            continue;
+
+        }
+
+        /*-----------------------------------------------
+            EXPLANATION CONTINUATION
+        -----------------------------------------------*/
+
+        if (
+            current.explanation &&
+            !current.option_a &&
+            !current.option_b &&
+            !current.option_c &&
+            !current.option_d
+        ) {
+
+            current.explanation +=
+                ` ${line}`;
+
+            continue;
+
+        }
+
+        /*-----------------------------------------------
+            QUESTION CONTINUATION
+        -----------------------------------------------*/
+
+        if (
+            !current.option_a &&
+            !current.option_b &&
+            !current.option_c &&
+            !current.option_d
+        ) {
+
+            current.question +=
+                ` ${line}`;
 
         }
 
     }
 
-    if (current) {
+    saveCurrent();
 
-        questions.push(current);
-
-    }
-
-    return questions;
+    return validateParsedQuestions(
+        questions
+    );
 
 }
 
 /*=========================================================
-    EXCEL PARSER
+    XLSX PARSER
 =========================================================*/
 
-async function parseExcel(buffer) {
+async function parseXLSX(file) {
 
-    const workbook = XLSX.read(buffer, {
+    if (
+        typeof XLSX === "undefined"
+    ) {
 
-        type: "array"
-
-    });
-
-    const sheetName =
-
-        workbook.SheetNames[0];
-
-    const worksheet =
-
-        workbook.Sheets[sheetName];
-
-    const rows =
-
-        XLSX.utils.sheet_to_json(
-
-            worksheet,
-
-            {
-
-                defval: ""
-
-            }
-
+        throw new Error(
+            "Spreadsheet parser is not available."
         );
 
-    const questions = [];
+    }
 
-    for (const row of rows) {
+    const arrayBuffer =
+        await file.arrayBuffer();
 
-        questions.push({
+    const workbook =
+        XLSX.read(
+            arrayBuffer,
+            {
+                type: "array"
+            }
+        );
 
-            question:
+    if (
+        !workbook.SheetNames ||
+        !workbook.SheetNames.length
+    ) {
 
-                String(
+        throw new Error(
+            "The spreadsheet contains no worksheets."
+        );
 
-                    row.Question || ""
+    }
 
-                ).trim(),
+    const sheetName =
+        workbook.SheetNames[0];
 
-            options: {
+    const sheet =
+        workbook.Sheets[sheetName];
 
-                A: String(
+    if (!sheet) {
 
-                    row.OptionA || ""
+        throw new Error(
+            "Unable to read the spreadsheet worksheet."
+        );
 
-                ).trim(),
+    }
 
-                B: String(
+    const rows =
+        XLSX.utils.sheet_to_json(
+            sheet,
+            {
+                defval: "",
+                raw: false
+            }
+        );
 
-                    row.OptionB || ""
+    if (!rows.length) {
 
-                ).trim(),
+        throw new Error(
+            "The spreadsheet contains no questions."
+        );
 
-                C: String(
+    }
 
-                    row.OptionC || ""
-
-                ).trim(),
-
-                D: String(
-
-                    row.OptionD || ""
-
-                ).trim()
-
-            },
-
-            answer:
-
-                String(
-
-                    row.Answer || ""
-
+    const questions =
+        rows.map(
+            (row, index) =>
+                normalizeSpreadsheetQuestion(
+                    row,
+                    index + 2
                 )
+        );
+
+    return validateParsedQuestions(
+        questions
+    );
+
+}
+
+/*=========================================================
+    XLSX ROW NORMALIZATION
+=========================================================*/
+
+function normalizeSpreadsheetQuestion(
+    row,
+    rowNumber
+) {
+
+    const normalizedRow = {};
+
+    Object.keys(row).forEach(key => {
+
+        const normalizedKey =
+            String(key)
 
                 .trim()
 
-                .toUpperCase(),
+                .toLowerCase()
 
-            explanation:
+                .replace(/[\s_-]+/g, "");
 
-                String(
+        normalizedRow[
+            normalizedKey
+        ] = String(
+            row[key] ?? ""
+        ).trim();
 
-                    row.Explanation || ""
+    });
 
-                ).trim(),
+    const getValue =
+        (...keys) => {
 
-            image_url:
+            for (const key of keys) {
 
-                String(
+                if (
+                    normalizedRow[key] !==
+                    undefined &&
+                    normalizedRow[key] !== ""
+                ) {
 
-                    row.Image || ""
+                    return normalizedRow[key];
 
-                ).trim()
+                }
 
-        });
+            }
 
-    }
+            return "";
 
-    return questions;
+        };
+
+    const answer =
+        getValue(
+            "answer",
+            "correctanswer",
+            "correct",
+            "correctoption"
+        );
+
+    const difficulty =
+        getValue(
+            "difficulty"
+        )
+        .toLowerCase() || "medium";
+
+    return {
+
+        question_number:
+            rowNumber,
+
+        question:
+            getValue(
+                "question",
+                "questiontext"
+            ),
+
+        option_a:
+            getValue(
+                "optiona",
+                "a",
+                "choicea"
+            ),
+
+        option_b:
+            getValue(
+                "optionb",
+                "b",
+                "choiceb"
+            ),
+
+        option_c:
+            getValue(
+                "optionc",
+                "c",
+                "choicec"
+            ),
+
+        option_d:
+            getValue(
+                "optiond",
+                "d",
+                "choiced"
+            ),
+
+        correct_answer:
+            normalizeAnswer(answer),
+
+        explanation:
+            getValue(
+                "explanation",
+                "answerexplanation"
+            ),
+
+        difficulty,
+
+        image_url:
+            getValue(
+                "image",
+                "imageurl",
+                "image_url"
+            )
+
+    };
 
 }
 
 /*=========================================================
-    QUESTION VALIDATOR
+    ANSWER NORMALIZATION
 =========================================================*/
 
-function validateQuestions(questions) {
+function normalizeAnswer(answer) {
 
-    const errors = [];
+    const value =
+        String(answer || "")
+            .trim()
+            .toUpperCase();
 
-    const validAnswers = [
+    if (
+        /^[ABCD]$/.test(value)
+    ) {
 
-        "A",
+        return value;
 
-        "B",
+    }
 
-        "C",
+    const match =
+        value.match(
+            /^(?:OPTION\s*)?([ABCD])(?:[.)]|\s|$)/i
+        );
 
-        "D"
+    return match
+        ? match[1].toUpperCase()
+        : value;
 
-    ];
+}
 
-    questions.forEach((question, index) => {
+/*=========================================================
+    QUESTION NORMALIZATION
+=========================================================*/
 
-        const number = index + 1;
+function normalizeQuestion(question) {
 
-        /*=========================================
-                QUESTION
-        =========================================*/
+    if (!question) {
 
-        if (!question.question) {
+        return null;
 
-            errors.push({
-
-                question: number,
-
-                error: "Question text is missing."
-
-            });
-
-        }
-
-        /*=========================================
-                OPTION A
-        =========================================*/
-
-        if (!question.options.A) {
-
-            errors.push({
-
-                question: number,
-
-                error: "Option A is missing."
-
-            });
-
-        }
-
-        /*=========================================
-                OPTION B
-        =========================================*/
-
-        if (!question.options.B) {
-
-            errors.push({
-
-                question: number,
-
-                error: "Option B is missing."
-
-            });
-
-        }
-
-        /*=========================================
-                OPTION C
-        =========================================*/
-
-        if (!question.options.C) {
-
-            errors.push({
-
-                question: number,
-
-                error: "Option C is missing."
-
-            });
-
-        }
-
-        /*=========================================
-                OPTION D
-        =========================================*/
-
-        if (!question.options.D) {
-
-            errors.push({
-
-                question: number,
-
-                error: "Option D is missing."
-
-            });
-
-        }
-
-        /*=========================================
-                ANSWER
-        =========================================*/
-
-        if (
-
-            !validAnswers.includes(
-
-                question.answer
-
-            )
-
-        ) {
-
-            errors.push({
-
-                question: number,
-
-                error: "Correct answer must be A, B, C or D."
-
-            });
-
-        }
-
-    });
+    }
 
     return {
 
-        valid: errors.length === 0,
+        question_number:
+            question.question_number || null,
+
+        question:
+            String(
+                question.question || ""
+            ).trim(),
+
+        option_a:
+            String(
+                question.option_a || ""
+            ).trim(),
+
+        option_b:
+            String(
+                question.option_b || ""
+            ).trim(),
+
+        option_c:
+            String(
+                question.option_c || ""
+            ).trim(),
+
+        option_d:
+            String(
+                question.option_d || ""
+            ).trim(),
+
+        correct_answer:
+            normalizeAnswer(
+                question.correct_answer
+            ),
+
+        explanation:
+            String(
+                question.explanation || ""
+            ).trim(),
+
+        difficulty:
+            normalizeDifficulty(
+                question.difficulty
+            ),
+
+        image_url:
+            String(
+                question.image_url || ""
+            ).trim()
+
+    };
+
+}
+
+/*=========================================================
+    DIFFICULTY
+=========================================================*/
+
+function normalizeDifficulty(
+    difficulty
+) {
+
+    const value =
+        String(
+            difficulty || "medium"
+        )
+        .trim()
+        .toLowerCase();
+
+    return [
+        "easy",
+        "medium",
+        "hard"
+    ].includes(value)
+
+        ? value
+
+        : "medium";
+
+}
+
+/*=========================================================
+    VALIDATE IMPORTED QUESTIONS
+=========================================================*/
+
+function validateParsedQuestions(
+    questions
+) {
+
+    if (!Array.isArray(questions)) {
+
+        throw new Error(
+            "Invalid parsed question data."
+        );
+
+    }
+
+    if (!questions.length) {
+
+        throw new Error(
+            "No questions could be extracted from the file."
+        );
+
+    }
+
+    const validQuestions = [];
+
+    const errors = [];
+
+    questions.forEach(
+        (question, index) => {
+
+            const row =
+                question.question_number ||
+                index + 1;
+
+            if (
+                !question.question
+            ) {
+
+                errors.push(
+                    `Question ${row}: question text is missing.`
+                );
+
+                return;
+
+            }
+
+            if (
+                !question.option_a ||
+                !question.option_b ||
+                !question.option_c ||
+                !question.option_d
+            ) {
+
+                errors.push(
+                    `Question ${row}: all four answer options are required.`
+                );
+
+                return;
+
+            }
+
+            if (
+                !["A", "B", "C", "D"]
+                    .includes(
+                        question.correct_answer
+                    )
+            ) {
+
+                errors.push(
+                    `Question ${row}: correct answer must be A, B, C or D.`
+                );
+
+                return;
+
+            }
+
+            validQuestions.push(
+                question
+            );
+
+        }
+    );
+
+    if (!validQuestions.length) {
+
+        throw new Error(
+            errors.join(" ")
+        );
+
+    }
+
+    return {
+
+        questions:
+            validQuestions,
 
         errors
 
@@ -651,7 +852,7 @@ function validateQuestions(questions) {
 }
 
 /*=========================================================
-    PREPARE QUESTIONS FOR DATABASE
+    PREPARE QUESTIONS FOR API IMPORT
 =========================================================*/
 
 function prepareQuestionsForImport(
@@ -659,146 +860,150 @@ function prepareQuestionsForImport(
     subjectId
 ) {
 
-    const timestamp =
-        new Date().toISOString();
+    if (
+        !subjectId ||
+        !String(subjectId).trim()
+    ) {
 
-    return questions.map(question => ({
-
-        id:
-            crypto.randomUUID(),
-
-        subject_id:
-            subjectId,
-
-        question:
-            question.question,
-
-        image_url:
-            question.image_url || null,
-
-        option_a:
-            question.options.A,
-
-        option_b:
-            question.options.B,
-
-        option_c:
-            question.options.C,
-
-        option_d:
-            question.options.D,
-
-        correct_answer:
-            question.answer,
-
-        explanation:
-            question.explanation || null,
-
-        created_at:
-            timestamp,
-
-        updated_at:
-            timestamp
-
-    }));
-
-}
-
-/*=========================================================
-    BULK IMPORT QUESTIONS
-=========================================================*/
-
-async function importQuestions(
-    env,
-    questions
-) {
-
-    const statements = [];
-
-    for (const question of questions) {
-
-        statements.push(
-
-            env.DB.prepare(`
-
-                INSERT INTO practice_questions (
-
-                    id,
-
-                    subject_id,
-
-                    question,
-
-                    image_url,
-
-                    option_a,
-
-                    option_b,
-
-                    option_c,
-
-                    option_d,
-
-                    correct_answer,
-
-                    explanation,
-
-                    created_at,
-
-                    updated_at
-
-                )
-
-                VALUES (
-
-                    ?,?,?,?,?,?,?,?,?,?,?,?
-
-                )
-
-            `).bind(
-
-                question.id,
-
-                question.subject_id,
-
-                question.question,
-
-                question.image_url,
-
-                question.option_a,
-
-                question.option_b,
-
-                question.option_c,
-
-                question.option_d,
-
-                question.correct_answer,
-
-                question.explanation,
-
-                question.created_at,
-
-                question.updated_at
-
-            )
-
+        throw new Error(
+            "Please select a subject."
         );
 
     }
 
-    await env.DB.batch(
+    if (
+        !Array.isArray(questions) ||
+        !questions.length
+    ) {
 
-        statements
+        throw new Error(
+            "There are no valid questions to import."
+        );
 
+    }
+
+    return questions.map(
+        question => ({
+
+            subject_id:
+                String(subjectId).trim(),
+
+            question:
+                question.question.trim(),
+
+            image_url:
+                question.image_url || "",
+
+            option_a:
+                question.option_a.trim(),
+
+            option_b:
+                question.option_b.trim(),
+
+            option_c:
+                question.option_c.trim(),
+
+            option_d:
+                question.option_d.trim(),
+
+            correct_answer:
+                question.correct_answer
+                    .toUpperCase(),
+
+            explanation:
+                question.explanation || "",
+
+            difficulty:
+                normalizeDifficulty(
+                    question.difficulty
+                )
+
+        })
     );
 
-    return {
+}
 
-        success: true,
+/*=========================================================
+    API IMPORT
+=========================================================*/
 
-        imported: questions.length
+async function importQuestions(
+    questions,
+    subjectId
+) {
 
-    };
+    const payload =
+        prepareQuestionsForImport(
+            questions,
+            subjectId
+        );
+
+    const response =
+        await fetch(
+            "/api/admin/questions/import",
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
+
+                body:
+                    JSON.stringify({
+                        subject_id:
+                            String(subjectId).trim(),
+
+                        questions:
+                            payload
+                    })
+            }
+        );
+
+    let result;
+
+    try {
+
+        result =
+            await response.json();
+
+    } catch {
+
+        throw new Error(
+            "The server returned an invalid response."
+        );
+
+    }
+
+    if (!response.ok || !result.success) {
+
+        throw new Error(
+            result.message ||
+            "Question import failed."
+        );
+
+    }
+
+    return result;
 
 }
+
+/*=========================================================
+    EXPORT
+=========================================================*/
+
+window.QuestionParser = {
+
+    parseQuestionFile,
+
+    parseDOCX,
+
+    parseXLSX,
+
+    parseDOCXText,
+
+    prepareQuestionsForImport,
+
+    importQuestions
+
+};

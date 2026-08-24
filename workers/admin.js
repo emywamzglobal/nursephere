@@ -392,16 +392,127 @@ if (
     });
 
 }
-        // =====================================================
+
+ // =====================================================
 // EXAM MANAGEMENT
 // =====================================================
 
 // -----------------------------------------
-// GET ALL EXAMS
-// GET /api/admin/exams
+// CONSTANTS
 // -----------------------------------------
 
-if (method === "GET" && pathname === "/api/admin/exams") {
+const EXAM_STATUSES = ["active", "inactive"];
+
+const MAX_EXAM_NAME_LENGTH = 150;
+const MAX_EXAM_CODE_LENGTH = 50;
+const MAX_EXAM_DESCRIPTION_LENGTH = 2000;
+const MAX_URL_LENGTH = 1000;
+const MAX_COLOR_LENGTH = 50;
+
+
+// -----------------------------------------
+// HELPERS
+// -----------------------------------------
+
+function cleanText(value) {
+
+    return typeof value === "string"
+        ? value.trim()
+        : "";
+
+}
+
+function cleanCode(value) {
+
+    return cleanText(value).toUpperCase();
+
+}
+
+function validateUrl(value) {
+
+    if (!value) return true;
+
+    if (value.length > MAX_URL_LENGTH) {
+        return false;
+    }
+
+    try {
+
+        const url = new URL(value);
+
+        return (
+            url.protocol === "http:" ||
+            url.protocol === "https:"
+        );
+
+    }
+
+    catch {
+
+        return false;
+
+    }
+
+}
+
+function validateColor(value) {
+
+    if (!value) return true;
+
+    if (value.length > MAX_COLOR_LENGTH) {
+        return false;
+    }
+
+    // Supports values such as:
+    // #2563EB
+    // rgb(...)
+    // named colors
+    // CSS variables
+
+    return true;
+
+}
+
+function parseDisplayOrder(value) {
+
+    if (
+        value === undefined ||
+        value === null ||
+        value === ""
+    ) {
+
+        return 0;
+
+    }
+
+    const number = Number(value);
+
+    if (
+        !Number.isInteger(number) ||
+        number < 0
+    ) {
+
+        return null;
+
+    }
+
+    return number;
+
+}
+
+
+// =====================================================
+// GET ALL EXAMS
+// GET /api/admin/exams
+// =====================================================
+
+if (
+
+    method === "GET" &&
+
+    pathname === "/api/admin/exams"
+
+) {
 
     const { results } = await env.DB.prepare(
 
@@ -418,7 +529,9 @@ if (method === "GET" && pathname === "/api/admin/exams") {
             created_at,
             updated_at
          FROM exams
-         ORDER BY display_order ASC, name ASC`
+         ORDER BY
+            display_order ASC,
+            name COLLATE NOCASE ASC`
 
     ).all();
 
@@ -426,7 +539,8 @@ if (method === "GET" && pathname === "/api/admin/exams") {
 
         success: true,
 
-        message: "Exams retrieved successfully.",
+        message:
+            "Exams retrieved successfully.",
 
         data: results
 
@@ -434,20 +548,22 @@ if (method === "GET" && pathname === "/api/admin/exams") {
 
 }
 
-// -----------------------------------------
+
+// =====================================================
 // GET SINGLE EXAM
 // GET /api/admin/exams/:id
-// -----------------------------------------
+// =====================================================
 
 if (
 
     method === "GET" &&
 
-    pathname.startsWith("/api/admin/exams/")
+    /^\/api\/admin\/exams\/[^/]+$/.test(pathname)
 
 ) {
 
-    const examId = pathname.split("/").pop();
+    const examId =
+        pathname.split("/").pop();
 
     const exam = await env.DB.prepare(
 
@@ -478,7 +594,8 @@ if (
 
             success: false,
 
-            message: "Exam not found."
+            message:
+                "Exam not found."
 
         }, {
 
@@ -492,7 +609,8 @@ if (
 
         success: true,
 
-        message: "Exam retrieved successfully.",
+        message:
+            "Exam retrieved successfully.",
 
         data: exam
 
@@ -500,10 +618,11 @@ if (
 
 }
 
-// -----------------------------------------
-// ADD EXAM
+
+// =====================================================
+// CREATE EXAM
 // POST /api/admin/exams
-// -----------------------------------------
+// =====================================================
 
 if (
 
@@ -513,37 +632,67 @@ if (
 
 ) {
 
-    const body = await request.json();
+    let body;
 
-    const {
+    try {
 
-        name,
+        body = await request.json();
 
-        code,
+    }
 
-        description,
+    catch {
 
-        image_url,
+        return Response.json({
 
-        icon_url,
+            success: false,
 
-        color,
+            message:
+                "Invalid JSON request body."
 
-        display_order
+        }, {
 
-    } = body;
+            status: 400
+
+        });
+
+    }
+
+    const name =
+        cleanText(body.name);
+
+    const code =
+        cleanCode(body.code);
+
+    const description =
+        cleanText(body.description);
+
+    const image_url =
+        cleanText(body.image_url);
+
+    const icon_url =
+        cleanText(body.icon_url);
+
+    const color =
+        cleanText(body.color);
+
+    const display_order =
+        parseDisplayOrder(
+            body.display_order
+        );
+
 
     // -----------------------------------------
     // VALIDATION
     // -----------------------------------------
 
-    if (!name || !name.trim()) {
+    if (!name) {
 
         return Response.json({
 
             success: false,
 
-            message: "Exam name is required."
+            message:
+                "Exam name is required."
 
         }, {
 
@@ -553,13 +702,17 @@ if (
 
     }
 
-    if (!code || !code.trim()) {
+    if (
+        name.length >
+        MAX_EXAM_NAME_LENGTH
+    ) {
 
         return Response.json({
 
             success: false,
 
-            message: "Exam code is required."
+            message:
+                `Exam name cannot exceed ${MAX_EXAM_NAME_LENGTH} characters.`
 
         }, {
 
@@ -568,23 +721,152 @@ if (
         });
 
     }
+
+    if (!code) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Exam code is required."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+    if (
+        code.length >
+        MAX_EXAM_CODE_LENGTH
+    ) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                `Exam code cannot exceed ${MAX_EXAM_CODE_LENGTH} characters.`
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+    if (
+        description.length >
+        MAX_EXAM_DESCRIPTION_LENGTH
+    ) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                `Description cannot exceed ${MAX_EXAM_DESCRIPTION_LENGTH} characters.`
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+    if (
+        display_order === null
+    ) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Display order must be a non-negative whole number."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+    if (!validateUrl(image_url)) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Image URL must be a valid HTTP or HTTPS URL."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+    if (!validateUrl(icon_url)) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Icon URL must be a valid HTTP or HTTPS URL."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+    if (!validateColor(color)) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Invalid exam color."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
 
     // -----------------------------------------
     // DUPLICATE NAME
     // -----------------------------------------
 
-    const duplicateName = await env.DB.prepare(
+    const duplicateName =
+        await env.DB.prepare(
 
-        `SELECT id
-         FROM exams
-         WHERE LOWER(name)=LOWER(?)
-         LIMIT 1`
+            `SELECT id
+             FROM exams
+             WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))
+             LIMIT 1`
 
-    )
+        )
 
-    .bind(name.trim())
+        .bind(name)
 
-    .first();
+        .first();
 
     if (duplicateName) {
 
@@ -592,7 +874,8 @@ if (
 
             success: false,
 
-            message: "An exam with this name already exists."
+            message:
+                "An exam with this name already exists."
 
         }, {
 
@@ -602,22 +885,24 @@ if (
 
     }
 
+
     // -----------------------------------------
     // DUPLICATE CODE
     // -----------------------------------------
 
-    const duplicateCode = await env.DB.prepare(
+    const duplicateCode =
+        await env.DB.prepare(
 
-        `SELECT id
-         FROM exams
-         WHERE LOWER(code)=LOWER(?)
-         LIMIT 1`
+            `SELECT id
+             FROM exams
+             WHERE LOWER(TRIM(code)) = LOWER(TRIM(?))
+             LIMIT 1`
 
-    )
+        )
 
-    .bind(code.trim())
+        .bind(code)
 
-    .first();
+        .first();
 
     if (duplicateCode) {
 
@@ -625,7 +910,8 @@ if (
 
             success: false,
 
-            message: "An exam with this code already exists."
+            message:
+                "An exam with this code already exists."
 
         }, {
 
@@ -635,14 +921,20 @@ if (
 
     }
 
-    const examId = crypto.randomUUID();
 
-    const now = new Date().toISOString();
+    // -----------------------------------------
+    // CREATE
+    // -----------------------------------------
+
+    const examId =
+        crypto.randomUUID();
+
+    const now =
+        new Date().toISOString();
 
     await env.DB.prepare(
 
         `INSERT INTO exams (
-
             id,
             name,
             code,
@@ -654,50 +946,36 @@ if (
             status,
             created_at,
             updated_at
-
-        )
-
-        VALUES (
-
-            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-
-        )`
+         )
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
     )
 
     .bind(
 
         examId,
-
-        name.trim(),
-
-        code.trim().toUpperCase(),
-
-        description || "",
-
-        image_url || "",
-
-        icon_url || "",
-
-        color || "",
-
-        Number(display_order) || 0,
-
+        name,
+        code,
+        description,
+        image_url,
+        icon_url,
+        color,
+        display_order,
         "active",
-
         now,
-
         now
 
     )
 
     .run();
 
+
     return Response.json({
 
         success: true,
 
-        message: "Exam created successfully.",
+        message:
+            "Exam created successfully.",
 
         data: {
 
@@ -713,6 +991,7 @@ if (
 
 }
 
+
 // =====================================================
 // UPDATE EXAM
 // PUT /api/admin/exams/:id
@@ -722,45 +1001,29 @@ if (
 
     method === "PUT" &&
 
-    pathname.startsWith("/api/admin/exams/")
+    /^\/api\/admin\/exams\/[^/]+$/.test(pathname)
 
 ) {
 
-    const examId = pathname.split("/").pop();
+    const examId =
+        pathname.split("/").pop();
 
-    const body = await request.json();
+    let body;
 
-    const {
+    try {
 
-        name,
+        body = await request.json();
 
-        code,
+    }
 
-        description,
-
-        image_url,
-
-        icon_url,
-
-        color,
-
-        display_order,
-
-        status
-
-    } = body;
-
-    // -----------------------------------------
-    // VALIDATION
-    // -----------------------------------------
-
-    if (!name || !name.trim()) {
+    catch {
 
         return Response.json({
 
             success: false,
 
-            message: "Exam name is required."
+            message:
+                "Invalid JSON request body."
 
         }, {
 
@@ -770,13 +1033,47 @@ if (
 
     }
 
-    if (!code || !code.trim()) {
+
+    const name =
+        cleanText(body.name);
+
+    const code =
+        cleanCode(body.code);
+
+    const description =
+        cleanText(body.description);
+
+    const image_url =
+        cleanText(body.image_url);
+
+    const icon_url =
+        cleanText(body.icon_url);
+
+    const color =
+        cleanText(body.color);
+
+    const display_order =
+        parseDisplayOrder(
+            body.display_order
+        );
+
+    const status =
+        cleanText(body.status)
+            .toLowerCase();
+
+
+    // -----------------------------------------
+    // VALIDATION
+    // -----------------------------------------
+
+    if (!name) {
 
         return Response.json({
 
             success: false,
 
-            message: "Exam code is required."
+            message:
+                "Exam name is required."
 
         }, {
 
@@ -787,18 +1084,16 @@ if (
     }
 
     if (
-
-        status &&
-
-        !["active", "inactive"].includes(status)
-
+        name.length >
+        MAX_EXAM_NAME_LENGTH
     ) {
 
         return Response.json({
 
             success: false,
 
-            message: "Invalid status."
+            message:
+                `Exam name cannot exceed ${MAX_EXAM_NAME_LENGTH} characters.`
 
         }, {
 
@@ -808,21 +1103,170 @@ if (
 
     }
 
+    if (!code) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Exam code is required."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+    if (
+        code.length >
+        MAX_EXAM_CODE_LENGTH
+    ) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                `Exam code cannot exceed ${MAX_EXAM_CODE_LENGTH} characters.`
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+    if (
+        description.length >
+        MAX_EXAM_DESCRIPTION_LENGTH
+    ) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                `Description cannot exceed ${MAX_EXAM_DESCRIPTION_LENGTH} characters.`
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+    if (
+        display_order === null
+    ) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Display order must be a non-negative whole number."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+    if (
+        !EXAM_STATUSES.includes(status)
+    ) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Status must be active or inactive."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+    if (!validateUrl(image_url)) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Image URL must be a valid HTTP or HTTPS URL."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+    if (!validateUrl(icon_url)) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Icon URL must be a valid HTTP or HTTPS URL."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+    if (!validateColor(color)) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Invalid exam color."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+
     // -----------------------------------------
-    // VERIFY EXAM EXISTS
+    // VERIFY EXAM
     // -----------------------------------------
 
-    const existingExam = await env.DB.prepare(
+    const existingExam =
+        await env.DB.prepare(
 
-        `SELECT id
-         FROM exams
-         WHERE id = ?`
+            `SELECT id
+             FROM exams
+             WHERE id = ?
+             LIMIT 1`
 
-    )
+        )
 
-    .bind(examId)
+        .bind(examId)
 
-    .first();
+        .first();
 
     if (!existingExam) {
 
@@ -830,7 +1274,8 @@ if (
 
             success: false,
 
-            message: "Exam not found."
+            message:
+                "Exam not found."
 
         }, {
 
@@ -840,28 +1285,28 @@ if (
 
     }
 
+
     // -----------------------------------------
-    // CHECK DUPLICATE NAME
+    // DUPLICATE NAME
     // -----------------------------------------
 
-    const duplicateName = await env.DB.prepare(
+    const duplicateName =
+        await env.DB.prepare(
 
-        `SELECT id
-         FROM exams
-         WHERE LOWER(name)=LOWER(?)
-         AND id<>?`
+            `SELECT id
+             FROM exams
+             WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))
+             AND id <> ?
+             LIMIT 1`
 
-    )
+        )
 
-    .bind(
+        .bind(
+            name,
+            examId
+        )
 
-        name.trim(),
-
-        examId
-
-    )
-
-    .first();
+        .first();
 
     if (duplicateName) {
 
@@ -869,7 +1314,8 @@ if (
 
             success: false,
 
-            message: "Another exam already uses this name."
+            message:
+                "Another exam already uses this name."
 
         }, {
 
@@ -879,28 +1325,28 @@ if (
 
     }
 
+
     // -----------------------------------------
-    // CHECK DUPLICATE CODE
+    // DUPLICATE CODE
     // -----------------------------------------
 
-    const duplicateCode = await env.DB.prepare(
+    const duplicateCode =
+        await env.DB.prepare(
 
-        `SELECT id
-         FROM exams
-         WHERE LOWER(code)=LOWER(?)
-         AND id<>?`
+            `SELECT id
+             FROM exams
+             WHERE LOWER(TRIM(code)) = LOWER(TRIM(?))
+             AND id <> ?
+             LIMIT 1`
 
-    )
+        )
 
-    .bind(
+        .bind(
+            code,
+            examId
+        )
 
-        code.trim(),
-
-        examId
-
-    )
-
-    .first();
+        .first();
 
     if (duplicateCode) {
 
@@ -908,7 +1354,8 @@ if (
 
             success: false,
 
-            message: "Another exam already uses this code."
+            message:
+                "Another exam already uses this code."
 
         }, {
 
@@ -918,11 +1365,13 @@ if (
 
     }
 
-    const now = new Date().toISOString();
 
     // -----------------------------------------
-    // UPDATE EXAM
+    // UPDATE
     // -----------------------------------------
+
+    const now =
+        new Date().toISOString();
 
     await env.DB.prepare(
 
@@ -943,42 +1392,36 @@ if (
 
     .bind(
 
-        name.trim(),
-
-        code.trim().toUpperCase(),
-
-        description || "",
-
-        image_url || "",
-
-        icon_url || "",
-
-        color || "",
-
-        Number(display_order) || 0,
-
-        status || "active",
-
+        name,
+        code,
+        description,
+        image_url,
+        icon_url,
+        color,
+        display_order,
+        status,
         now,
-
         examId
 
     )
 
     .run();
 
+
     return Response.json({
 
         success: true,
 
-        message: "Exam updated successfully."
+        message:
+            "Exam updated successfully."
 
     });
 
 }
 
+
 // =====================================================
-// SOFT DELETE EXAM
+// SOFT DELETE / DEACTIVATE EXAM
 // DELETE /api/admin/exams/:id
 // =====================================================
 
@@ -986,23 +1429,34 @@ if (
 
     method === "DELETE" &&
 
-    pathname.startsWith("/api/admin/exams/")
+    /^\/api\/admin\/exams\/[^/]+$/.test(pathname)
 
 ) {
 
-    const examId = pathname.split("/").pop();
+    const examId =
+        pathname.split("/").pop();
 
-    const exam = await env.DB.prepare(
 
-        `SELECT id
-         FROM exams
-         WHERE id = ?`
+    // -----------------------------------------
+    // VERIFY EXAM
+    // -----------------------------------------
 
-    )
+    const exam =
+        await env.DB.prepare(
 
-    .bind(examId)
+            `SELECT
+                id,
+                name,
+                status
+             FROM exams
+             WHERE id = ?
+             LIMIT 1`
 
-    .first();
+        )
+
+        .bind(examId)
+
+        .first();
 
     if (!exam) {
 
@@ -1010,7 +1464,8 @@ if (
 
             success: false,
 
-            message: "Exam not found."
+            message:
+                "Exam not found."
 
         }, {
 
@@ -1019,6 +1474,34 @@ if (
         });
 
     }
+
+
+    // -----------------------------------------
+    // ALREADY INACTIVE
+    // -----------------------------------------
+
+    if (
+        exam.status === "inactive"
+    ) {
+
+        return Response.json({
+
+            success: true,
+
+            message:
+                "Exam is already inactive."
+
+        });
+
+    }
+
+
+    // -----------------------------------------
+    // DEACTIVATE
+    // -----------------------------------------
+
+    const now =
+        new Date().toISOString();
 
     await env.DB.prepare(
 
@@ -1032,31 +1515,117 @@ if (
 
     .bind(
 
-        new Date().toISOString(),
-
+        now,
         examId
 
     )
 
     .run();
 
+
     return Response.json({
 
         success: true,
 
-        message: "Exam deleted successfully."
+        message:
+            "Exam deactivated successfully."
 
     });
 
 }
-        // =====================================================
+
+
+// =====================================================
 // SUBJECT MANAGEMENT
 // =====================================================
 
 // -----------------------------------------
+// CONSTANTS
+// -----------------------------------------
+
+const SUBJECT_STATUSES = ["active", "inactive"];
+
+const MAX_SUBJECT_NAME_LENGTH = 150;
+const MAX_SUBJECT_DESCRIPTION_LENGTH = 2000;
+const MAX_SUBJECT_IMAGE_URL_LENGTH = 1000;
+
+
+// -----------------------------------------
+// HELPERS
+// -----------------------------------------
+
+function cleanSubjectText(value) {
+
+    return typeof value === "string"
+        ? value.trim()
+        : "";
+
+}
+
+function validateSubjectImageUrl(value) {
+
+    if (!value) return true;
+
+    if (
+        value.length >
+        MAX_SUBJECT_IMAGE_URL_LENGTH
+    ) {
+
+        return false;
+
+    }
+
+    try {
+
+        const url = new URL(value);
+
+        return (
+            url.protocol === "http:" ||
+            url.protocol === "https:"
+        );
+
+    }
+
+    catch {
+
+        return false;
+
+    }
+
+}
+
+function parseSubjectDisplayOrder(value) {
+
+    if (
+        value === undefined ||
+        value === null ||
+        value === ""
+    ) {
+
+        return 0;
+
+    }
+
+    const number = Number(value);
+
+    if (
+        !Number.isInteger(number) ||
+        number < 0
+    ) {
+
+        return null;
+
+    }
+
+    return number;
+
+}
+
+
+// =====================================================
 // GET ALL SUBJECTS
 // GET /api/admin/subjects
-// -----------------------------------------
+// =====================================================
 
 if (
 
@@ -1069,40 +1638,28 @@ if (
     const { results } = await env.DB.prepare(
 
         `SELECT
-
             s.id,
-
             s.exam_id,
-
             e.name AS exam_name,
-
+            e.code AS exam_code,
             s.name,
-
             s.description,
-
             s.image_url,
-
             s.display_order,
-
             s.status,
-
             s.created_at,
-
             s.updated_at
 
-        FROM subjects s
+         FROM subjects s
 
-        INNER JOIN exams e
-
+         INNER JOIN exams e
             ON s.exam_id = e.id
 
-        ORDER BY
-
+         ORDER BY
             e.display_order ASC,
-
+            e.name COLLATE NOCASE ASC,
             s.display_order ASC,
-
-            s.name ASC`
+            s.name COLLATE NOCASE ASC`
 
     ).all();
 
@@ -1110,7 +1667,8 @@ if (
 
         success: true,
 
-        message: "Subjects retrieved successfully.",
+        message:
+            "Subjects retrieved successfully.",
 
         data: results
 
@@ -1118,52 +1676,122 @@ if (
 
 }
 
-// -----------------------------------------
-// GET SINGLE SUBJECT
-// GET /api/admin/subjects/:id
-// -----------------------------------------
+
+// =====================================================
+// GET SUBJECTS FOR EXAM
+// GET /api/admin/subjects?exam_id=...
+// =====================================================
 
 if (
 
     method === "GET" &&
 
-    pathname.startsWith("/api/admin/subjects/")
+    pathname === "/api/admin/subjects" &&
+
+    url.searchParams.has("exam_id")
 
 ) {
 
-    const subjectId = pathname.split("/").pop();
+    const examId =
+        cleanSubjectText(
+            url.searchParams.get("exam_id")
+        );
+
+    if (!examId) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Exam ID is required."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+    const { results } = await env.DB.prepare(
+
+        `SELECT
+            id,
+            exam_id,
+            name,
+            description,
+            image_url,
+            display_order,
+            status,
+            created_at,
+            updated_at
+
+         FROM subjects
+
+         WHERE exam_id = ?
+
+         ORDER BY
+            display_order ASC,
+            name COLLATE NOCASE ASC`
+
+    )
+
+    .bind(examId)
+
+    .all();
+
+    return Response.json({
+
+        success: true,
+
+        message:
+            "Subjects retrieved successfully.",
+
+        data: results
+
+    });
+
+}
+
+
+// =====================================================
+// GET SINGLE SUBJECT
+// GET /api/admin/subjects/:id
+// =====================================================
+
+if (
+
+    method === "GET" &&
+
+    /^\/api\/admin\/subjects\/[^/]+$/.test(pathname)
+
+) {
+
+    const subjectId =
+        pathname.split("/").pop();
 
     const subject = await env.DB.prepare(
 
         `SELECT
-
             s.id,
-
             s.exam_id,
-
             e.name AS exam_name,
-
+            e.code AS exam_code,
             s.name,
-
             s.description,
-
             s.image_url,
-
             s.display_order,
-
             s.status,
-
             s.created_at,
-
             s.updated_at
 
-        FROM subjects s
+         FROM subjects s
 
-        INNER JOIN exams e
-
+         INNER JOIN exams e
             ON s.exam_id = e.id
 
-        WHERE s.id = ?`
+         WHERE s.id = ?`
 
     )
 
@@ -1177,7 +1805,8 @@ if (
 
             success: false,
 
-            message: "Subject not found."
+            message:
+                "Subject not found."
 
         }, {
 
@@ -1191,7 +1820,8 @@ if (
 
         success: true,
 
-        message: "Subject retrieved successfully.",
+        message:
+            "Subject retrieved successfully.",
 
         data: subject
 
@@ -1199,10 +1829,11 @@ if (
 
 }
 
-// -----------------------------------------
-// ADD SUBJECT
+
+// =====================================================
+// CREATE SUBJECT
 // POST /api/admin/subjects
-// -----------------------------------------
+// =====================================================
 
 if (
 
@@ -1212,33 +1843,61 @@ if (
 
 ) {
 
-    const body = await request.json();
+    let body;
 
-    const {
+    try {
 
-        exam_id,
+        body = await request.json();
 
-        name,
+    }
 
-        description,
+    catch {
 
-        image_url,
+        return Response.json({
 
-        display_order
+            success: false,
 
-    } = body;
+            message:
+                "Invalid JSON request body."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+    const exam_id =
+        cleanSubjectText(body.exam_id);
+
+    const name =
+        cleanSubjectText(body.name);
+
+    const description =
+        cleanSubjectText(body.description);
+
+    const image_url =
+        cleanSubjectText(body.image_url);
+
+    const display_order =
+        parseSubjectDisplayOrder(
+            body.display_order
+        );
+
 
     // -----------------------------------------
     // VALIDATION
     // -----------------------------------------
 
-    if (!exam_id || !exam_id.trim()) {
+    if (!exam_id) {
 
         return Response.json({
 
             success: false,
 
-            message: "Please select an exam."
+            message:
+                "Please select an exam."
 
         }, {
 
@@ -1248,13 +1907,14 @@ if (
 
     }
 
-    if (!name || !name.trim()) {
+    if (!name) {
 
         return Response.json({
 
             success: false,
 
-            message: "Subject name is required."
+            message:
+                "Subject name is required."
 
         }, {
 
@@ -1263,20 +1923,102 @@ if (
         });
 
     }
+
+    if (
+        name.length >
+        MAX_SUBJECT_NAME_LENGTH
+    ) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                `Subject name cannot exceed ${MAX_SUBJECT_NAME_LENGTH} characters.`
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+    if (
+        description.length >
+        MAX_SUBJECT_DESCRIPTION_LENGTH
+    ) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                `Description cannot exceed ${MAX_SUBJECT_DESCRIPTION_LENGTH} characters.`
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+    if (
+        display_order === null
+    ) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Display order must be a non-negative whole number."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+    if (
+        !validateSubjectImageUrl(image_url)
+    ) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Image URL must be a valid HTTP or HTTPS URL."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
 
     // -----------------------------------------
-    // VERIFY EXAM EXISTS
+    // VERIFY ACTIVE EXAM
     // -----------------------------------------
 
     const exam = await env.DB.prepare(
 
-        `SELECT id
+        `SELECT
+            id,
+            name,
+            status
 
          FROM exams
 
          WHERE id = ?
 
-         AND status = 'active'`
+         LIMIT 1`
 
     )
 
@@ -1290,7 +2032,8 @@ if (
 
             success: false,
 
-            message: "Selected exam does not exist."
+            message:
+                "Selected exam does not exist."
 
         }, {
 
@@ -1300,41 +2043,16 @@ if (
 
     }
 
-    // -----------------------------------------
-    // CHECK DUPLICATE SUBJECT
-    // -----------------------------------------
-
-    const duplicate = await env.DB.prepare(
-
-        `SELECT id
-
-         FROM subjects
-
-         WHERE exam_id = ?
-
-         AND LOWER(name) = LOWER(?)
-
-         LIMIT 1`
-
-    )
-
-    .bind(
-
-        exam_id,
-
-        name.trim()
-
-    )
-
-    .first();
-
-    if (duplicate) {
+    if (
+        exam.status !== "active"
+    ) {
 
         return Response.json({
 
             success: false,
 
-            message: "This subject already exists under the selected exam."
+            message:
+                "Subjects can only be created under an active exam."
 
         }, {
 
@@ -1344,60 +2062,92 @@ if (
 
     }
 
-    const subjectId = crypto.randomUUID();
 
-    const now = new Date().toISOString();
+    // -----------------------------------------
+    // DUPLICATE SUBJECT
+    // -----------------------------------------
+
+    const duplicate =
+        await env.DB.prepare(
+
+            `SELECT id
+
+             FROM subjects
+
+             WHERE exam_id = ?
+
+             AND LOWER(TRIM(name))
+                 = LOWER(TRIM(?))
+
+             LIMIT 1`
+
+        )
+
+        .bind(
+
+            exam_id,
+            name
+
+        )
+
+        .first();
+
+    if (duplicate) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "This subject already exists under the selected exam."
+
+        }, {
+
+            status: 409
+
+        });
+
+    }
+
+
+    // -----------------------------------------
+    // CREATE
+    // -----------------------------------------
+
+    const subjectId =
+        crypto.randomUUID();
+
+    const now =
+        new Date().toISOString();
 
     await env.DB.prepare(
 
         `INSERT INTO subjects (
-
             id,
-
             exam_id,
-
             name,
-
             description,
-
             image_url,
-
             display_order,
-
             status,
-
             created_at,
-
             updated_at
+         )
 
-        )
-
-        VALUES (
-
-            ?, ?, ?, ?, ?, ?, ?, ?, ?
-
-        )`
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
     )
 
     .bind(
 
         subjectId,
-
         exam_id,
-
-        name.trim(),
-
-        description || "",
-
-        image_url || "",
-
-        Number(display_order) || 0,
-
+        name,
+        description,
+        image_url,
+        display_order,
         "active",
-
         now,
-
         now
 
     )
@@ -1408,7 +2158,8 @@ if (
 
         success: true,
 
-        message: "Subject created successfully.",
+        message:
+            "Subject created successfully.",
 
         data: {
 
@@ -1424,6 +2175,7 @@ if (
 
 }
 
+
 // =====================================================
 // UPDATE SUBJECT
 // PUT /api/admin/subjects/:id
@@ -1433,41 +2185,29 @@ if (
 
     method === "PUT" &&
 
-    pathname.startsWith("/api/admin/subjects/")
+    /^\/api\/admin\/subjects\/[^/]+$/.test(pathname)
 
 ) {
 
-    const subjectId = pathname.split("/").pop();
+    const subjectId =
+        pathname.split("/").pop();
 
-    const body = await request.json();
+    let body;
 
-    const {
+    try {
 
-        exam_id,
+        body = await request.json();
 
-        name,
+    }
 
-        description,
-
-        image_url,
-
-        display_order,
-
-        status
-
-    } = body;
-
-    // -----------------------------------------
-    // VALIDATION
-    // -----------------------------------------
-
-    if (!exam_id || !exam_id.trim()) {
+    catch {
 
         return Response.json({
 
             success: false,
 
-            message: "Please select an exam."
+            message:
+                "Invalid JSON request body."
 
         }, {
 
@@ -1477,13 +2217,57 @@ if (
 
     }
 
-    if (!name || !name.trim()) {
+    const exam_id =
+        cleanSubjectText(body.exam_id);
+
+    const name =
+        cleanSubjectText(body.name);
+
+    const description =
+        cleanSubjectText(body.description);
+
+    const image_url =
+        cleanSubjectText(body.image_url);
+
+    const display_order =
+        parseSubjectDisplayOrder(
+            body.display_order
+        );
+
+    const status =
+        cleanSubjectText(body.status)
+            .toLowerCase();
+
+
+    // -----------------------------------------
+    // VALIDATION
+    // -----------------------------------------
+
+    if (!exam_id) {
 
         return Response.json({
 
             success: false,
 
-            message: "Subject name is required."
+            message:
+                "Please select an exam."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+    if (!name) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Subject name is required."
 
         }, {
 
@@ -1494,18 +2278,16 @@ if (
     }
 
     if (
-
-        status &&
-
-        !["active", "inactive"].includes(status)
-
+        name.length >
+        MAX_SUBJECT_NAME_LENGTH
     ) {
 
         return Response.json({
 
             success: false,
 
-            message: "Invalid subject status."
+            message:
+                `Subject name cannot exceed ${MAX_SUBJECT_NAME_LENGTH} characters.`
 
         }, {
 
@@ -1515,21 +2297,104 @@ if (
 
     }
 
+    if (
+        description.length >
+        MAX_SUBJECT_DESCRIPTION_LENGTH
+    ) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                `Description cannot exceed ${MAX_SUBJECT_DESCRIPTION_LENGTH} characters.`
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+    if (
+        display_order === null
+    ) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Display order must be a non-negative whole number."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+    if (
+        !SUBJECT_STATUSES.includes(status)
+    ) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Status must be active or inactive."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+    if (
+        !validateSubjectImageUrl(image_url)
+    ) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Image URL must be a valid HTTP or HTTPS URL."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+
     // -----------------------------------------
-    // VERIFY SUBJECT EXISTS
+    // VERIFY SUBJECT
     // -----------------------------------------
 
-    const existingSubject = await env.DB.prepare(
+    const existingSubject =
+        await env.DB.prepare(
 
-        `SELECT id
-         FROM subjects
-         WHERE id = ?`
+            `SELECT id
 
-    )
+             FROM subjects
 
-    .bind(subjectId)
+             WHERE id = ?
 
-    .first();
+             LIMIT 1`
+
+        )
+
+        .bind(subjectId)
+
+        .first();
 
     if (!existingSubject) {
 
@@ -1537,7 +2402,8 @@ if (
 
             success: false,
 
-            message: "Subject not found."
+            message:
+                "Subject not found."
 
         }, {
 
@@ -1547,22 +2413,29 @@ if (
 
     }
 
+
     // -----------------------------------------
-    // VERIFY EXAM EXISTS
+    // VERIFY ACTIVE EXAM
     // -----------------------------------------
 
-    const exam = await env.DB.prepare(
+    const exam =
+        await env.DB.prepare(
 
-        `SELECT id
-         FROM exams
-         WHERE id = ?
-         AND status = 'active'`
+            `SELECT
+                id,
+                status
 
-    )
+             FROM exams
 
-    .bind(exam_id)
+             WHERE id = ?
 
-    .first();
+             LIMIT 1`
+
+        )
+
+        .bind(exam_id)
+
+        .first();
 
     if (!exam) {
 
@@ -1570,7 +2443,8 @@ if (
 
             success: false,
 
-            message: "Selected exam does not exist."
+            message:
+                "Selected exam does not exist."
 
         }, {
 
@@ -1580,39 +2454,16 @@ if (
 
     }
 
-    // -----------------------------------------
-    // CHECK DUPLICATE SUBJECT
-    // -----------------------------------------
-
-    const duplicate = await env.DB.prepare(
-
-        `SELECT id
-         FROM subjects
-         WHERE exam_id = ?
-         AND LOWER(name) = LOWER(?)
-         AND id <> ?`
-
-    )
-
-    .bind(
-
-        exam_id,
-
-        name.trim(),
-
-        subjectId
-
-    )
-
-    .first();
-
-    if (duplicate) {
+    if (
+        exam.status !== "active"
+    ) {
 
         return Response.json({
 
             success: false,
 
-            message: "Another subject with this name already exists."
+            message:
+                "Subjects can only belong to an active exam."
 
         }, {
 
@@ -1622,30 +2473,75 @@ if (
 
     }
 
-    const now = new Date().toISOString();
 
     // -----------------------------------------
-    // UPDATE SUBJECT
+    // DUPLICATE SUBJECT
     // -----------------------------------------
+
+    const duplicate =
+        await env.DB.prepare(
+
+            `SELECT id
+
+             FROM subjects
+
+             WHERE exam_id = ?
+
+             AND LOWER(TRIM(name))
+                 = LOWER(TRIM(?))
+
+             AND id <> ?
+
+             LIMIT 1`
+
+        )
+
+        .bind(
+
+            exam_id,
+            name,
+            subjectId
+
+        )
+
+        .first();
+
+    if (duplicate) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Another subject with this name already exists under the selected exam."
+
+        }, {
+
+            status: 409
+
+        });
+
+    }
+
+
+    // -----------------------------------------
+    // UPDATE
+    // -----------------------------------------
+
+    const now =
+        new Date().toISOString();
 
     await env.DB.prepare(
 
         `UPDATE subjects
 
          SET
-
             exam_id = ?,
-
             name = ?,
-
             description = ?,
-
             image_url = ?,
-
             display_order = ?,
-
             status = ?,
-
             updated_at = ?
 
          WHERE id = ?`
@@ -1655,19 +2551,12 @@ if (
     .bind(
 
         exam_id,
-
-        name.trim(),
-
-        description || "",
-
-        image_url || "",
-
-        Number(display_order) || 0,
-
-        status || "active",
-
+        name,
+        description,
+        image_url,
+        display_order,
+        status,
         now,
-
         subjectId
 
     )
@@ -1678,14 +2567,16 @@ if (
 
         success: true,
 
-        message: "Subject updated successfully."
+        message:
+            "Subject updated successfully."
 
     });
 
 }
 
+
 // =====================================================
-// SOFT DELETE SUBJECT
+// SOFT DELETE / DEACTIVATE SUBJECT
 // DELETE /api/admin/subjects/:id
 // =====================================================
 
@@ -1693,23 +2584,37 @@ if (
 
     method === "DELETE" &&
 
-    pathname.startsWith("/api/admin/subjects/")
+    /^\/api\/admin\/subjects\/[^/]+$/.test(pathname)
 
 ) {
 
-    const subjectId = pathname.split("/").pop();
+    const subjectId =
+        pathname.split("/").pop();
 
-    const subject = await env.DB.prepare(
 
-        `SELECT id
-         FROM subjects
-         WHERE id = ?`
+    // -----------------------------------------
+    // VERIFY SUBJECT
+    // -----------------------------------------
 
-    )
+    const subject =
+        await env.DB.prepare(
 
-    .bind(subjectId)
+            `SELECT
+                id,
+                name,
+                status
 
-    .first();
+             FROM subjects
+
+             WHERE id = ?
+
+             LIMIT 1`
+
+        )
+
+        .bind(subjectId)
+
+        .first();
 
     if (!subject) {
 
@@ -1717,7 +2622,8 @@ if (
 
             success: false,
 
-            message: "Subject not found."
+            message:
+                "Subject not found."
 
         }, {
 
@@ -1727,14 +2633,40 @@ if (
 
     }
 
+
+    // -----------------------------------------
+    // ALREADY INACTIVE
+    // -----------------------------------------
+
+    if (
+        subject.status === "inactive"
+    ) {
+
+        return Response.json({
+
+            success: true,
+
+            message:
+                "Subject is already inactive."
+
+        });
+
+    }
+
+
+    // -----------------------------------------
+    // DEACTIVATE
+    // -----------------------------------------
+
+    const now =
+        new Date().toISOString();
+
     await env.DB.prepare(
 
         `UPDATE subjects
 
          SET
-
             status = 'inactive',
-
             updated_at = ?
 
          WHERE id = ?`
@@ -1743,8 +2675,7 @@ if (
 
     .bind(
 
-        new Date().toISOString(),
-
+        now,
         subjectId
 
     )
@@ -1755,19 +2686,90 @@ if (
 
         success: true,
 
-        message: "Subject deleted successfully."
+        message:
+            "Subject deactivated successfully."
 
     });
 
 }
-        // =====================================================
+
+// =====================================================
 // PRACTICE QUESTION MANAGEMENT
 // =====================================================
 
-// -----------------------------------------
+const QUESTION_STATUSES = [
+    "active",
+    "inactive"
+];
+
+const QUESTION_DIFFICULTIES = [
+    "easy",
+    "medium",
+    "hard"
+];
+
+const VALID_QUESTION_ANSWERS = [
+    "A",
+    "B",
+    "C",
+    "D"
+];
+
+const MAX_QUESTION_LENGTH = 10000;
+const MAX_OPTION_LENGTH = 2000;
+const MAX_EXPLANATION_LENGTH = 10000;
+const MAX_IMAGE_URL_LENGTH = 1000;
+
+
+// =====================================================
+// HELPERS
+// =====================================================
+
+function cleanQuestionText(value) {
+
+    return typeof value === "string"
+        ? value.trim()
+        : "";
+
+}
+
+function validateQuestionImageUrl(value) {
+
+    if (!value) return true;
+
+    if (
+        value.length >
+        MAX_IMAGE_URL_LENGTH
+    ) {
+
+        return false;
+
+    }
+
+    try {
+
+        const url = new URL(value);
+
+        return (
+            url.protocol === "http:" ||
+            url.protocol === "https:"
+        );
+
+    }
+
+    catch {
+
+        return false;
+
+    }
+
+}
+
+
+// =====================================================
 // GET ALL QUESTIONS
 // GET /api/admin/questions
-// -----------------------------------------
+// =====================================================
 
 if (
 
@@ -1780,9 +2782,7 @@ if (
     const { results } = await env.DB.prepare(
 
         `SELECT
-
             q.id,
-
             q.subject_id,
 
             s.name AS subject_name,
@@ -1790,45 +2790,37 @@ if (
             s.exam_id,
 
             e.name AS exam_name,
+            e.code AS exam_code,
 
             q.question,
-
             q.image_url,
 
             q.option_a,
-
             q.option_b,
-
             q.option_c,
-
             q.option_d,
 
             q.correct_answer,
-
             q.explanation,
-
             q.difficulty,
-
             q.status,
 
             q.created_at,
-
             q.updated_at
 
-        FROM practice_questions q
+         FROM practice_questions q
 
-        INNER JOIN subjects s
+         INNER JOIN subjects s
             ON q.subject_id = s.id
 
-        INNER JOIN exams e
+         INNER JOIN exams e
             ON s.exam_id = e.id
 
-        ORDER BY
-
-            e.display_order,
-
-            s.display_order,
-
+         ORDER BY
+            e.display_order ASC,
+            e.name COLLATE NOCASE ASC,
+            s.display_order ASC,
+            s.name COLLATE NOCASE ASC,
             q.created_at DESC`
 
     ).all();
@@ -1837,7 +2829,8 @@ if (
 
         success: true,
 
-        message: "Practice questions retrieved successfully.",
+        message:
+            "Practice questions retrieved successfully.",
 
         data: results
 
@@ -1845,74 +2838,68 @@ if (
 
 }
 
-// -----------------------------------------
+
+// =====================================================
 // GET SINGLE QUESTION
 // GET /api/admin/questions/:id
-// -----------------------------------------
+// =====================================================
 
 if (
 
     method === "GET" &&
 
-    pathname.startsWith("/api/admin/questions/")
+    /^\/api\/admin\/questions\/[^/]+$/.test(pathname)
 
 ) {
 
-    const questionId = pathname.split("/").pop();
+    const questionId =
+        pathname.split("/").pop();
 
-    const question = await env.DB.prepare(
+    const question =
+        await env.DB.prepare(
 
-        `SELECT
+            `SELECT
+                q.id,
+                q.subject_id,
 
-            q.id,
+                s.name AS subject_name,
 
-            q.subject_id,
+                s.exam_id,
 
-            s.name AS subject_name,
+                e.name AS exam_name,
+                e.code AS exam_code,
 
-            s.exam_id,
+                q.question,
+                q.image_url,
 
-            e.name AS exam_name,
+                q.option_a,
+                q.option_b,
+                q.option_c,
+                q.option_d,
 
-            q.question,
+                q.correct_answer,
+                q.explanation,
+                q.difficulty,
+                q.status,
 
-            q.image_url,
+                q.created_at,
+                q.updated_at
 
-            q.option_a,
+             FROM practice_questions q
 
-            q.option_b,
+             INNER JOIN subjects s
+                ON q.subject_id = s.id
 
-            q.option_c,
+             INNER JOIN exams e
+                ON s.exam_id = e.id
 
-            q.option_d,
+             WHERE q.id = ?`
 
-            q.correct_answer,
+        )
 
-            q.explanation,
+        .bind(questionId)
 
-            q.difficulty,
-
-            q.status,
-
-            q.created_at,
-
-            q.updated_at
-
-        FROM practice_questions q
-
-        INNER JOIN subjects s
-            ON q.subject_id = s.id
-
-        INNER JOIN exams e
-            ON s.exam_id = e.id
-
-        WHERE q.id = ?`
-
-    )
-
-    .bind(questionId)
-
-    .first();
+        .first();
 
     if (!question) {
 
@@ -1920,7 +2907,8 @@ if (
 
             success: false,
 
-            message: "Practice question not found."
+            message:
+                "Practice question not found."
 
         }, {
 
@@ -1934,7 +2922,8 @@ if (
 
         success: true,
 
-        message: "Practice question retrieved successfully.",
+        message:
+            "Practice question retrieved successfully.",
 
         data: question
 
@@ -1942,10 +2931,11 @@ if (
 
 }
 
-// -----------------------------------------
-// ADD PRACTICE QUESTION
+
+// =====================================================
+// CREATE QUESTION
 // POST /api/admin/questions
-// -----------------------------------------
+// =====================================================
 
 if (
 
@@ -1955,43 +2945,78 @@ if (
 
 ) {
 
-    const body = await request.json();
+    let body;
 
-    const {
+    try {
 
-        subject_id,
+        body = await request.json();
 
-        question,
+    }
 
-        image_url,
+    catch {
 
-        option_a,
+        return Response.json({
 
-        option_b,
+            success: false,
 
-        option_c,
+            message:
+                "Invalid JSON request body."
 
-        option_d,
+        }, {
 
-        correct_answer,
+            status: 400
 
-        explanation,
+        });
 
-        difficulty
+    }
 
-    } = body;
+
+    const subject_id =
+        cleanQuestionText(body.subject_id);
+
+    const question =
+        cleanQuestionText(body.question);
+
+    const image_url =
+        cleanQuestionText(body.image_url);
+
+    const option_a =
+        cleanQuestionText(body.option_a);
+
+    const option_b =
+        cleanQuestionText(body.option_b);
+
+    const option_c =
+        cleanQuestionText(body.option_c);
+
+    const option_d =
+        cleanQuestionText(body.option_d);
+
+    const correct_answer =
+        cleanQuestionText(body.correct_answer)
+            .toUpperCase();
+
+    const explanation =
+        cleanQuestionText(body.explanation);
+
+    const difficulty =
+        cleanQuestionText(
+            body.difficulty || "medium"
+        ).toLowerCase();
+
 
     // -----------------------------------------
     // VALIDATION
     // -----------------------------------------
 
-    if (!subject_id || !subject_id.trim()) {
+    if (!subject_id) {
 
         return Response.json({
 
             success: false,
 
-            message: "Please select a subject."
+            message:
+                "Please select a subject."
 
         }, {
 
@@ -2001,13 +3026,14 @@ if (
 
     }
 
-    if (!question || !question.trim()) {
+    if (!question) {
 
         return Response.json({
 
             success: false,
 
-            message: "Question is required."
+            message:
+                "Question is required."
 
         }, {
 
@@ -2018,22 +3044,38 @@ if (
     }
 
     if (
+        question.length >
+        MAX_QUESTION_LENGTH
+    ) {
 
+        return Response.json({
+
+            success: false,
+
+            message:
+                `Question cannot exceed ${MAX_QUESTION_LENGTH} characters.`
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+    if (
         !option_a ||
-
         !option_b ||
-
         !option_c ||
-
         !option_d
-
     ) {
 
         return Response.json({
 
             success: false,
 
-            message: "All answer options are required."
+            message:
+                "All answer options are required."
 
         }, {
 
@@ -2042,22 +3084,20 @@ if (
         });
 
     }
-
-    const validAnswers = ["A", "B", "C", "D"];
 
     if (
-
-        !correct_answer ||
-
-        !validAnswers.includes(correct_answer.toUpperCase())
-
+        option_a.length > MAX_OPTION_LENGTH ||
+        option_b.length > MAX_OPTION_LENGTH ||
+        option_c.length > MAX_OPTION_LENGTH ||
+        option_d.length > MAX_OPTION_LENGTH
     ) {
 
         return Response.json({
 
             success: false,
 
-            message: "Correct answer must be A, B, C or D."
+            message:
+                `Answer options cannot exceed ${MAX_OPTION_LENGTH} characters.`
 
         }, {
 
@@ -2066,30 +3106,19 @@ if (
         });
 
     }
-
-    const validDifficulties = [
-
-        "easy",
-
-        "medium",
-
-        "hard"
-
-    ];
 
     if (
-
-        difficulty &&
-
-        !validDifficulties.includes(difficulty)
-
+        !VALID_QUESTION_ANSWERS.includes(
+            correct_answer
+        )
     ) {
 
         return Response.json({
 
             success: false,
 
-            message: "Difficulty must be easy, medium or hard."
+            message:
+                "Correct answer must be A, B, C or D."
 
         }, {
 
@@ -2099,25 +3128,94 @@ if (
 
     }
 
+    if (
+        !QUESTION_DIFFICULTIES.includes(
+            difficulty
+        )
+    ) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Difficulty must be easy, medium or hard."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+    if (
+        explanation.length >
+        MAX_EXPLANATION_LENGTH
+    ) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                `Explanation cannot exceed ${MAX_EXPLANATION_LENGTH} characters.`
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+    if (
+        !validateQuestionImageUrl(image_url)
+    ) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Image URL must be a valid HTTP or HTTPS URL."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+
     // -----------------------------------------
-    // VERIFY SUBJECT EXISTS
+    // VERIFY SUBJECT
     // -----------------------------------------
 
-    const subject = await env.DB.prepare(
+    const subject =
+        await env.DB.prepare(
 
-        `SELECT id
+            `SELECT
+                s.id,
+                s.status AS subject_status,
+                e.id AS exam_id,
+                e.status AS exam_status
 
-         FROM subjects
+             FROM subjects s
 
-         WHERE id = ?
+             INNER JOIN exams e
+                ON s.exam_id = e.id
 
-         AND status = 'active'`
+             WHERE s.id = ?
 
-    )
+             LIMIT 1`
 
-    .bind(subject_id)
+        )
 
-    .first();
+        .bind(subject_id)
+
+        .first();
 
     if (!subject) {
 
@@ -2125,7 +3223,8 @@ if (
 
             success: false,
 
-            message: "Selected subject does not exist."
+            message:
+                "Selected subject does not exist."
 
         }, {
 
@@ -2135,39 +3234,16 @@ if (
 
     }
 
-    // -----------------------------------------
-    // CHECK DUPLICATE QUESTION
-    // -----------------------------------------
-
-    const duplicate = await env.DB.prepare(
-
-        `SELECT id
-
-         FROM practice_questions
-
-         WHERE subject_id = ?
-
-         AND LOWER(question) = LOWER(?)`
-
-    )
-
-    .bind(
-
-        subject_id,
-
-        question.trim()
-
-    )
-
-    .first();
-
-    if (duplicate) {
+    if (
+        subject.subject_status !== "active"
+    ) {
 
         return Response.json({
 
             success: false,
 
-            message: "This question already exists for the selected subject."
+            message:
+                "Practice questions can only be added to an active subject."
 
         }, {
 
@@ -2177,97 +3253,763 @@ if (
 
     }
 
+    if (
+        subject.exam_status !== "active"
+    ) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "The selected subject belongs to an inactive exam."
+
+        }, {
+
+            status: 409
+
+        });
+
+    }
+
+
     // -----------------------------------------
-    // CREATE QUESTION
+    // DUPLICATE QUESTION
     // -----------------------------------------
 
-    const questionId = crypto.randomUUID();
+    const duplicate =
+        await env.DB.prepare(
 
-    const now = new Date().toISOString();
+            `SELECT id
+
+             FROM practice_questions
+
+             WHERE subject_id = ?
+
+             AND LOWER(TRIM(question))
+                 = LOWER(TRIM(?))
+
+             LIMIT 1`
+
+        )
+
+        .bind(
+            subject_id,
+            question
+        )
+
+        .first();
+
+    if (duplicate) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "This question already exists for the selected subject."
+
+        }, {
+
+            status: 409
+
+        });
+
+    }
+
+
+    // -----------------------------------------
+    // CREATE
+    // -----------------------------------------
+
+    const questionId =
+        crypto.randomUUID();
+
+    const now =
+        new Date().toISOString();
 
     await env.DB.prepare(
 
         `INSERT INTO practice_questions (
 
             id,
-
             subject_id,
 
             question,
-
             image_url,
 
             option_a,
-
             option_b,
-
             option_c,
-
             option_d,
 
             correct_answer,
-
             explanation,
-
             difficulty,
-
             status,
 
             created_at,
-
             updated_at
 
         )
 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        VALUES (
+            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+        )`
 
     )
 
     .bind(
 
         questionId,
-
         subject_id,
 
-        question.trim(),
+        question,
+        image_url,
 
-        image_url || "",
+        option_a,
+        option_b,
+        option_c,
+        option_d,
 
-        option_a.trim(),
-
-        option_b.trim(),
-
-        option_c.trim(),
-
-        option_d.trim(),
-
-        correct_answer.toUpperCase(),
-
-        explanation || "",
-
-        difficulty || "medium",
-
+        correct_answer,
+        explanation,
+        difficulty,
         "active",
 
         now,
-
         now
 
     )
 
     .run();
 
+
     return Response.json({
 
         success: true,
 
-        message: "Practice question created successfully.",
+        message:
+            "Practice question created successfully.",
 
         data: {
 
             id: questionId
 
         }
+
+    }, {
+
+        status: 201
+
+    });
+
+}
+
+
+// =====================================================
+// UPDATE QUESTION
+// PUT /api/admin/questions/:id
+// =====================================================
+
+if (
+
+    method === "PUT" &&
+
+    /^\/api\/admin\/questions\/[^/]+$/.test(pathname)
+
+) {
+
+    const questionId =
+        pathname.split("/").pop();
+
+    let body;
+
+    try {
+
+        body = await request.json();
+
+    }
+
+    catch {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Invalid JSON request body."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+
+    const subject_id =
+        cleanQuestionText(body.subject_id);
+
+    const question =
+        cleanQuestionText(body.question);
+
+    const image_url =
+        cleanQuestionText(body.image_url);
+
+    const option_a =
+        cleanQuestionText(body.option_a);
+
+    const option_b =
+        cleanQuestionText(body.option_b);
+
+    const option_c =
+        cleanQuestionText(body.option_c);
+
+    const option_d =
+        cleanQuestionText(body.option_d);
+
+    const correct_answer =
+        cleanQuestionText(body.correct_answer)
+            .toUpperCase();
+
+    const explanation =
+        cleanQuestionText(body.explanation);
+
+    const difficulty =
+        cleanQuestionText(body.difficulty)
+            .toLowerCase();
+
+    const status =
+        cleanQuestionText(body.status)
+            .toLowerCase();
+
+
+    // -----------------------------------------
+    // VALIDATION
+    // -----------------------------------------
+
+    if (!subject_id) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Please select a subject."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+    if (!question) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Question is required."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+    if (
+        question.length >
+        MAX_QUESTION_LENGTH
+    ) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                `Question cannot exceed ${MAX_QUESTION_LENGTH} characters.`
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+    if (
+        !option_a ||
+        !option_b ||
+        !option_c ||
+        !option_d
+    ) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "All answer options are required."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+    if (
+        !VALID_QUESTION_ANSWERS.includes(
+            correct_answer
+        )
+    ) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Correct answer must be A, B, C or D."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+    if (
+        !QUESTION_DIFFICULTIES.includes(
+            difficulty
+        )
+    ) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Difficulty must be easy, medium or hard."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+    if (
+        !QUESTION_STATUSES.includes(status)
+    ) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Status must be active or inactive."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+    if (
+        explanation.length >
+        MAX_EXPLANATION_LENGTH
+    ) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                `Explanation cannot exceed ${MAX_EXPLANATION_LENGTH} characters.`
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+    if (
+        !validateQuestionImageUrl(image_url)
+    ) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Image URL must be a valid HTTP or HTTPS URL."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+
+    // -----------------------------------------
+    // VERIFY QUESTION
+    // -----------------------------------------
+
+    const existingQuestion =
+        await env.DB.prepare(
+
+            `SELECT id
+
+             FROM practice_questions
+
+             WHERE id = ?
+
+             LIMIT 1`
+
+        )
+
+        .bind(questionId)
+
+        .first();
+
+    if (!existingQuestion) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Practice question not found."
+
+        }, {
+
+            status: 404
+
+        });
+
+    }
+
+
+    // -----------------------------------------
+    // VERIFY SUBJECT + EXAM
+    // -----------------------------------------
+
+    const subject =
+        await env.DB.prepare(
+
+            `SELECT
+                s.id,
+                s.status AS subject_status,
+                e.id AS exam_id,
+                e.status AS exam_status
+
+             FROM subjects s
+
+             INNER JOIN exams e
+                ON s.exam_id = e.id
+
+             WHERE s.id = ?
+
+             LIMIT 1`
+
+        )
+
+        .bind(subject_id)
+
+        .first();
+
+    if (!subject) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Selected subject does not exist."
+
+        }, {
+
+            status: 404
+
+        });
+
+    }
+
+    if (
+        subject.subject_status !== "active"
+    ) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Practice questions can only belong to an active subject."
+
+        }, {
+
+            status: 409
+
+        });
+
+    }
+
+    if (
+        subject.exam_status !== "active"
+    ) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "The selected subject belongs to an inactive exam."
+
+        }, {
+
+            status: 409
+
+        });
+
+    }
+
+
+    // -----------------------------------------
+    // DUPLICATE QUESTION
+    // -----------------------------------------
+
+    const duplicate =
+        await env.DB.prepare(
+
+            `SELECT id
+
+             FROM practice_questions
+
+             WHERE subject_id = ?
+
+             AND LOWER(TRIM(question))
+                 = LOWER(TRIM(?))
+
+             AND id <> ?
+
+             LIMIT 1`
+
+        )
+
+        .bind(
+
+            subject_id,
+            question,
+            questionId
+
+        )
+
+        .first();
+
+    if (duplicate) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Another identical question already exists for this subject."
+
+        }, {
+
+            status: 409
+
+        });
+
+    }
+
+
+    // -----------------------------------------
+    // UPDATE
+    // -----------------------------------------
+
+    const now =
+        new Date().toISOString();
+
+    await env.DB.prepare(
+
+        `UPDATE practice_questions
+
+         SET
+            subject_id = ?,
+            question = ?,
+            image_url = ?,
+
+            option_a = ?,
+            option_b = ?,
+            option_c = ?,
+            option_d = ?,
+
+            correct_answer = ?,
+            explanation = ?,
+            difficulty = ?,
+            status = ?,
+
+            updated_at = ?
+
+         WHERE id = ?`
+
+    )
+
+    .bind(
+
+        subject_id,
+        question,
+        image_url,
+
+        option_a,
+        option_b,
+        option_c,
+        option_d,
+
+        correct_answer,
+        explanation,
+        difficulty,
+        status,
+
+        now,
+
+        questionId
+
+    )
+
+    .run();
+
+
+    return Response.json({
+
+        success: true,
+
+        message:
+            "Practice question updated successfully."
+
+    });
+
+}
+
+
+// =====================================================
+// SOFT DELETE QUESTION
+// DELETE /api/admin/questions/:id
+// =====================================================
+
+if (
+
+    method === "DELETE" &&
+
+    /^\/api\/admin\/questions\/[^/]+$/.test(pathname)
+
+) {
+
+    const questionId =
+        pathname.split("/").pop();
+
+
+    const question =
+        await env.DB.prepare(
+
+            `SELECT
+                id,
+                status
+
+             FROM practice_questions
+
+             WHERE id = ?
+
+             LIMIT 1`
+
+        )
+
+        .bind(questionId)
+
+        .first();
+
+    if (!question) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Practice question not found."
+
+        }, {
+
+            status: 404
+
+        });
+
+    }
+
+
+    if (
+        question.status === "inactive"
+    ) {
+
+        return Response.json({
+
+            success: true,
+
+            message:
+                "Practice question is already inactive."
+
+        });
+
+    }
+
+
+    const now =
+        new Date().toISOString();
+
+    await env.DB.prepare(
+
+        `UPDATE practice_questions
+
+         SET
+            status = 'inactive',
+            updated_at = ?
+
+         WHERE id = ?`
+
+    )
+
+    .bind(
+
+        now,
+        questionId
+
+    )
+
+    .run();
+
+
+    return Response.json({
+
+        success: true,
+
+        message:
+            "Practice question deactivated successfully."
 
     });
 
@@ -2305,6 +4047,8 @@ if (
             e.name AS exam_name,
 
             r.title,
+
+            r.author,
 
             r.description,
 
@@ -2352,6 +4096,7 @@ if (
 
 }
 
+
 // -----------------------------------------
 // GET SINGLE STUDY RESOURCE
 // GET /api/admin/resources/:id
@@ -2382,6 +4127,8 @@ if (
             e.name AS exam_name,
 
             r.title,
+
+            r.author,
 
             r.description,
 
@@ -2445,6 +4192,7 @@ if (
 
 }
 
+
 // -----------------------------------------
 // ADD STUDY RESOURCE
 // POST /api/admin/resources
@@ -2466,6 +4214,8 @@ if (
 
         title,
 
+        author,
+
         description,
 
         file_url,
@@ -2476,11 +4226,12 @@ if (
 
     } = body;
 
+
     // -----------------------------------------
     // VALIDATION
     // -----------------------------------------
 
-    if (!subject_id || !subject_id.trim()) {
+    if (!subject_id || !String(subject_id).trim()) {
 
         return Response.json({
 
@@ -2496,7 +4247,7 @@ if (
 
     }
 
-    if (!title || !title.trim()) {
+    if (!title || !String(title).trim()) {
 
         return Response.json({
 
@@ -2512,13 +4263,13 @@ if (
 
     }
 
-    if (!file_url || !file_url.trim()) {
+    if (!author || !String(author).trim()) {
 
         return Response.json({
 
             success: false,
 
-            message: "File URL is required."
+            message: "Book author is required."
 
         }, {
 
@@ -2527,6 +4278,38 @@ if (
         });
 
     }
+
+
+    // -----------------------------------------
+    // FILE URL VALIDATION
+    // -----------------------------------------
+
+    if (
+
+        !file_url ||
+
+        !String(file_url).trim()
+
+    ) {
+
+        return Response.json({
+
+            success: false,
+
+            message: "Study resource file URL is required."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+
+    // -----------------------------------------
+    // FILE TYPE VALIDATION
+    // -----------------------------------------
 
     const validTypes = [
 
@@ -2540,11 +4323,19 @@ if (
 
     ];
 
+    const normalizedFileType =
+
+        String(file_type || "")
+
+            .trim()
+
+            .toLowerCase();
+
     if (
 
-        !file_type ||
+        !normalizedFileType ||
 
-        !validTypes.includes(file_type)
+        !validTypes.includes(normalizedFileType)
 
     ) {
 
@@ -2561,6 +4352,7 @@ if (
         });
 
     }
+
 
     // -----------------------------------------
     // VERIFY SUBJECT EXISTS
@@ -2598,6 +4390,7 @@ if (
 
     }
 
+
     // -----------------------------------------
     // CHECK DUPLICATE
     // -----------------------------------------
@@ -2618,7 +4411,7 @@ if (
 
         subject_id,
 
-        title.trim()
+        String(title).trim()
 
     )
 
@@ -2630,7 +4423,8 @@ if (
 
             success: false,
 
-            message: "A study resource with this title already exists."
+            message:
+                "A study resource with this title already exists."
 
         }, {
 
@@ -2640,9 +4434,11 @@ if (
 
     }
 
+
     const resourceId = crypto.randomUUID();
 
     const now = new Date().toISOString();
+
 
     // -----------------------------------------
     // CREATE RESOURCE
@@ -2657,6 +4453,8 @@ if (
             subject_id,
 
             title,
+
+            author,
 
             description,
 
@@ -2674,7 +4472,11 @@ if (
 
         )
 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        VALUES (
+
+            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+
+        )`
 
     )
 
@@ -2684,15 +4486,25 @@ if (
 
         subject_id,
 
-        title.trim(),
+        String(title).trim(),
 
-        description || "",
+        String(author).trim(),
 
-        file_url.trim(),
+        description
 
-        cover_image || "",
+            ? String(description).trim()
 
-        file_type,
+            : "",
+
+        String(file_url).trim(),
+
+        cover_image
+
+            ? String(cover_image).trim()
+
+            : "",
+
+        normalizedFileType,
 
         "active",
 
@@ -2704,11 +4516,13 @@ if (
 
     .run();
 
+
     return Response.json({
 
         success: true,
 
-        message: "Study resource created successfully.",
+        message:
+            "Study resource created successfully.",
 
         data: {
 
@@ -2716,9 +4530,14 @@ if (
 
         }
 
+    }, {
+
+        status: 201
+
     });
 
 }
+
 
 // -----------------------------------------
 // UPDATE STUDY RESOURCE
@@ -2743,6 +4562,8 @@ if (
 
         title,
 
+        author,
+
         description,
 
         file_url,
@@ -2755,11 +4576,12 @@ if (
 
     } = body;
 
+
     // -----------------------------------------
     // VALIDATION
     // -----------------------------------------
 
-    if (!subject_id || !subject_id.trim()) {
+    if (!subject_id || !String(subject_id).trim()) {
 
         return Response.json({
 
@@ -2775,7 +4597,7 @@ if (
 
     }
 
-    if (!title || !title.trim()) {
+    if (!title || !String(title).trim()) {
 
         return Response.json({
 
@@ -2791,13 +4613,13 @@ if (
 
     }
 
-    if (!file_url || !file_url.trim()) {
+    if (!author || !String(author).trim()) {
 
         return Response.json({
 
             success: false,
 
-            message: "File URL is required."
+            message: "Book author is required."
 
         }, {
 
@@ -2806,6 +4628,38 @@ if (
         });
 
     }
+
+
+    // -----------------------------------------
+    // FILE URL VALIDATION
+    // -----------------------------------------
+
+    if (
+
+        !file_url ||
+
+        !String(file_url).trim()
+
+    ) {
+
+        return Response.json({
+
+            success: false,
+
+            message: "Study resource file URL is required."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+
+    // -----------------------------------------
+    // FILE TYPE VALIDATION
+    // -----------------------------------------
 
     const validTypes = [
 
@@ -2819,11 +4673,19 @@ if (
 
     ];
 
+    const normalizedFileType =
+
+        String(file_type || "")
+
+            .trim()
+
+            .toLowerCase();
+
     if (
 
-        !file_type ||
+        !normalizedFileType ||
 
-        !validTypes.includes(file_type)
+        !validTypes.includes(normalizedFileType)
 
     ) {
 
@@ -2840,6 +4702,7 @@ if (
         });
 
     }
+
 
     if (
 
@@ -2862,6 +4725,7 @@ if (
         });
 
     }
+
 
     // -----------------------------------------
     // VERIFY RESOURCE EXISTS
@@ -2897,6 +4761,7 @@ if (
 
     }
 
+
     // -----------------------------------------
     // VERIFY SUBJECT EXISTS
     // -----------------------------------------
@@ -2909,7 +4774,7 @@ if (
 
          WHERE id = ?
 
-         AND status='active'`
+         AND status = 'active'`
 
     )
 
@@ -2933,6 +4798,7 @@ if (
 
     }
 
+
     // -----------------------------------------
     // CHECK DUPLICATE TITLE
     // -----------------------------------------
@@ -2945,9 +4811,9 @@ if (
 
          WHERE subject_id = ?
 
-         AND LOWER(title)=LOWER(?)
+         AND LOWER(title) = LOWER(?)
 
-         AND id<>?`
+         AND id <> ?`
 
     )
 
@@ -2955,7 +4821,7 @@ if (
 
         subject_id,
 
-        title.trim(),
+        String(title).trim(),
 
         resourceId
 
@@ -2969,7 +4835,8 @@ if (
 
             success: false,
 
-            message: "Another study resource with this title already exists."
+            message:
+                "Another study resource with this title already exists."
 
         }, {
 
@@ -2978,6 +4845,7 @@ if (
         });
 
     }
+
 
     // -----------------------------------------
     // UPDATE RESOURCE
@@ -2989,23 +4857,25 @@ if (
 
          SET
 
-            subject_id=?,
+            subject_id = ?,
 
-            title=?,
+            title = ?,
 
-            description=?,
+            author = ?,
 
-            file_url=?,
+            description = ?,
 
-            cover_image=?,
+            file_url = ?,
 
-            file_type=?,
+            cover_image = ?,
 
-            status=?,
+            file_type = ?,
 
-            updated_at=?
+            status = ?,
 
-         WHERE id=?`
+            updated_at = ?
+
+         WHERE id = ?`
 
     )
 
@@ -3013,15 +4883,25 @@ if (
 
         subject_id,
 
-        title.trim(),
+        String(title).trim(),
 
-        description || "",
+        String(author).trim(),
 
-        file_url.trim(),
+        description
 
-        cover_image || "",
+            ? String(description).trim()
 
-        file_type,
+            : "",
+
+        String(file_url).trim(),
+
+        cover_image
+
+            ? String(cover_image).trim()
+
+            : "",
+
+        normalizedFileType,
 
         status || "active",
 
@@ -3042,6 +4922,7 @@ if (
     });
 
 }
+
 
 // =====================================================
 // ACTIVATE / DEACTIVATE STUDY RESOURCE
@@ -3066,6 +4947,7 @@ if (
 
     const { status } = body;
 
+
     if (
 
         !status ||
@@ -3078,7 +4960,8 @@ if (
 
             success: false,
 
-            message: "Status must be 'active' or 'inactive'."
+            message:
+                "Status must be 'active' or 'inactive'."
 
         }, {
 
@@ -3088,13 +4971,14 @@ if (
 
     }
 
+
     const resource = await env.DB.prepare(
 
         `SELECT id
 
          FROM study_resources
 
-         WHERE id=?`
+         WHERE id = ?`
 
     )
 
@@ -3118,17 +5002,18 @@ if (
 
     }
 
+
     await env.DB.prepare(
 
         `UPDATE study_resources
 
          SET
 
-            status=?,
+            status = ?,
 
-            updated_at=?
+            updated_at = ?
 
-         WHERE id=?`
+         WHERE id = ?`
 
     )
 
@@ -3144,15 +5029,18 @@ if (
 
     .run();
 
+
     return Response.json({
 
         success: true,
 
-        message: `Study resource ${status} successfully.`
+        message:
+            `Study resource ${status} successfully.`
 
     });
 
 }
+
 
 // =====================================================
 // SOFT DELETE STUDY RESOURCE
@@ -3175,7 +5063,7 @@ if (
 
          FROM study_resources
 
-         WHERE id=?`
+         WHERE id = ?`
 
     )
 
@@ -3199,17 +5087,18 @@ if (
 
     }
 
+
     await env.DB.prepare(
 
         `UPDATE study_resources
 
          SET
 
-            status='inactive',
+            status = 'inactive',
 
-            updated_at=?
+            updated_at = ?
 
-         WHERE id=?`
+         WHERE id = ?`
 
     )
 
@@ -3223,16 +5112,17 @@ if (
 
     .run();
 
+
     return Response.json({
 
         success: true,
 
-        message: "Study resource deleted successfully."
+        message:
+            "Study resource deleted successfully."
 
     });
 
 }
-
 
         // =====================================================
 // STUDENT MANAGEMENT
