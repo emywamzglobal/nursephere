@@ -18,6 +18,8 @@ import documentsHandler from "./workers/documents.js";
 import profileHandler from "./workers/profile.js";
 import referralHandler from "./workers/referral.js";
 import passwordResetHandler from "./workers/password-reset.js";
+import passwordChangeHandler from "./workers/password-change.js";
+import settingsHandler from "./workers/settings.js";
 export default {
 
     async fetch(request, env, ctx) {
@@ -138,6 +140,38 @@ if (
 
     const response =
         await passwordResetHandler(
+            request,
+            env
+        );
+
+    Object.entries(
+        corsHeaders
+    ).forEach(
+        ([key, value]) => {
+
+            response.headers.set(
+                key,
+                value
+            );
+
+        }
+    );
+
+    return response;
+
+}
+
+// ======================================================
+// PASSWORD CHANGE
+// ======================================================
+
+if (
+    url.pathname === "/api/password/change" &&
+    request.method === "POST"
+) {
+
+    const response =
+        await passwordChangeHandler(
             request,
             env
         );
@@ -433,8 +467,10 @@ if (
 // -----------------------------
 if (
     url.pathname === "/api/referral" &&
-     request.method === "GET" ||
-    request.method === "POST"
+    (
+        request.method === "GET" ||
+        request.method === "POST"
+    )
 ) {
 
     const response =
@@ -487,7 +523,87 @@ if (
 
 }
 
+// ======================================================
+// STUDENT SETTINGS
+// ======================================================
 
+if (
+    url.pathname === "/api/settings" &&
+    request.method === "GET"
+) {
+
+    const response =
+        await settingsHandler(
+            request,
+            env
+        );
+
+    Object.entries(corsHeaders).forEach(
+        ([key, value]) => {
+
+            response.headers.set(
+                key,
+                value
+            );
+
+        }
+    );
+
+    return response;
+
+}
+
+if (
+    url.pathname === "/api/settings/email-preferences" &&
+    request.method === "PUT"
+) {
+
+    const response =
+        await settingsHandler(
+            request,
+            env
+        );
+
+    Object.entries(corsHeaders).forEach(
+        ([key, value]) => {
+
+            response.headers.set(
+                key,
+                value
+            );
+
+        }
+    );
+
+    return response;
+
+}
+
+if (
+    url.pathname === "/api/settings/account" &&
+    request.method === "DELETE"
+) {
+
+    const response =
+        await settingsHandler(
+            request,
+            env
+        );
+
+    Object.entries(corsHeaders).forEach(
+        ([key, value]) => {
+
+            response.headers.set(
+                key,
+                value
+            );
+
+        }
+    );
+
+    return response;
+
+}
 // -----------------------------
 // Payment Management
 // -----------------------------
