@@ -1,445 +1,177 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-
     <meta charset="UTF-8">
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Student Dashboard | Nursephere</title>
+    <title>Practice | Nursephere</title>
+    <meta name="description" content="Choose an examination and subject to practice on Nursephere.">
 
-    <meta name="description"
-        content="Nursephere Student Dashboard">
+    <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="../assets/favicon/favicon-16x16.png">
 
-    <!-- Favicon -->
-
-    <link rel="icon" type="image/png" sizes="32x32"
-        href="../assets/favicon/favicon-32x32.png">
-
-    <link rel="icon" type="image/png" sizes="16x16"
-        href="../assets/favicon/favicon-16x16.png">
-
-    <!-- Google Fonts -->
-
-    <link rel="preconnect"
-        href="https://fonts.googleapis.com">
-
-    <link rel="preconnect"
-        href="https://fonts.gstatic.com"
-        crossorigin>
-
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
-        rel="stylesheet">
-
-    <!-- Font Awesome -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     <link rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
 
-    <!-- CSS -->
-
-    <link rel="stylesheet"
-        href="../css/sidebar.css">
-
-    <link rel="stylesheet"
-        href="../css/header.css">
-
-    <link rel="stylesheet"
-        href="../css/dashboard-student.css">
-
-    <link rel="stylesheet"
-        href="../css/practice.css">
-        
-
+    <link rel="stylesheet" href="../css/sidebar.css">
+    <link rel="stylesheet" href="../css/header.css">
+    <link rel="stylesheet" href="../css/dashboard-student.css">
+    <link rel="stylesheet" href="../css/practice.css">
 </head>
 
 <body>
+<div class="student-layout">
 
-    <!-- ===================================
-            STUDENT APPLICATION LAYOUT
-    ==================================== -->
+    <aside class="student-sidebar" id="studentSidebar">
+        <div class="sidebar-brand">
+            <a href="dashboard.html" class="brand-link">
+                <img src="../assets/logo/logo.jpeg" alt="Nursephere Logo">
+                <div class="brand-text">
+                    <h2>Nursephere</h2>
+                    <span>Learn • Practice • Pass</span>
+                </div>
+            </a>
+        </div>
 
-    <div class="student-layout">
+        <div class="sidebar-section">
+            <h3 class="sidebar-title">MAIN MENU</h3>
+            <ul class="sidebar-menu">
+                <li><a href="dashboard.html"><i class="fas fa-house"></i><span>Dashboard</span></a></li>
+                <li><a href="practice.html" class="active"><i class="fas fa-book-medical"></i><span>Practice</span></a></li>
+                <li><a href="progress.html"><i class="fas fa-chart-line"></i><span>Track Progress</span></a></li>
+                <li><a href="documents.html"><i class="fas fa-folder-open"></i><span>Documents</span></a></li>
+            </ul>
+        </div>
 
-        <!-- Sidebar -->
+        <div class="sidebar-section">
+            <h3 class="sidebar-title">ACCOUNT</h3>
+            <ul class="sidebar-menu">
+                <li><a href="profile.html"><i class="fas fa-user"></i><span>Profile</span></a></li>
+                <li><a href="referral.html"><i class="fas fa-user-plus"></i><span>Referral</span></a></li>
+                <li><a href="subscription.html"><i class="fas fa-credit-card"></i><span>Subscription</span></a></li>
+                <li><a href="settings.html"><i class="fas fa-gear"></i><span>Settings</span></a></li>
+                <li><a href="../index.html" id="logoutBtn"><i class="fas fa-right-from-bracket"></i><span>Logout</span></a></li>
+            </ul>
+        </div>
 
-<aside class="student-sidebar" id="studentSidebar">
-
-    <!-- Logo -->
-    <div class="sidebar-brand">
-
-        <a href="dashboard.html" class="brand-link">
-
-            <img src="../assets/logo/logo.jpeg" alt="Nursephere Logo">
-
-            <div class="brand-text">
-                <h2>Nursephere</h2>
-                <span>Learn • Practice • Pass</span>
+        <div class="upgrade-card">
+            <div class="upgrade-icon"><i class="fas fa-crown"></i></div>
+            <div class="upgrade-text">
+                <h3>Upgrade to Premium</h3>
+                <p>Unlock unlimited questions, full mock exams, detailed analytics, and every nursing subject.</p>
             </div>
-
-        </a>
-
-    </div>
-
-    <!-- Main Navigation -->
-
-    <div class="sidebar-section">
-
-        <h3 class="sidebar-title">MAIN MENU</h3>
-
-        <ul class="sidebar-menu">
-
-            <li>
-                <a href="dashboard.html">
-                    <i class="fas fa-house"></i>
-                    <span>Dashboard</span>
-                </a>
-            </li>
-
-            <li>
-                <a href="practice.html">
-                    <i class="fas fa-book-medical"></i>
-                    <span>Practice</span>
-                </a>
-            </li>
-
-            <li>
-                <a href="progress.html">
-                    <i class="fas fa-chart-line"></i>
-                    <span>Track Progress</span>
-                </a>
-            </li>
-
-            <li>
-                <a href="documents.html">
-                    <i class="fas fa-folder-open"></i>
-                    <span>Documents</span>
-                </a>
-            </li>
-
-        </ul>
-
-    </div>
-
-    <!-- Account -->
-
-    <div class="sidebar-section">
-
-        <h3 class="sidebar-title">ACCOUNT</h3>
-
-        <ul class="sidebar-menu">
-
-            <li>
-                <a href="profile.html">
-                    <i class="fas fa-user"></i>
-                    <span>Profile</span>
-                </a>
-            </li>
-
-            <li>
-                <a href="referral.html">
-                    <i class="fas fa-user-plus"></i>
-                    <span>Referral</span>
-                </a>
-            </li>
-
-            <li>
-                <a href="subscription.html">
-                    <i class="fas fa-credit-card"></i>
-                    <span>Subscription</span>
-                </a>
-            </li>
-
-            <li>
-                <a href="settings.html">
-                    <i class="fas fa-gear"></i>
-                    <span>Settings</span>
-                </a>
-            </li>
-
-            <li>
-                <a href="../index.html" id="logoutBtn">
-                    <i class="fas fa-right-from-bracket"></i>
-                    <span>Logout</span>
-                </a>
-            </li>
-
-        </ul>
-
-    </div>
-
-    <div class="upgrade-card">
-
-        <div class="upgrade-icon">
-
-            <i class="fas fa-crown"></i>
-
+            <a href="../pricing.html" class="upgrade-btn">Upgrade Now</a>
         </div>
+    </aside>
 
-        <div class="upgrade-text">
+    <div class="student-main">
 
-            <h3>Upgrade to Premium</h3>
+        <header class="student-header">
+            <div class="header-left">
+                <button class="menu-toggle" id="menuToggle" type="button" aria-label="Open navigation">
+                    <i class="fas fa-bars"></i>
+                </button>
 
-            <p>
-
-                Unlock unlimited questions,
-                full mock exams,
-                detailed analytics,
-                and every nursing subject.
-
-            </p>
-
-        </div>
-
-        <a href="../pricing.html" class="upgrade-btn">
-
-            Upgrade Now
-
-        </a>
-
-    </div>
-
-</aside>
-
-        <!-- ===========================
-                MAIN APPLICATION
-        ============================ -->
-
-        <div class="student-main">
-
-            <!-- Header -->
-
-            <header class="student-header">
-
-    <div class="header-left">
-
-        <button class="menu-toggle" id="menuToggle">
-
-            <i class="fas fa-bars"></i>
-
-        </button>
-
-        <div class="search-box">
-
-            <i class="fas fa-search"></i>
-
-            <input
-                type="text"
-                id="searchInput"
-                placeholder="Search questions, exams or documents...">
-
-        </div>
-
-    </div>
-
-    <div class="header-right">
-
-        
-        <div class="profile-dropdown">
-
-            <button class="profile-btn" id="profileToggle">
-
-                <div class="avatar-wrapper">
-
-                    <img
-                        src="../assets/images/avatar-placeholder.png"
-                        id="studentAvatar"
-                        alt="Student">
-
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
                     <input
-                        type="file"
-                        id="avatarUpload"
-                        hidden>
-
+                        type="search"
+                        id="searchInput"
+                        autocomplete="off"
+                        placeholder="Search exams or subjects..."
+                        aria-label="Search exams or subjects">
                 </div>
-
-                <div class="profile-info">
-
-                    <h4 id="headerStudentName">
-
-                        Student
-
-                    </h4>
-
-                    <span id="studentPlan">
-
-                        Free Trial
-
-                    </span>
-
-                </div>
-
-                <i class="fas fa-chevron-down"></i>
-
-            </button>
-
-            <div class="profile-menu" id="profileMenu">
-
-                <a href="#" id="uploadPhoto">
-
-                    <i class="fas fa-camera"></i>
-
-                    Upload Photo
-
-                </a>
-
-                <a href="profile.html">
-
-                    <i class="fas fa-user"></i>
-
-                    My Profile
-
-                </a>
-
-                <a href="subscription.html">
-
-                    <i class="fas fa-credit-card"></i>
-
-                    Subscription
-
-                </a>
-
-                <a href="settings.html">
-
-                    <i class="fas fa-gear"></i>
-
-                    Settings
-
-                </a>
-
-                <hr>
-
-                <a href="../index.html" id="logoutBtn">
-
-                    <i class="fas fa-right-from-bracket"></i>
-
-                    Logout
-
-                </a>
-
             </div>
 
-        </div>
+            <div class="header-right">
+                <div class="profile-dropdown">
+                    <button class="profile-btn" id="profileToggle" type="button" aria-expanded="false">
+                        <div class="avatar-wrapper">
+                            <img src="../assets/images/avatar-placeholder.png" id="studentAvatar" alt="Student">
+                            <input type="file" id="avatarUpload" hidden>
+                        </div>
+                        <div class="profile-info">
+                            <h4 id="headerStudentName">Student</h4>
+                            <span id="studentPlan">Free Trial</span>
+                        </div>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
 
+                    <div class="profile-menu" id="profileMenu">
+                        <a href="#" id="uploadPhoto"><i class="fas fa-camera"></i>Upload Photo</a>
+                        <a href="profile.html"><i class="fas fa-user"></i>My Profile</a>
+                        <a href="subscription.html"><i class="fas fa-credit-card"></i>Subscription</a>
+                        <a href="settings.html"><i class="fas fa-gear"></i>Settings</a>
+                        <hr>
+                        <a href="../index.html" id="profileLogoutBtn"><i class="fas fa-right-from-bracket"></i>Logout</a>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="dashboard-content practice-page">
+
+            <section class="practice-hero">
+                <div>
+                    <span class="practice-eyebrow">
+                        <i class="fas fa-stethoscope"></i>
+                        Nursing Preparation
+                    </span>
+                    <h1>Practice Questions</h1>
+                    <p>
+                        Choose an examination, then select a subject to begin practicing.
+                        Everything shown here is managed from the Nursephere administration portal.
+                    </p>
+                </div>
+            </section>
+
+            <section class="practice-section" aria-labelledby="examHeading">
+                <div class="practice-section-heading">
+                    <div>
+                        <h2 id="examHeading">Select Examination</h2>
+                        <p>Only active examinations published by the administrator are displayed.</p>
+                    </div>
+                    <span class="content-count" id="examCount">0 exams</span>
+                </div>
+
+                <div id="examContainer" class="exam-container" aria-live="polite">
+                    <div class="practice-loading">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <span>Loading examinations...</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="practice-section" aria-labelledby="subjectHeading">
+                <div class="practice-section-heading">
+                    <div>
+                        <h2 id="subjectHeading">Available Subjects</h2>
+                        <p id="selectedExamText">Select an examination above to display its subjects.</p>
+                    </div>
+                    <span class="content-count" id="subjectCount">0 subjects</span>
+                </div>
+
+                <div id="subjectContainer" class="subject-container" aria-live="polite">
+                    <div class="practice-empty">
+                        <div class="empty-icon"><i class="fas fa-book-medical"></i></div>
+                        <h3>No Examination Selected</h3>
+                        <p>Your administrator-managed subjects will appear here after you select an examination.</p>
+                    </div>
+                </div>
+            </section>
+
+            <div id="practiceMessage" class="practice-message" role="alert" hidden></div>
+        </main>
     </div>
+</div>
 
-</header>
-
-            <!-- ===========================
-                    PAGE CONTENT
-            ============================ -->
-
-            <main class="dashboard-content">
-
-                <!-- =====================================================
-                    PAGE HEADER
-====================================================== -->
-
-<section class="practice-header">
-
-    <h1>
-
-        Practice Questions
-
-    </h1>
-
-    <p>
-
-        Select your examination, choose a subject and begin
-        practicing real nursing examination questions.
-
-    </p>
-
-</section>
-
-<!-- =====================================================
-                    EXAMINATION
-====================================================== -->
-
-<section class="practice-section">
-
-    <h2>
-
-        Select Examination
-
-    </h2>
-
-    <p>
-
-        Available examinations managed by the administrator.
-
-    </p>
-
-    <div id="examContainer" class="exam-container">
-
-        <!-- Dynamic exam buttons appear here -->
-
-    </div>
-
-</section>
-
-<!-- =====================================================
-                    SUBJECTS
-====================================================== -->
-
-<section class="practice-section">
-
-    <h2>
-
-        Available Subjects
-
-    </h2>
-
-    <p id="selectedExamText">
-
-        Select an examination above to display its subjects.
-
-    </p>
-
-    <div id="subjectContainer" class="subject-container">
-
-        <div class="empty-state">
-
-            <i class="fas fa-book-medical"></i>
-
-            <h3>
-
-                No Examination Selected
-
-            </h3>
-
-            <p>
-
-                Your nursing subjects will appear here
-                after selecting an examination.
-
-            </p>
-
-        </div>
-
-    </div>
-
-</section>
-            </main>
-
-        </div>
-
-    </div>
-
-    <!-- JavaScript -->
-
-    <script src="../js/student-main.js"></script>
-
-    <script src="../js/dashboard-student.js"></script>
-
-    <script src="../js/exams.js"></script>
-
-    <script src="../js/practice.js"></script>
-
-    <script src="../js/auth.js"></script>
-
+<script src="../js/student-main.js"></script>
+<script src="../js/dashboard-student.js"></script>
+<script src="../js/practice.js"></script>
+<script src="../js/auth.js"></script>
 </body>
-
 </html>
-                         `  

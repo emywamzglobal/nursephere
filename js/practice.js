@@ -1,419 +1,539 @@
 /*
 ========================================================
-    NurseSphere Student Practice Controller
+    Nursephere Student Practice Controller
+    Production version
     File: js/practice.js
 ========================================================
 */
 
 "use strict";
 
-/*========================================================
-    API ENDPOINTS
-========================================================*/
-const API_BASE =
+const PRACTICE_API_BASE =
     "https://nursephere.wamalwaemily.workers.dev/api";
-const PracticeAPI = {
 
-    exams: "https://nursephere.wamalwaemily.workers.dev/api/exams",
-
-    subjects: "https://nursephere.wamalwaemily.workers.dev/api/subjects"
-
+const practiceState = {
+    exams: [],
+    subjects: [],
+    selectedExamId: null,
+    selectedExam: null,
+    searchTerm: ""
 };
 
-/*========================================================
-    DOM ELEMENTS
-========================================================*/
+const examContainer = document.getElementById("examContainer");
+const subjectContainer = document.getElementById("subjectContainer");
+const selectedExamText = document.getElementById("selectedExamText");
+const examCount = document.getElementById("examCount");
+const subjectCount = document.getElementById("subjectCount");
+const searchInput = document.getElementById("searchInput");
+const practiceMessage = document.getElementById("practiceMessage");
 
-const examContainer =
-    document.getElementById("examContainer");
+document.addEventListener("DOMContentLoaded", initializePractice);
 
-const subjectContainer =
-    document.getElementById("subjectContainer");
+async function initializePractice() {
+    const token = localStorage.getItem("studentToken");
 
-const selectedExamText =
-    document.getElementById("selectedExamText");
-
-/*========================================================
-    STATE
-========================================================*/
-
-let selectedExamId = null;
-
-/*========================================================
-    INITIALIZE
-========================================================*/
-
-document.addEventListener(
-
-    "DOMContentLoaded",
-
-    () => {
-
-        loadExams();
-
+    if (!token) {
+        window.location.replace("../login.html");
+        return;
     }
 
-);
+    const requestedExamId =
+        new URLSearchParams(window.location.search).get("exam_id");
 
-/*========================================================
-    LOAD EXAMS
-========================================================*/
+    if (searchInput) {
+        searchInput.addEventListener("input", () => {
+            practiceState.searchTerm =
+                searchInput.value.trim().toLowerCase();
 
-async function loadExams() {
+            renderExams();
+            renderSubjects();
+        });
+    }
 
-    examContainer.innerHTML = `
+    await loadExams(requestedExamId);
+}
 
-        <div class="empty-state">
+async function apiRequest(path) {
+    const token = localStorage.getItem("studentToken");
 
-            <p>Loading examinations...</p>
+    if (!token) {
+        window.location.replace("../login.html");
+        throw new Error("Your session has expired.");
+    }
 
-        </div>
-
-    `;
+    let response;
 
     try {
+        response = await fetch(
+            `${PRACTICE_API_BASE}${path}`,
+            {
+                method: "GET",
+                headers: {
+                    "Authorization": `Bearer ${token}`,
+                    "Accept": "application/json"
+                },
+                cache: "no-store"
+            }
+        );
+    } catch (error) {
+        throw new Error("Unable to connect to Nursephere.");
+    }
 
-        const response =
-            await fetch(PracticeAPI.exams);
+    if (response.status === 401) {
+        localStorage.removeItem("studentToken");
+        localStorage.removeItem("student");
+        window.location.replace("../login.html");
+        throw new Error("Your session has expired.");
+    }
 
-        const result =
-            await response.json();
+    let result;
 
-        if (!result.success) {
+    try {
+        result = await response.json();
+    } catch {
+        throw new Error("The server returned an invalid response.");
+    }
 
-            throw new Error(
-                result.message
-            );
+    if (!response.ok || result?.success === false) {
+        throw new Error(
+            result?.message || "Unable to load practice content."
+        );
+    }
 
+    return result;
+}
+
+async function loadExams(requestedExamId = null) {
+    showExamLoading();
+    clearMessage();
+
+    try {
+        const result = await apiRequest("/exams");
+
+        practiceState.exams = normalizeArray(
+            result.exams ?? result.data ?? result.results
+        );
+
+        examCount.textContent =
+            `${practiceState.exams.length} ${practiceState.exams.length === 1 ? "exam" : "exams"}`;
+
+        renderExams();
+
+        if (!practiceState.exams.length) {
+            clearSubjects();
+            return;
         }
 
-        renderExams(result.exams);
+        const matchingExam =
+            requestedExamId
+                ? practiceState.exams.find(
+                    exam => String(getId(exam)) === String(requestedExamId)
+                )
+                : null;
 
-    }
+        const examToSelect =
+            matchingExam || practiceState.exams[0];
 
-    catch (error) {
+        selectExam(examToSelect, false);
 
-        console.error(
-            "Load Exams:",
-            error
+    } catch (error) {
+        console.error("Nursephere Practice - Exams:", error);
+        showExamError(error.message);
+        clearSubjects();
+        showMessage(
+            "We could not load the examinations. Please try again.",
+            "error"
         );
-
-        examContainer.innerHTML = `
-
-            <div class="empty-state">
-
-                <h3>
-
-                    Unable to load examinations.
-
-                </h3>
-
-                <p>
-
-                    Please try again later.
-
-                </p>
-
-            </div>
-
-        `;
-
     }
-
 }
 
-/*========================================================
-    RENDER EXAMS
-========================================================*/
+async function selectExam(exam, updateUrl = true) {
+    const examId = getId(exam);
 
-function renderExams(exams) {
+    if (!examId) return;
 
-    examContainer.innerHTML = "";
+    practiceState.selectedExamId = String(examId);
+    practiceState.selectedExam = exam;
 
-    if (!exams.length) {
-
-        examContainer.innerHTML = `
-
-            <div class="empty-state">
-
-                <i class="fas fa-file-circle-xmark"></i>
-
-                <h3>
-
-                    No examinations available.
-
-                </h3>
-
-                <p>
-
-                    The administrator has not added any examinations yet.
-
-                </p>
-
-            </div>
-
-        `;
-
-        return;
-
+    if (updateUrl) {
+        const url = new URL(window.location.href);
+        url.searchParams.set("exam_id", String(examId));
+        window.history.replaceState({}, "", url);
     }
 
-    exams.forEach(exam => {
+    selectedExamText.textContent =
+        `Subjects for ${getName(exam)}`;
 
-        const button = document.createElement("button");
-
-        button.className = "exam-card";
-
-        button.innerHTML = `
-
-            <i class="fas fa-file-medical"></i>
-
-            <span>
-
-                ${exam.name}
-
-            </span>
-
-        `;
-
-        button.addEventListener(
-
-            "click",
-
-            () => {
-
-                document
-
-                    .querySelectorAll(".exam-card")
-
-                    .forEach(card => {
-
-                        card.classList.remove("active");
-
-                    });
-
-                button.classList.add("active");
-
-                selectedExamId = exam.id;
-
-                selectedExamText.textContent =
-
-                    `Subjects for ${exam.name}`;
-
-                loadSubjects(exam.id);
-
-            }
-
-        );
-
-        examContainer.appendChild(button);
-
-    });
-
+    renderExams();
+    await loadSubjects(examId);
 }
-
-/*========================================================
-    LOAD SUBJECTS
-========================================================*/
 
 async function loadSubjects(examId) {
-
-    subjectContainer.innerHTML = `
-
-        <div class="empty-state">
-
-            <p>Loading subjects...</p>
-
-        </div>
-
-    `;
+    showSubjectLoading();
+    clearMessage();
 
     try {
+        const result =
+            await apiRequest(`/subjects?exam_id=${encodeURIComponent(examId)}`);
 
-        const response = await fetch(
-
-            `${PracticeAPI.subjects}?exam_id=${examId}`
-
+        practiceState.subjects = normalizeArray(
+            result.subjects ?? result.data ?? result.results
         );
 
-        const result = await response.json();
+        subjectCount.textContent =
+            `${practiceState.subjects.length} ${practiceState.subjects.length === 1 ? "subject" : "subjects"}`;
 
-        if (!result.success) {
+        renderSubjects();
 
-            throw new Error(
+    } catch (error) {
+        console.error("Nursephere Practice - Subjects:", error);
 
-                result.message
+        practiceState.subjects = [];
+        subjectCount.textContent = "0 subjects";
 
-            );
+        subjectContainer.innerHTML = "";
 
-        }
+        const empty = document.createElement("div");
+        empty.className = "practice-empty";
 
-        renderSubjects(result.subjects);
+        const icon = document.createElement("div");
+        icon.className = "empty-icon";
+        icon.innerHTML = '<i class="fas fa-circle-exclamation"></i>';
 
-    }
+        const title = document.createElement("h3");
+        title.textContent = "Unable to load subjects";
 
-    catch (error) {
+        const text = document.createElement("p");
+        text.textContent = error.message ||
+            "Please try again later.";
 
-        console.error(
-
-            "Load Subjects:",
-
-            error
-
+        const retry = document.createElement("button");
+        retry.type = "button";
+        retry.className = "practice-retry";
+        retry.textContent = "Try Again";
+        retry.addEventListener(
+            "click",
+            () => loadSubjects(examId)
         );
 
-        subjectContainer.innerHTML = `
+        empty.append(icon, title, text, retry);
+        subjectContainer.appendChild(empty);
 
-            <div class="empty-state">
-
-                <i class="fas fa-circle-exclamation"></i>
-
-                <h3>
-
-                    Unable to load subjects.
-
-                </h3>
-
-                <p>
-
-                    Please try again later.
-
-                </p>
-
-            </div>
-
-        `;
-
+        showMessage(
+            "The selected examination could not load its subjects.",
+            "error"
+        );
     }
-
 }
 
-/*========================================================
-    RENDER SUBJECTS
-========================================================*/
+function renderExams() {
+    examContainer.innerHTML = "";
 
-function renderSubjects(subjects) {
+    const filtered = practiceState.exams.filter(exam => {
+        if (!practiceState.searchTerm) return true;
+
+        const haystack = [
+            getName(exam),
+            exam.description || ""
+        ]
+            .join(" ")
+            .toLowerCase();
+
+        return haystack.includes(practiceState.searchTerm);
+    });
+
+    if (!filtered.length) {
+        renderNoSearchResults(
+            examContainer,
+            "No examinations match your search.",
+            "Try another examination name."
+        );
+        return;
+    }
+
+    const fragment = document.createDocumentFragment();
+
+    filtered.forEach(exam => {
+        const id = getId(exam);
+        const card = document.createElement("button");
+
+        card.type = "button";
+        card.className = "exam-card";
+
+        if (
+            practiceState.selectedExamId &&
+            String(id) === String(practiceState.selectedExamId)
+        ) {
+            card.classList.add("active");
+            card.setAttribute("aria-pressed", "true");
+        } else {
+            card.setAttribute("aria-pressed", "false");
+        }
+
+        const imageUrl = getImageUrl(exam);
+
+        if (imageUrl) {
+            const image = document.createElement("img");
+            image.src = imageUrl;
+            image.alt = "";
+            image.loading = "lazy";
+            image.className = "exam-card-image";
+            card.appendChild(image);
+        } else {
+            const icon = document.createElement("span");
+            icon.className = "exam-card-icon";
+            icon.innerHTML = '<i class="fas fa-file-medical"></i>';
+            card.appendChild(icon);
+        }
+
+        const content = document.createElement("span");
+        content.className = "exam-card-content";
+
+        const title = document.createElement("strong");
+        title.textContent = getName(exam);
+
+        const description = document.createElement("small");
+        description.textContent =
+            exam.description ||
+            "View available subjects";
+
+        content.append(title, description);
+        card.appendChild(content);
+
+        const arrow = document.createElement("i");
+        arrow.className = "fas fa-chevron-right exam-card-arrow";
+        card.appendChild(arrow);
+
+        card.addEventListener(
+            "click",
+            () => selectExam(exam)
+        );
+
+        fragment.appendChild(card);
+    });
+
+    examContainer.appendChild(fragment);
+}
+
+function renderSubjects() {
+    subjectContainer.innerHTML = "";
+
+    const filtered = practiceState.subjects.filter(subject => {
+        if (!practiceState.searchTerm) return true;
+
+        const haystack = [
+            getName(subject),
+            subject.description || ""
+        ]
+            .join(" ")
+            .toLowerCase();
+
+        return haystack.includes(practiceState.searchTerm);
+    });
+
+    if (!filtered.length) {
+        renderNoSearchResults(
+            subjectContainer,
+            practiceState.searchTerm
+                ? "No subjects match your search."
+                : "No subjects available.",
+            practiceState.searchTerm
+                ? "Try another subject name."
+                : "The administrator has not published any active subjects for this examination yet."
+        );
+        return;
+    }
+
+    const fragment = document.createDocumentFragment();
+
+    filtered.forEach(subject => {
+        const id = getId(subject);
+        const card = document.createElement("article");
+        card.className = "subject-card";
+
+        const visual = document.createElement("div");
+        visual.className = "subject-visual";
+
+        const imageUrl = getImageUrl(subject);
+
+        if (imageUrl) {
+            const image = document.createElement("img");
+            image.src = imageUrl;
+            image.alt = "";
+            image.loading = "lazy";
+            visual.appendChild(image);
+        } else {
+            visual.innerHTML = '<i class="fas fa-book-open"></i>';
+        }
+
+        const info = document.createElement("div");
+        info.className = "subject-info";
+
+        const title = document.createElement("h3");
+        title.textContent = getName(subject);
+
+        const description = document.createElement("p");
+        description.textContent =
+            subject.description ||
+            "Practice questions and study resources for this subject.";
+
+        info.append(title, description);
+
+        const actions = document.createElement("div");
+        actions.className = "subject-actions";
+
+        const practiceButton = document.createElement("a");
+        practiceButton.className = "practice-btn";
+        practiceButton.href =
+            `questions.html?subject_id=${encodeURIComponent(id)}`;
+        practiceButton.innerHTML =
+            '<i class="fas fa-clipboard-question"></i><span>Start Practice</span>';
+
+        const resourceButton = document.createElement("a");
+        resourceButton.className = "resource-btn";
+        resourceButton.href =
+            `resources.html?subject_id=${encodeURIComponent(id)}`;
+        resourceButton.innerHTML =
+            '<i class="fas fa-book-open"></i><span>Study Resources</span>';
+
+        actions.append(practiceButton, resourceButton);
+        card.append(visual, info, actions);
+
+        fragment.appendChild(card);
+    });
+
+    subjectContainer.appendChild(fragment);
+}
+
+function clearSubjects() {
+    practiceState.subjects = [];
+    practiceState.selectedExam = null;
+    practiceState.selectedExamId = null;
+    subjectCount.textContent = "0 subjects";
 
     subjectContainer.innerHTML = "";
 
-    if (!subjects.length) {
+    const empty = document.createElement("div");
+    empty.className = "practice-empty";
 
-        subjectContainer.innerHTML = `
+    const icon = document.createElement("div");
+    icon.className = "empty-icon";
+    icon.innerHTML = '<i class="fas fa-book-medical"></i>';
 
-            <div class="empty-state">
+    const title = document.createElement("h3");
+    title.textContent = "No Examination Selected";
 
-                <i class="fas fa-book-medical"></i>
+    const text = document.createElement("p");
+    text.textContent =
+        "Your administrator-managed subjects will appear here after you select an examination.";
 
-                <h3>
-
-                    No subjects available.
-
-                </h3>
-
-                <p>
-
-                    This examination does not have any subjects yet.
-
-                </p>
-
-            </div>
-
-        `;
-
-        return;
-
-    }
-
-    subjects.forEach(subject => {
-
-        const card = document.createElement("div");
-
-        card.className = "subject-card";
-
-        card.innerHTML = `
-
-            <div class="subject-info">
-
-                <h3>
-
-                    ${subject.name}
-
-                </h3>
-
-                <p>
-
-                    ${subject.description || "Begin practicing questions or open study resources."}
-
-                </p>
-
-            </div>
-
-            <div class="subject-actions">
-
-                <button
-                    class="practice-btn"
-                    data-id="${subject.id}">
-
-                    <i class="fas fa-clipboard-question"></i>
-
-                    Start Practice
-
-                </button>
-
-                <button
-                    class="resource-btn"
-                    data-id="${subject.id}">
-
-                    <i class="fas fa-book-open"></i>
-
-                    Study Resources
-
-                </button>
-
-            </div>
-
-        `;
-
-        card
-
-            .querySelector(".practice-btn")
-
-            .addEventListener(
-
-                "click",
-
-                () => {
-
-                    window.location.href =
-
-                        `questions.html?subject_id=${subject.id}`;
-
-                }
-
-            );
-
-        card
-
-            .querySelector(".resource-btn")
-
-            .addEventListener(
-
-                "click",
-
-                () => {
-
-                    window.location.href =
-
-                        `resources.html?subject_id=${subject.id}`;
-
-                }
-
-            );
-
-        subjectContainer.appendChild(card);
-
-    });
-
+    empty.append(icon, title, text);
+    subjectContainer.appendChild(empty);
 }
 
+function showExamLoading() {
+    examContainer.innerHTML = `
+        <div class="practice-loading">
+            <i class="fas fa-spinner fa-spin"></i>
+            <span>Loading examinations...</span>
+        </div>
+    `;
+}
 
+function showSubjectLoading() {
+    subjectContainer.innerHTML = `
+        <div class="practice-loading">
+            <i class="fas fa-spinner fa-spin"></i>
+            <span>Loading subjects...</span>
+        </div>
+    `;
+}
+
+function showExamError(message) {
+    examContainer.innerHTML = "";
+
+    const empty = document.createElement("div");
+    empty.className = "practice-empty";
+
+    const icon = document.createElement("div");
+    icon.className = "empty-icon";
+    icon.innerHTML = '<i class="fas fa-cloud-arrow-down"></i>';
+
+    const title = document.createElement("h3");
+    title.textContent = "Unable to load examinations";
+
+    const text = document.createElement("p");
+    text.textContent =
+        message || "Please try again later.";
+
+    const retry = document.createElement("button");
+    retry.type = "button";
+    retry.className = "practice-retry";
+    retry.textContent = "Try Again";
+    retry.addEventListener("click", () => loadExams());
+
+    empty.append(icon, title, text, retry);
+    examContainer.appendChild(empty);
+}
+
+function renderNoSearchResults(container, titleText, descriptionText) {
+    const empty = document.createElement("div");
+    empty.className = "practice-empty";
+
+    const icon = document.createElement("div");
+    icon.className = "empty-icon";
+    icon.innerHTML = '<i class="fas fa-magnifying-glass"></i>';
+
+    const title = document.createElement("h3");
+    title.textContent = titleText;
+
+    const text = document.createElement("p");
+    text.textContent = descriptionText;
+
+    empty.append(icon, title, text);
+    container.appendChild(empty);
+}
+
+function showMessage(message, type = "error") {
+    if (!practiceMessage) return;
+
+    practiceMessage.hidden = false;
+    practiceMessage.className = `practice-message ${type}`;
+    practiceMessage.textContent = message;
+}
+
+function clearMessage() {
+    if (!practiceMessage) return;
+
+    practiceMessage.hidden = true;
+    practiceMessage.textContent = "";
+}
+
+function normalizeArray(value) {
+    return Array.isArray(value) ? value.filter(Boolean) : [];
+}
+
+function getId(item) {
+    return item?.id ?? item?.exam_id ?? item?.subject_id ?? "";
+}
+
+function getName(item) {
+    return String(
+        item?.name ??
+        item?.title ??
+        item?.exam_name ??
+        item?.subject_name ??
+        "Untitled"
+    );
+}
+
+function getImageUrl(item) {
+    const value =
+        item?.image_url ??
+        item?.cover_image ??
+        "";
+
+    return typeof value === "string" && value.trim()
+        ? value.trim()
+        : "";
+}

@@ -1,447 +1,361 @@
-/* ===================================================
-                    PRACTICE PAGE
-=================================================== */
+/* ========================================================
+   Nursephere Practice Page
+   File: css/practice.css
+   ======================================================== */
 
-.practice-header{
-
-    margin-bottom:50px;
-
+.practice-page {
+    max-width: 1500px;
+    margin-inline: auto;
 }
 
-.practice-header h1{
-
-    font-size:2.5rem;
-
-    color:#0F172A;
-
-    margin-bottom:15px;
-
-    font-weight:700;
-
+.practice-hero {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 28px;
+    padding: 30px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, #0a2540 0%, #123e68 100%);
+    color: #fff;
+    box-shadow: 0 12px 35px rgba(10, 37, 64, .12);
 }
 
-.practice-header p{
-
-    max-width:700px;
-
-    color:#64748B;
-
-    line-height:1.8;
-
-    font-size:1rem;
-
+.practice-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    opacity: .85;
 }
 
-/* ===================================================
-                    SECTION
-=================================================== */
-
-.practice-section{
-
-    margin-bottom:50px;
-
+.practice-hero h1 {
+    margin: 0 0 8px;
+    font-size: clamp(28px, 4vw, 40px);
+    line-height: 1.15;
 }
 
-.practice-section h2{
-
-    font-size:1.8rem;
-
-    color:#0F172A;
-
-    margin-bottom:8px;
-
+.practice-hero p {
+    max-width: 760px;
+    margin: 0;
+    line-height: 1.7;
+    color: rgba(255,255,255,.82);
 }
 
-.practice-section>p{
-
-    color:#64748B;
-
-    margin-bottom:25px;
-
+.practice-section {
+    margin-bottom: 28px;
+    padding: 24px;
+    border: 1px solid #e8edf3;
+    border-radius: 18px;
+    background: #fff;
+    box-shadow: 0 8px 25px rgba(20, 43, 67, .05);
 }
 
-/* ===================================================
-                    EXAMS
-=================================================== */
-
-.exam-container{
-
-    display:flex;
-
-    flex-wrap:wrap;
-
-    gap:15px;
-
+.practice-section-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 20px;
 }
 
-.exam-btn{
-
-    display:flex;
-
-    align-items:center;
-
-    gap:10px;
-
-    padding:14px 26px;
-
-    border-radius:50px;
-
-    border:2px solid #2563EB;
-
-    background:#FFFFFF;
-
-    color:#2563EB;
-
-    cursor:pointer;
-
-    transition:.25s;
-
-    font-weight:600;
-
+.practice-section-heading h2 {
+    margin: 0 0 5px;
+    color: #0a2540;
+    font-size: 21px;
 }
 
-.exam-btn:hover{
-
-    background:#2563EB;
-
-    color:#FFFFFF;
-
+.practice-section-heading p {
+    margin: 0;
+    color: #6b7785;
+    font-size: 14px;
+    line-height: 1.6;
 }
 
-.exam-btn.active{
-
-    background:#2563EB;
-
-    color:#FFFFFF;
-
+.content-count {
+    flex: 0 0 auto;
+    padding: 7px 11px;
+    border-radius: 999px;
+    background: #eef5fb;
+    color: #1769aa;
+    font-size: 12px;
+    font-weight: 600;
 }
 
-.exam-btn i{
-
-    font-size:1rem;
-
+.exam-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 14px;
 }
 
-/* ===================================================
-                    SUBJECTS
-=================================================== */
-
-.subject-container{
-
-    display:grid;
-
-    grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
-
-    gap:20px;
-
+.exam-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    width: 100%;
+    padding: 16px;
+    border: 1px solid #e2e9f0;
+    border-radius: 14px;
+    background: #fff;
+    color: #0a2540;
+    text-align: left;
+    cursor: pointer;
+    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
 }
 
-.subject-card{
-
-    background:#FFFFFF;
-
-    border:1px solid #E2E8F0;
-
-    border-radius:18px;
-
-    padding:25px;
-
-    transition:.25s;
-
-    cursor:pointer;
-
+.exam-card:hover {
+    transform: translateY(-2px);
+    border-color: #9fc5e5;
+    box-shadow: 0 8px 20px rgba(10, 37, 64, .08);
 }
 
-.subject-card:hover{
-
-    transform:translateY(-5px);
-
-    border-color:#14B8A6;
-
-    box-shadow:0 15px 30px rgba(0,0,0,.08);
-
+.exam-card.active {
+    border-color: #1769aa;
+    background: #f1f8fd;
+    box-shadow: 0 0 0 2px rgba(23,105,170,.08);
 }
 
-.subject-card h3{
-
-    font-size:1.15rem;
-
-    color:#0F172A;
-
-    margin-bottom:12px;
-
+.exam-card-icon,
+.exam-card-image {
+    flex: 0 0 44px;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
 }
 
-.subject-card p{
-
-    color:#64748B;
-
-    line-height:1.6;
-
-    margin-bottom:18px;
-
+.exam-card-icon {
+    display: grid;
+    place-items: center;
+    background: #eaf4fb;
+    color: #1769aa;
+    font-size: 18px;
 }
 
-.subject-footer{
-
-    display:flex;
-
-    justify-content:space-between;
-
-    align-items:center;
-
-    border-top:1px solid #E2E8F0;
-
-    padding-top:15px;
-
+.exam-card-image {
+    object-fit: cover;
 }
 
-.subject-footer span{
-
-    color:#14B8A6;
-
-    font-weight:600;
-
+.exam-card-content {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
 }
 
-.subject-footer i{
-
-    color:#2563EB;
-
+.exam-card-content strong {
+    overflow: hidden;
+    color: #0a2540;
+    font-size: 14px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-/* ===================================================
-                    EMPTY STATE
-=================================================== */
-
-.empty-state{
-
-    grid-column:1/-1;
-
-    padding:70px 30px;
-
-    border:2px dashed #CBD5E1;
-
-    border-radius:18px;
-
-    text-align:center;
-
+.exam-card-content small {
+    margin-top: 3px;
+    overflow: hidden;
+    color: #7b8794;
+    font-size: 11px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-.empty-state i{
-
-    font-size:3.2rem;
-
-    color:#14B8A6;
-
-    margin-bottom:20px;
-
+.exam-card-arrow {
+    color: #9aa8b6;
+    font-size: 12px;
 }
 
-.empty-state h3{
-
-    color:#0F172A;
-
-    margin-bottom:12px;
-
+.subject-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+    gap: 16px;
 }
 
-.empty-state p{
-
-    color:#64748B;
-
-    max-width:420px;
-
-    margin:auto;
-
-    line-height:1.7;
-
+.subject-card {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-width: 0;
+    border: 1px solid #e5ebf1;
+    border-radius: 16px;
+    background: #fff;
+    transition: transform .18s ease, box-shadow .18s ease;
 }
 
-/* ===================================================
-                    RESPONSIVE
-=================================================== */
+.subject-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px rgba(10, 37, 64, .08);
+}
 
-@media(max-width:768px){
+.subject-visual {
+    display: grid;
+    place-items: center;
+    height: 112px;
+    overflow: hidden;
+    background: linear-gradient(135deg, #edf6fc, #f7fbfe);
+    color: #1769aa;
+    font-size: 34px;
+}
 
-    .practice-header h1{
+.subject-visual img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
 
-        font-size:2rem;
+.subject-info {
+    padding: 18px 18px 12px;
+}
 
+.subject-info h3 {
+    margin: 0 0 7px;
+    color: #0a2540;
+    font-size: 17px;
+}
+
+.subject-info p {
+    min-height: 45px;
+    margin: 0;
+    color: #6b7785;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.subject-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 9px;
+    padding: 0 18px 18px;
+}
+
+.subject-actions a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-height: 42px;
+    padding: 9px 12px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: filter .18s ease, transform .18s ease;
+}
+
+.subject-actions a:hover {
+    filter: brightness(.97);
+    transform: translateY(-1px);
+}
+
+.practice-btn {
+    background: #1769aa;
+    color: #fff;
+}
+
+.resource-btn {
+    border: 1px solid #dce6ee;
+    background: #fff;
+    color: #1769aa;
+}
+
+.practice-loading,
+.practice-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 190px;
+    padding: 25px;
+    border: 1px dashed #d9e2ea;
+    border-radius: 14px;
+    background: #fbfcfd;
+    color: #71808e;
+    text-align: center;
+}
+
+.practice-loading {
+    flex-direction: row;
+    gap: 10px;
+    min-height: 110px;
+    border-style: solid;
+}
+
+.empty-icon {
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    margin-bottom: 10px;
+    border-radius: 50%;
+    background: #edf5fb;
+    color: #1769aa;
+    font-size: 19px;
+}
+
+.practice-empty h3 {
+    margin: 0 0 6px;
+    color: #0a2540;
+    font-size: 16px;
+}
+
+.practice-empty p {
+    max-width: 520px;
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.practice-retry {
+    margin-top: 14px;
+    padding: 9px 16px;
+    border: 0;
+    border-radius: 9px;
+    background: #1769aa;
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.practice-message {
+    margin: 0 0 28px;
+    padding: 13px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+}
+
+.practice-message.error {
+    border: 1px solid #f0caca;
+    background: #fff5f5;
+    color: #a33a3a;
+}
+
+.practice-message.success {
+    border: 1px solid #c9e9d3;
+    background: #f2fbf4;
+    color: #27733c;
+}
+
+@media (max-width: 700px) {
+    .practice-hero,
+    .practice-section {
+        padding: 18px;
+        border-radius: 14px;
     }
 
-    .exam-container{
-
-        flex-direction:column;
-
+    .practice-section-heading {
+        flex-direction: column;
     }
 
-    .exam-btn{
-
-        width:100%;
-
-        justify-content:center;
-
+    .exam-container,
+    .subject-container {
+        grid-template-columns: 1fr;
     }
 
-    .subject-container{
-
-        grid-template-columns:1fr;
-
+    .subject-actions {
+        grid-template-columns: 1fr;
     }
-
-}
-
-/*========================================================
-    SUBJECT CARDS
-========================================================*/
-
-.subject-container{
-
-    display:grid;
-
-    grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
-
-    gap:24px;
-
-    margin-top:25px;
-
-}
-
-.subject-card{
-
-    background:#ffffff;
-
-    border:1px solid #e5e7eb;
-
-    border-radius:18px;
-
-    padding:24px;
-
-    display:flex;
-
-    flex-direction:column;
-
-    justify-content:space-between;
-
-    gap:20px;
-
-    box-shadow:0 10px 30px rgba(0,0,0,.05);
-
-    transition:.3s;
-
-}
-
-.subject-card:hover{
-
-    transform:translateY(-5px);
-
-    box-shadow:0 18px 40px rgba(0,0,0,.08);
-
-}
-
-.subject-info h3{
-
-    font-size:1.2rem;
-
-    color:#1e293b;
-
-    margin-bottom:10px;
-
-    font-weight:600;
-
-}
-
-.subject-info p{
-
-    color:#64748b;
-
-    line-height:1.7;
-
-    font-size:.95rem;
-
-}
-
-/*========================================================
-    ACTION BUTTONS
-========================================================*/
-
-.subject-actions{
-
-    display:flex;
-
-    gap:12px;
-
-    margin-top:auto;
-
-}
-
-.subject-actions button{
-
-    flex:1;
-
-    border:none;
-
-    border-radius:10px;
-
-    padding:12px 18px;
-
-    cursor:pointer;
-
-    font-size:.95rem;
-
-    font-weight:600;
-
-    display:flex;
-
-    align-items:center;
-
-    justify-content:center;
-
-    gap:8px;
-
-    transition:.3s;
-
-}
-
-.practice-btn{
-
-    background:#0d6efd;
-
-    color:#fff;
-
-}
-
-.practice-btn:hover{
-
-    background:#0b5ed7;
-
-}
-
-.resource-btn{
-
-    background:#f1f5f9;
-
-    color:#0f172a;
-
-}
-
-.resource-btn:hover{
-
-    background:#e2e8f0;
-
-}
-
-/*========================================================
-    MOBILE
-========================================================*/
-
-@media(max-width:768px){
-
-    .subject-actions{
-
-        flex-direction:column;
-
-    }
-
 }

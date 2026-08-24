@@ -396,6 +396,8 @@ if (
 
     url.pathname === "/api/practice" ||
 
+    url.pathname === "/api/subjects" ||
+
     (
         url.pathname.startsWith("/api/subjects/") &&
         url.pathname.endsWith("/resources")
