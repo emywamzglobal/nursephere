@@ -4,10 +4,14 @@
 
     - Plan loading
     - Student loading
-    - PayPal Hosted Fields
+    - PayPal Checkout Buttons
     - Payment order creation
     - Payment capture
     - Subscription activation
+
+    IMPORTANT:
+    PayPal handles the payment UI.
+    NurseSphere never receives or stores card details.
 =========================================================*/
 
 "use strict";
@@ -51,11 +55,11 @@ const checkoutState = {
 
     orderId: null,
 
-    hostedFields: null,
-
     isSubmitting: false,
 
-    initialized: false
+    initialized: false,
+
+    paypalRendered: false
 
 };
 
@@ -69,40 +73,48 @@ const checkoutForm =
         "checkoutForm"
     );
 
+
 const fullNameInput =
     document.getElementById(
         "fullName"
     );
+
 
 const emailInput =
     document.getElementById(
         "email"
     );
 
+
 const planName =
     document.getElementById(
         "planName"
     );
+
 
 const planDescription =
     document.getElementById(
         "planDescription"
     );
 
+
 const planDuration =
     document.getElementById(
         "planDuration"
     );
+
 
 const planPrice =
     document.getElementById(
         "planPrice"
     );
 
+
 const totalPrice =
     document.getElementById(
         "totalPrice"
     );
+
 
 const payButton =
     document.getElementById(
@@ -173,7 +185,7 @@ document.addEventListener(
 
 
 /*=========================================================
-    INITIALIZE
+    INITIALIZE CHECKOUT
 =========================================================*/
 
 async function initializeCheckout() {
@@ -187,13 +199,17 @@ async function initializeCheckout() {
     }
 
 
-    setPaymentButtonState(
+    setPayButtonPlaceholder(
         true,
         "Loading Checkout..."
     );
 
 
     try {
+
+        /*=====================================================
+            AUTHENTICATION
+        =====================================================*/
 
         checkoutState.token =
             localStorage.getItem(
@@ -211,6 +227,10 @@ async function initializeCheckout() {
 
         }
 
+
+        /*=====================================================
+            PLAN ID
+        =====================================================*/
 
         const params =
             new URLSearchParams(
@@ -232,37 +252,47 @@ async function initializeCheckout() {
                 "No subscription plan was selected."
             );
 
+
             window.location.replace(
                 "pricing.html"
             );
+
 
             return;
 
         }
 
 
+        /*=====================================================
+            LOAD STUDENT
+        =====================================================*/
+
         await loadStudent();
 
+
+        /*=====================================================
+            LOAD PLAN
+        =====================================================*/
 
         await loadPlan();
 
 
-        /*
-            Important:
-
-            Hosted Fields must only be initialized
-            after the PayPal SDK is available.
-        */
+        /*=====================================================
+            WAIT FOR PAYPAL
+        =====================================================*/
 
         await waitForPayPal();
 
 
-        await initializePayPalHostedFields();
+        /*=====================================================
+            RENDER PAYPAL BUTTONS
+        =====================================================*/
+
+        await initializePayPalButtons();
 
 
         checkoutState.initialized =
             true;
-
 
     }
 
@@ -280,7 +310,7 @@ async function initializeCheckout() {
         );
 
 
-        setPaymentButtonState(
+        setPayButtonPlaceholder(
             true,
             "Payment Unavailable"
         );
@@ -301,10 +331,12 @@ async function loadStudent() {
             "studentId"
         );
 
+
     const studentName =
         localStorage.getItem(
             "studentName"
         );
+
 
     const studentEmail =
         localStorage.getItem(
@@ -347,6 +379,7 @@ async function loadStudent() {
         studentEmail;
 
 }
+
 
 /*=========================================================
     LOAD PLAN
@@ -505,7 +538,8 @@ function waitForPayPal() {
 
                 if (
                     window.paypal &&
-                    window.paypal.HostedFields
+                    typeof window.paypal.Buttons ===
+                        "function"
                 ) {
 
                     resolve();
@@ -524,7 +558,7 @@ function waitForPayPal() {
                     reject(
 
                         new Error(
-                            "PayPal secure card fields could not be loaded."
+                            "PayPal Checkout could not be loaded."
                         )
 
                     );
@@ -551,25 +585,267 @@ function waitForPayPal() {
 
 
 /*=========================================================
-    PAYPAL HOSTED FIELDS
+    INITIALIZE PAYPAL BUTTONS
 =========================================================*/
 
-async function initializePayPalHostedFields() {
+async function initializePayPalButtons() {
 
     if (
         !window.paypal ||
-        !window.paypal.HostedFields
+        typeof window.paypal.Buttons !==
+            "function"
     ) {
 
         throw new Error(
-            "PayPal Hosted Fields are unavailable."
+            "PayPal Checkout is unavailable."
+        );
+
+    }
+
+
+    /*
+        The existing HTML contains a normal button:
+
+            #payButton
+
+        PayPal Buttons require a container.
+
+        We replace that button with a PayPal
+        rendering container.
+    */
+
+    const paypalContainer =
+        document.createElement(
+            "div"
+        );
+
+
+    paypalContainer.id =
+        "paypal-button-container";
+
+
+    paypalContainer.className =
+        "paypal-button-container";
+
+
+    payButton.replaceWith(
+        paypalContainer
+    );
+
+
+    const buttons =
+        window.paypal.Buttons({
+
+            style: {
+
+                layout:
+                    "vertical",
+
+                shape:
+                    "rect",
+
+                label:
+                    "paypal",
+
+                height:
+                    48
+
+            },
+
+
+            /*=================================================
+                CREATE ORDER
+            =================================================*/
+
+            createOrder:
+                async function () {
+
+                    if (
+                        checkoutState.isSubmitting
+                    ) {
+
+                        throw new Error(
+                            "A payment is already being processed."
+                        );
+
+                    }
+
+
+                    checkoutState.isSubmitting =
+                        true;
+
+
+                    checkoutState.orderId =
+                        null;
+
+
+                    try {
+
+                        const orderId =
+                            await createOrder();
+
+
+                        return orderId;
+
+                    }
+
+                    catch (error) {
+
+                        checkoutState.isSubmitting =
+                            false;
+
+
+                        throw error;
+
+                    }
+
+                },
+
+
+            /*=================================================
+                APPROVE PAYMENT
+            =================================================*/
+
+            onApprove:
+                async function (
+                    data
+                ) {
+
+                    try {
+
+                        if (
+                            !data ||
+                            !data.orderID
+                        ) {
+
+                            throw new Error(
+                                "PayPal did not return a valid payment order."
+                            );
+
+                        }
+
+
+                        checkoutState.orderId =
+                            data.orderID;
+
+
+                        setPaypalProcessingState();
+
+
+                        await capturePayment();
+
+                    }
+
+                    catch (error) {
+
+                        console.error(
+                            "PAYPAL APPROVAL ERROR:",
+                            error
+                        );
+
+
+                        checkoutState.orderId =
+                            null;
+
+
+                        checkoutState.isSubmitting =
+                            false;
+
+
+                        restorePaypalButtons();
+
+
+                        showError(
+                            getPaymentErrorMessage(
+                                error
+                            )
+                        );
+
+                    }
+
+                },
+
+
+            /*=================================================
+                CANCEL
+            =================================================*/
+
+            onCancel:
+                function () {
+
+                    checkoutState.orderId =
+                        null;
+
+
+                    checkoutState.isSubmitting =
+                        false;
+
+
+                    restorePaypalButtons();
+
+
+                    showError(
+                        "Payment was cancelled."
+                    );
+
+                },
+
+
+            /*=================================================
+                ERROR
+            =================================================*/
+
+            onError:
+                function (
+                    error
+                ) {
+
+                    console.error(
+                        "PAYPAL CHECKOUT ERROR:",
+                        error
+                    );
+
+
+                    checkoutState.orderId =
+                        null;
+
+
+                    checkoutState.isSubmitting =
+                        false;
+
+
+                    restorePaypalButtons();
+
+
+                    showError(
+                        getPaymentErrorMessage(
+                            error
+                        )
+                    );
+
+                }
+
+        });
+
+
+    if (
+        !buttons
+    ) {
+
+        throw new Error(
+            "Unable to initialize PayPal Checkout."
         );
 
     }
 
 
     const eligible =
-        await window.paypal.HostedFields.isEligible();
+        typeof buttons.isEligible ===
+            "function"
+
+            ? buttons.isEligible()
+
+            : true;
 
 
     if (
@@ -577,123 +853,23 @@ async function initializePayPalHostedFields() {
     ) {
 
         throw new Error(
-            "Secure card payments are unavailable."
+            "PayPal Checkout is currently unavailable."
         );
 
     }
 
 
-    /*
-        This is the important part.
-
-        The actual HTML card containers are:
-
-        #card-number
-        #expiration-date
-        #cvv
-
-        Hosted Fields injects the secure PayPal
-        card inputs into those existing elements.
-    */
-
-    checkoutState.hostedFields =
-        await window.paypal.HostedFields.render({
-
-            createOrder,
-
-            styles: {
-
-                input: {
-
-                    "font-size":
-                        "16px",
-
-                    "font-family":
-                        "Arial, sans-serif",
-
-                    color:
-                        "#1f2937"
-
-                },
-
-                ":focus": {
-
-                    color:
-                        "#111827"
-
-                },
-
-                ".invalid": {
-
-                    color:
-                        "#dc2626"
-
-                },
-
-                ".valid": {
-
-                    color:
-                        "#16a34a"
-
-                }
-
-            },
-
-            fields: {
-
-                number: {
-
-                    selector:
-                        "#card-number"
-
-                },
-
-                expirationDate: {
-
-                    selector:
-                        "#expiration-date"
-
-                },
-
-                cvv: {
-
-                    selector:
-                        "#cvv"
-
-                }
-
-            }
-
-        });
-
-
-    if (
-        !checkoutState.hostedFields
-    ) {
-
-        throw new Error(
-            "Unable to initialize secure card fields."
-        );
-
-    }
-
-
-    checkoutForm.addEventListener(
-        "submit",
-        handleCheckout
+    await buttons.render(
+        "#paypal-button-container"
     );
 
 
-    payButton.addEventListener(
-        "click",
-        handleCheckout
-    );
+    checkoutState.paypalRendered =
+        true;
 
 
-    setPaymentButtonState(
-        false,
-        "Complete Secure Payment"
-    );
+    checkoutState.initialized =
+        true;
 
 }
 
@@ -708,7 +884,10 @@ async function createOrder() {
         !checkoutState.token
     ) {
 
+        clearStudentSession();
+
         redirectToLogin();
+
 
         throw new Error(
             "Authentication required."
@@ -727,6 +906,17 @@ async function createOrder() {
 
     }
 
+
+    /*
+        IMPORTANT:
+
+        Only the plan ID is sent by the browser.
+
+        The backend must determine the authoritative
+        price, currency and plan details from the database.
+
+        The browser NEVER sends the price.
+    */
 
     const response =
         await fetch(
@@ -791,140 +981,32 @@ async function createOrder() {
 
 
 /*=========================================================
-    SUBMIT PAYMENT
-=========================================================*/
-
-async function handleCheckout(
-    event
-) {
-
-    if (
-        event
-    ) {
-
-        event.preventDefault();
-
-    }
-
-
-    if (
-        checkoutState.isSubmitting
-    ) {
-
-        return;
-
-    }
-
-
-    if (
-        !checkoutState.initialized ||
-        !checkoutState.hostedFields
-    ) {
-
-        showError(
-            "Secure card payment is not ready yet."
-        );
-
-        return;
-
-    }
-
-
-    checkoutState.isSubmitting =
-        true;
-
-
-    setPaymentButtonState(
-        true,
-        "Processing Payment..."
-    );
-
-
-    try {
-
-        const result =
-            await checkoutState.hostedFields.submit({
-
-                cardholderName:
-                    checkoutState.student.fullName ||
-                    checkoutState.student.full_name ||
-                    ""
-
-            });
-
-
-        if (
-            result?.orderID
-        ) {
-
-            checkoutState.orderId =
-                result.orderID;
-
-        }
-
-
-        if (
-            !checkoutState.orderId
-        ) {
-
-            throw new Error(
-                "Payment order was not created."
-            );
-
-        }
-
-
-        await capturePayment();
-
-    }
-
-    catch (error) {
-
-        console.error(
-            "PAYMENT ERROR:",
-            error
-        );
-
-
-        showError(
-            getPaymentErrorMessage(
-                error
-            )
-        );
-
-
-        checkoutState.orderId =
-            null;
-
-    }
-
-    finally {
-
-        checkoutState.isSubmitting =
-            false;
-
-
-        if (
-            checkoutState.initialized
-        ) {
-
-            setPaymentButtonState(
-                false,
-                "Complete Secure Payment"
-            );
-
-        }
-
-    }
-
-}
-
-
-/*=========================================================
     CAPTURE PAYMENT
 =========================================================*/
 
 async function capturePayment() {
+
+    if (
+        !checkoutState.orderId
+    ) {
+
+        throw new Error(
+            "Payment order ID is missing."
+        );
+
+    }
+
+
+    if (
+        !checkoutState.planId
+    ) {
+
+        throw new Error(
+            "Subscription plan ID is missing."
+        );
+
+    }
+
 
     const response =
         await fetch(
@@ -976,22 +1058,66 @@ async function capturePayment() {
     ) {
 
         throw new Error(
+
             result.message ||
             "Payment could not be completed."
+
         );
 
     }
 
+
+    /*
+        Backend has confirmed payment and
+        subscription activation.
+    */
 
     showSuccess(
         "Subscription activated successfully."
     );
 
 
-    setPaymentButtonState(
-        true,
-        "Payment Successful"
-    );
+    checkoutState.isSubmitting =
+        false;
+
+
+    /*
+        Disable further payment attempts.
+    */
+
+    const container =
+        document.getElementById(
+            "paypal-button-container"
+        );
+
+
+    if (
+        container
+    ) {
+
+        container.innerHTML = `
+
+            <div
+                class="payment-success"
+                style="
+                    padding:16px;
+                    text-align:center;
+                    border-radius:8px;
+                    background:#ecfdf5;
+                    color:#166534;
+                    font-weight:600;
+                "
+            >
+
+                <i class="fas fa-check-circle"></i>
+
+                Payment Successful
+
+            </div>
+
+        `;
+
+    }
 
 
     window.setTimeout(
@@ -1009,14 +1135,77 @@ async function capturePayment() {
 
 
 /*=========================================================
-    API RESPONSE
+    PAYPAL PROCESSING STATE
+=========================================================*/
+
+function setPaypalProcessingState() {
+
+    const container =
+        document.getElementById(
+            "paypal-button-container"
+        );
+
+
+    if (
+        !container
+    ) {
+
+        return;
+
+    }
+
+
+    container.style.pointerEvents =
+        "none";
+
+
+    container.style.opacity =
+        "0.6";
+
+}
+
+
+/*=========================================================
+    RESTORE PAYPAL BUTTONS
+=========================================================*/
+
+function restorePaypalButtons() {
+
+    const container =
+        document.getElementById(
+            "paypal-button-container"
+        );
+
+
+    if (
+        !container
+    ) {
+
+        return;
+
+    }
+
+
+    container.style.pointerEvents =
+        "auto";
+
+
+    container.style.opacity =
+        "1";
+
+}
+
+
+/*=========================================================
+    PARSE API RESPONSE
 =========================================================*/
 
 async function parseResponse(
     response
 ) {
 
-    let result = null;
+    let result =
+        null;
 
 
     try {
@@ -1028,7 +1217,8 @@ async function parseResponse(
 
     catch {
 
-        result = null;
+        result =
+            null;
 
     }
 
@@ -1040,6 +1230,7 @@ async function parseResponse(
         clearStudentSession();
 
         redirectToLogin();
+
 
         throw new Error(
             "Your session has expired. Please log in again."
@@ -1093,10 +1284,10 @@ async function parseResponse(
 
 
 /*=========================================================
-    BUTTON STATE
+    PAY BUTTON PLACEHOLDER
 =========================================================*/
 
-function setPaymentButtonState(
+function setPayButtonPlaceholder(
     disabled,
     text
 ) {
@@ -1112,42 +1303,6 @@ function setPaymentButtonState(
 
     payButton.disabled =
         disabled;
-
-
-    if (
-        text ===
-        "Complete Secure Payment"
-    ) {
-
-        payButton.innerHTML = `
-
-            <i class="fas fa-lock"></i>
-
-            Complete Secure Payment
-
-        `;
-
-        return;
-
-    }
-
-
-    if (
-        text ===
-        "Payment Successful"
-    ) {
-
-        payButton.innerHTML = `
-
-            <i class="fas fa-check-circle"></i>
-
-            Payment Successful
-
-        `;
-
-        return;
-
-    }
 
 
     payButton.innerHTML = `
@@ -1170,8 +1325,10 @@ function showError(
 ) {
 
     window.alert(
+
         message ||
         "Something went wrong. Please try again."
+
     );
 
 }
@@ -1186,8 +1343,10 @@ function showSuccess(
 ) {
 
     window.alert(
+
         message ||
         "Payment completed successfully."
+
     );
 
 }
@@ -1203,28 +1362,32 @@ function clearStudentSession() {
         "studentToken"
     );
 
+
     localStorage.removeItem(
         "studentId"
     );
+
 
     localStorage.removeItem(
         "studentName"
     );
 
+
     localStorage.removeItem(
         "studentEmail"
     );
 
+
     localStorage.removeItem(
         "subscriptionStatus"
     );
+
 
     localStorage.removeItem(
         "trialActive"
     );
 
 }
-
 
 
 /*=========================================================
@@ -1247,29 +1410,58 @@ function getPaymentErrorMessage(
     ) {
 
         return (
-            "Your card was declined. " +
-            "Please check your card details or use another card."
+            "Your payment was declined. " +
+            "Please try again or use another payment method."
         );
 
     }
 
 
     if (
-        /invalid card/i.test(
+        /cancel/i.test(
             message
         )
     ) {
 
         return (
-            "Please check your card details and try again."
+            "Payment was cancelled."
+        );
+
+    }
+
+
+    if (
+        /funds/i.test(
+            message
+        )
+    ) {
+
+        return (
+            "The payment could not be completed because there were insufficient funds."
+        );
+
+    }
+
+
+    if (
+        /unauthorized|authentication/i.test(
+            message
+        )
+    ) {
+
+        return (
+            "Your session has expired. Please log in again."
         );
 
     }
 
 
     return (
+
         message ||
+
         "Payment could not be completed. Please try again."
+
     );
 
 }
@@ -1299,22 +1491,32 @@ function formatCurrency(
     }
 
 
-    return new Intl.NumberFormat(
+    try {
 
-        "en-US",
+        return new Intl.NumberFormat(
 
-        {
+            "en-US",
 
-            style:
-                "currency",
+            {
 
-            currency
+                style:
+                    "currency",
 
-        }
+                currency
 
-    ).format(
-        value
-    );
+            }
+
+        ).format(
+            value
+        );
+
+    }
+
+    catch {
+
+        return `${currency} ${value.toFixed(2)}`;
+
+    }
 
 }
 
@@ -1330,22 +1532,27 @@ function escapeHtml(
     return String(
         value
     )
+
         .replace(
             /&/g,
             "&amp;"
         )
+
         .replace(
             /</g,
             "&lt;"
         )
+
         .replace(
             />/g,
             "&gt;"
         )
+
         .replace(
             /"/g,
             "&quot;"
         )
+
         .replace(
             /'/g,
             "&#039;"
