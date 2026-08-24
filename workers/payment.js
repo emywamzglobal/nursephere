@@ -699,6 +699,38 @@ async function loadPlan(
 
     }
 
+    const requestedPlan =
+        planId.trim();
+
+    // Frontend aliases → actual database plan names
+    const planAliases = {
+
+        monthly:
+            "Monthly",
+
+        yearly:
+            "Annual",
+
+        annual:
+            "Annual",
+
+        "90-day":
+            "90-Day",
+
+        "90day":
+            "90-Day",
+
+        trial:
+            "Trial"
+
+    };
+
+    const lookupPlan =
+        planAliases[
+            requestedPlan.toLowerCase()
+        ] ||
+        requestedPlan;
+
     const plan =
         await env.DB.prepare(`
 
@@ -714,12 +746,17 @@ async function loadPlan(
 
             FROM subscription_plans
 
-            WHERE id = ?
+            WHERE
+                id = ?
+                OR LOWER(name) = LOWER(?)
 
             LIMIT 1
 
         `)
-        .bind(planId.trim())
+        .bind(
+            requestedPlan,
+            lookupPlan
+        )
         .first();
 
     if (!plan) {
