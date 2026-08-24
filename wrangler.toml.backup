@@ -2,9 +2,6 @@ name = "nursephere"
 main = "worker.js"
 compatibility_date = "2026-07-11"
 
-[assets]
-directory = "."
-
 workers_dev = true
 
 [observability]
