@@ -23,6 +23,7 @@
     API communication uses:
 
         shared/api.js
+
 =========================================================
 */
 
@@ -85,7 +86,20 @@ const explanation =
 const questionsTableBody =
     document.getElementById("questionsTableBody");
 
-const importSubject =
+
+/*
+    IMPORTANT:
+
+    questions-import.js already declares its own
+    importSubject variable.
+
+    Therefore questions.js MUST NOT declare
+    importSubject.
+
+    We use a unique variable name here.
+*/
+
+const questionImportSubject =
     document.getElementById("importSubject");
 
 
@@ -102,8 +116,9 @@ document.addEventListener(
 async function initializeQuestionManagement() {
 
     /*
-        Fail early if the required shared API client
-        was not loaded before questions.js.
+    ---------------------------------------------------------
+        VERIFY SHARED API CLIENT
+    ---------------------------------------------------------
     */
 
     if (
@@ -124,6 +139,12 @@ async function initializeQuestionManagement() {
 
     }
 
+
+    /*
+    ---------------------------------------------------------
+        VERIFY REQUIRED DOM
+    ---------------------------------------------------------
+    */
 
     if (!examSelect) {
 
@@ -147,17 +168,33 @@ async function initializeQuestionManagement() {
     }
 
 
+    /*
+    ---------------------------------------------------------
+        BIND EVENTS
+    ---------------------------------------------------------
+    */
+
     bindQuestionEvents();
 
 
-    resetSubjectSelect();
+    /*
+    ---------------------------------------------------------
+        INITIAL SELECT STATE
+    ---------------------------------------------------------
+    */
 
+    resetSubjectSelect();
 
     resetImportSubject();
 
 
-    await loadExams();
+    /*
+    ---------------------------------------------------------
+        LOAD DATA
+    ---------------------------------------------------------
+    */
 
+    await loadExams();
 
     await loadQuestions();
 
@@ -211,6 +248,13 @@ async function loadExams() {
 
     try {
 
+        /*
+        -----------------------------------------------------
+            API.get automatically uses the shared API base
+            URL and handles authentication / JSON parsing.
+        -----------------------------------------------------
+        */
+
         const result =
             await API.get(
                 QUESTION_API.exams
@@ -236,6 +280,12 @@ async function loadExams() {
                 : [];
 
 
+        const activeExams =
+            exams.filter(
+                isActiveRecord
+            );
+
+
         examSelect.innerHTML = "";
 
 
@@ -246,24 +296,22 @@ async function loadExams() {
         );
 
 
-        exams
-            .filter(isActiveRecord)
-            .forEach(
-                exam => {
+        activeExams.forEach(
+            exam => {
 
-                    addOption(
-                        examSelect,
-                        exam.id,
-                        exam.name ||
-                        exam.code ||
-                        "Unnamed Exam"
-                    );
+                addOption(
+                    examSelect,
+                    exam.id,
+                    exam.name ||
+                    exam.code ||
+                    "Unnamed Exam"
+                );
 
-                }
-            );
+            }
+        );
 
 
-        if (!exams.filter(isActiveRecord).length) {
+        if (!activeExams.length) {
 
             setSelectMessage(
                 examSelect,
@@ -289,6 +337,7 @@ async function loadExams() {
 
 
         resetSubjectSelect();
+
         resetImportSubject();
 
 
@@ -315,7 +364,14 @@ async function handleExamChange() {
         ).trim();
 
 
+    /*
+    ---------------------------------------------------------
+        Clear dependent subject selectors first.
+    ---------------------------------------------------------
+    */
+
     resetSubjectSelect();
+
     resetImportSubject();
 
 
@@ -334,7 +390,7 @@ async function handleExamChange() {
 
 
 /*=========================================================
-    LOAD SUBJECTS FOR EXAM
+    LOAD SUBJECTS FOR SELECTED EXAM
 =========================================================*/
 
 async function loadSubjects(
@@ -354,10 +410,10 @@ async function loadSubjects(
     );
 
 
-    if (importSubject) {
+    if (questionImportSubject) {
 
         setSelectMessage(
-            importSubject,
+            questionImportSubject,
             "Loading Subjects..."
         );
 
@@ -367,23 +423,22 @@ async function loadSubjects(
     try {
 
         /*
-            IMPORTANT:
-
-            shared/api.js already contains:
+        -----------------------------------------------------
+            api.js already provides:
 
             https://nursephere.wamalwaemily.workers.dev/api
 
-            Therefore the endpoint here must be:
+            Therefore this endpoint is intentionally:
 
-            /admin/subjects?exam_id=...
+                /admin/subjects?exam_id=...
 
             NOT:
 
-            /api/admin/subjects
+                /api/admin/subjects
+        -----------------------------------------------------
         */
 
         const endpoint =
-
             `${QUESTION_API.subjects}?exam_id=${encodeURIComponent(
                 examId
             )}`;
@@ -416,12 +471,12 @@ async function loadSubjects(
 
         /*
         -----------------------------------------------------
-            SECURITY / DATA INTEGRITY
+            DEFENSIVE CLIENT-SIDE RELATIONSHIP CHECK
 
-            The worker already filters by exam_id.
+            The backend endpoint already filters by exam_id.
 
-            We additionally verify the returned relationship
-            on the client before displaying subjects.
+            We additionally ensure that returned subjects
+            explicitly identify the selected exam.
         -----------------------------------------------------
         */
 
@@ -430,12 +485,10 @@ async function loadSubjects(
                 subject => {
 
                     return (
-
                         String(
-                            subject.exam_id ?? ""
+                            subject?.exam_id ?? ""
                         ) ===
                         String(examId)
-
                     );
 
                 }
@@ -514,10 +567,14 @@ async function loadSubjects(
         );
 
 
-        setSelectMessage(
-            importSubject,
-            "Failed to load subjects."
-        );
+        if (questionImportSubject) {
+
+            setSelectMessage(
+                questionImportSubject,
+                "Failed to load subjects."
+            );
+
+        }
 
 
         notifyQuestionUser(
@@ -532,25 +589,25 @@ async function loadSubjects(
 
 
 /*=========================================================
-    IMPORT SUBJECTS
+    POPULATE IMPORT SUBJECTS
 =========================================================*/
 
 function populateImportSubjects(
     subjects
 ) {
 
-    if (!importSubject) {
+    if (!questionImportSubject) {
 
         return;
 
     }
 
 
-    importSubject.innerHTML = "";
+    questionImportSubject.innerHTML = "";
 
 
     addOption(
-        importSubject,
+        questionImportSubject,
         "",
         "Select Subject"
     );
@@ -563,26 +620,30 @@ function populateImportSubjects(
     }
 
 
-    subjects
-        .filter(isActiveRecord)
-        .forEach(
-            subject => {
-
-                addOption(
-                    importSubject,
-                    subject.id,
-                    subject.name ||
-                    "Unnamed Subject"
-                );
-
-            }
+    const activeSubjects =
+        subjects.filter(
+            isActiveRecord
         );
 
 
-    if (!subjects.filter(isActiveRecord).length) {
+    activeSubjects.forEach(
+        subject => {
+
+            addOption(
+                questionImportSubject,
+                subject.id,
+                subject.name ||
+                "Unnamed Subject"
+            );
+
+        }
+    );
+
+
+    if (!activeSubjects.length) {
 
         setSelectMessage(
-            importSubject,
+            questionImportSubject,
             "No active subjects found."
         );
 
@@ -610,9 +671,9 @@ async function handleQuestionSubmit(
 
 
     /*
-    -----------------------------------------------------
+    ---------------------------------------------------------
         READ EXAM
-    -----------------------------------------------------
+    ---------------------------------------------------------
     */
 
     const examId =
@@ -622,9 +683,9 @@ async function handleQuestionSubmit(
 
 
     /*
-    -----------------------------------------------------
+    ---------------------------------------------------------
         READ SUBJECT
-    -----------------------------------------------------
+    ---------------------------------------------------------
     */
 
     const subjectId =
@@ -634,9 +695,9 @@ async function handleQuestionSubmit(
 
 
     /*
-    -----------------------------------------------------
+    ---------------------------------------------------------
         READ QUESTION
-    -----------------------------------------------------
+    ---------------------------------------------------------
     */
 
     const question =
@@ -646,9 +707,9 @@ async function handleQuestionSubmit(
 
 
     /*
-    -----------------------------------------------------
-        READ ANSWER
-    -----------------------------------------------------
+    ---------------------------------------------------------
+        READ CORRECT ANSWER
+    ---------------------------------------------------------
     */
 
     const answer =
@@ -660,9 +721,9 @@ async function handleQuestionSubmit(
 
 
     /*
-    -----------------------------------------------------
+    ---------------------------------------------------------
         VALIDATE EXAM
-    -----------------------------------------------------
+    ---------------------------------------------------------
     */
 
     if (!examId) {
@@ -680,9 +741,9 @@ async function handleQuestionSubmit(
 
 
     /*
-    -----------------------------------------------------
+    ---------------------------------------------------------
         VALIDATE SUBJECT
-    -----------------------------------------------------
+    ---------------------------------------------------------
     */
 
     if (!subjectId) {
@@ -700,9 +761,9 @@ async function handleQuestionSubmit(
 
 
     /*
-    -----------------------------------------------------
+    ---------------------------------------------------------
         VALIDATE QUESTION
-    -----------------------------------------------------
+    ---------------------------------------------------------
     */
 
     if (!question) {
@@ -720,14 +781,14 @@ async function handleQuestionSubmit(
 
 
     /*
-    -----------------------------------------------------
-        BUILD PAYLOAD
-    -----------------------------------------------------
+    ---------------------------------------------------------
+        BUILD QUESTION PAYLOAD
+    ---------------------------------------------------------
 
         practice_questions stores subject_id.
 
-        exam_id is sent so the worker can verify that
-        the selected subject belongs to that exam.
+        exam_id is also sent so the worker can validate
+        the selected exam relationship.
     */
 
     const data = {
@@ -779,9 +840,9 @@ async function handleQuestionSubmit(
 
 
     /*
-    -----------------------------------------------------
-        VALIDATE OPTIONS
-    -----------------------------------------------------
+    ---------------------------------------------------------
+        VALIDATE ANSWER OPTIONS
+    ---------------------------------------------------------
     */
 
     if (
@@ -804,9 +865,9 @@ async function handleQuestionSubmit(
 
 
     /*
-    -----------------------------------------------------
+    ---------------------------------------------------------
         VALIDATE CORRECT ANSWER
-    -----------------------------------------------------
+    ---------------------------------------------------------
     */
 
     if (
@@ -842,17 +903,14 @@ async function handleQuestionSubmit(
 
 
         /*
-        -------------------------------------------------
-            IMPORTANT
+        -----------------------------------------------------
+            USE SHARED API CLIENT
 
-            API.post automatically:
+            No fetch()
+            No parseJSON()
 
-            - uses the shared BASE_URL
-            - adds JSON headers
-            - adds Authorization token
-            - parses JSON
-            - throws on HTTP errors
-        -------------------------------------------------
+            API.post handles the shared API contract.
+        -----------------------------------------------------
         */
 
         const result =
@@ -883,27 +941,26 @@ async function handleQuestionSubmit(
 
 
         /*
-        -------------------------------------------------
-            RESET QUESTION CONTENT
-        -------------------------------------------------
+        -----------------------------------------------------
+            RESET QUESTION FORM
+        -----------------------------------------------------
         */
 
         questionForm.reset();
 
 
-        resetSubjectSelect();
-
-
         /*
-        -------------------------------------------------
-            KEEP THE SELECTED EXAM
+        -----------------------------------------------------
+            RELOAD SUBJECTS FOR CURRENT EXAM
 
-            Reload its subjects so another question can
-            immediately be added under the same exam.
-        -------------------------------------------------
+            This allows another question to be entered
+            without losing the selected exam.
+        -----------------------------------------------------
         */
 
-        if (examSelect?.value) {
+        if (
+            examSelect?.value
+        ) {
 
             await loadSubjects(
                 examSelect.value
@@ -911,11 +968,19 @@ async function handleQuestionSubmit(
 
         }
 
+        else {
+
+            resetSubjectSelect();
+
+            resetImportSubject();
+
+        }
+
 
         /*
-        -------------------------------------------------
+        -----------------------------------------------------
             REFRESH QUESTION BANK
-        -------------------------------------------------
+        -----------------------------------------------------
         */
 
         await loadQuestions();
@@ -1060,7 +1125,10 @@ function renderQuestionBank(
     }
 
 
-    if (!Array.isArray(questions) || !questions.length) {
+    if (
+        !Array.isArray(questions) ||
+        !questions.length
+    ) {
 
         questionsTableBody.innerHTML = `
 
@@ -1096,7 +1164,9 @@ function renderQuestionBank(
             row.innerHTML = `
 
                 <td>
-                    ${index + 1}
+                    ${escapeQuestionHTML(
+                        index + 1
+                    )}
                 </td>
 
                 <td>
@@ -1149,6 +1219,12 @@ function renderQuestionBank(
     );
 
 
+    /*
+    ---------------------------------------------------------
+        BIND VIEW BUTTONS
+    ---------------------------------------------------------
+    */
+
     questionsTableBody
         .querySelectorAll(
             ".question-view-btn"
@@ -1174,7 +1250,7 @@ function renderQuestionBank(
 
 
 /*=========================================================
-    VIEW QUESTION
+    VIEW SINGLE QUESTION
 =========================================================*/
 
 async function viewQuestion(
@@ -1290,6 +1366,8 @@ function handleQuestionReset() {
 
             resetSubjectSelect();
 
+            resetImportSubject();
+
         },
         0
     );
@@ -1298,7 +1376,7 @@ function handleQuestionReset() {
 
 
 /*=========================================================
-    RESET SUBJECT
+    RESET MANUAL SUBJECT
 =========================================================*/
 
 function resetSubjectSelect() {
@@ -1328,18 +1406,18 @@ function resetSubjectSelect() {
 
 function resetImportSubject() {
 
-    if (!importSubject) {
+    if (!questionImportSubject) {
 
         return;
 
     }
 
 
-    importSubject.innerHTML = "";
+    questionImportSubject.innerHTML = "";
 
 
     addOption(
-        importSubject,
+        questionImportSubject,
         "",
         "Select Subject"
     );
@@ -1421,28 +1499,41 @@ function isActiveRecord(
     record
 ) {
 
-    /*
-        The admin endpoints normally return status.
+    if (!record) {
 
-        Treat missing status as active so this frontend
-        remains compatible with a valid endpoint response
-        that does not include the field.
+        return false;
+
+    }
+
+
+    /*
+        If the endpoint does not provide a status field,
+        the record is treated as active.
+
+        If status exists, only "active" is accepted.
     */
 
-    return (
-
-        !record ||
+    if (
         record.status === undefined ||
-        record.status === null ||
-        record.status === "active"
+        record.status === null
+    ) {
 
+        return true;
+
+    }
+
+
+    return (
+        String(
+            record.status
+        ).toLowerCase() === "active"
     );
 
 }
 
 
 /*=========================================================
-    BUTTON HELPERS
+    BUTTON LOADING
 =========================================================*/
 
 function setQuestionButtonLoading(
@@ -1457,7 +1548,9 @@ function setQuestionButtonLoading(
     }
 
 
-    if (!button.dataset.originalText) {
+    if (
+        !button.dataset.originalText
+    ) {
 
         button.dataset.originalText =
             button.textContent;
@@ -1474,6 +1567,10 @@ function setQuestionButtonLoading(
 
 }
 
+
+/*=========================================================
+    RESTORE BUTTON
+=========================================================*/
 
 function restoreQuestionButton(
     button,
@@ -1492,15 +1589,17 @@ function restoreQuestionButton(
 
 
     button.textContent =
-
         button.dataset.originalText ||
         fallbackText;
+
+
+    delete button.dataset.originalText;
 
 }
 
 
 /*=========================================================
-    NOTIFICATION HELPER
+    NOTIFICATION
 =========================================================*/
 
 function notifyQuestionUser(
@@ -1528,11 +1627,12 @@ function notifyQuestionUser(
 
 
     /*
-        Safe fallback if the shared notification helper
-        is unavailable.
+        Safe fallback.
     */
 
-    if (type === "error") {
+    if (
+        type === "error"
+    ) {
 
         console.error(
             message
@@ -1590,6 +1690,10 @@ function escapeQuestionHTML(
 
 }
 
+
+/*=========================================================
+    ATTRIBUTE ESCAPING
+=========================================================*/
 
 function escapeQuestionAttribute(
     value
