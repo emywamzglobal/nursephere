@@ -5927,36 +5927,10 @@ if (
 
 // =====================================================
 // STUDY RESOURCE R2 MULTIPART UPLOAD
-// =====================================================
-//
-// Large-file upload architecture:
-//
-// Browser
-//    ↓
-// /api/admin/resources/upload/init
-//    ↓
-// R2 multipart upload created
-//    ↓
-// Browser sends chunks
-//    ↓
-// /api/admin/resources/upload/part
-//    ↓
-// R2 uploadPart()
-//    ↓
-// /api/admin/resources/upload/complete
-//    ↓
-// R2 multipart upload completed
-//
-// NO APPLICATION FILE-SIZE LIMIT.
-// =====================================================
-
-
-// =====================================================
-// UPLOAD CONSTANTS
+// PRODUCTION UPLOAD PIPELINE
 // =====================================================
 
 const RESOURCE_UPLOAD_TYPES = {
-
     document: {
         bucket: "DOCUMENTS",
         folder: "study-resources/documents"
@@ -5966,16 +5940,10 @@ const RESOURCE_UPLOAD_TYPES = {
         bucket: "IMAGES",
         folder: "study-resources/covers"
     }
-
 };
 
 
-// =====================================================
-// ALLOWED DOCUMENT TYPES
-// =====================================================
-
 const RESOURCE_UPLOAD_MIME_TYPES = {
-
     pdf:
         "application/pdf",
 
@@ -5987,49 +5955,65 @@ const RESOURCE_UPLOAD_MIME_TYPES = {
 
     csv:
         "text/csv"
-
 };
 
-
-// =====================================================
-// ALLOWED COVER TYPES
-// =====================================================
 
 const RESOURCE_COVER_MIME_TYPES = {
-
-    "image/jpeg":
-        "jpg",
-
-    "image/png":
-        "png",
-
-    "image/webp":
-        "webp"
-
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp"
 };
 
 
+function resourceUploadError(message, status = 400) {
+
+    return Response.json(
+        {
+            success: false,
+            message
+        },
+        {
+            status,
+            headers: {
+                "Cache-Control": "no-store"
+            }
+        }
+    );
+
+}
+
+
+function resourceUploadSuccess(
+    message,
+    data = null,
+    status = 200
+) {
+
+    const response = {
+        success: true,
+        message
+    };
+
+    if (data !== null) {
+        response.data = data;
+    }
+
+    return Response.json(
+        response,
+        {
+            status,
+            headers: {
+                "Cache-Control": "no-store"
+            }
+        }
+    );
+
+}
+
+
 // =====================================================
-// CREATE MULTIPART UPLOAD
-//
-// POST
-// /api/admin/resources/upload/init
-//
-// Body:
-//
-// {
-//     "upload_type": "document",
-//     "file_name": "book.pdf",
-//     "content_type": "application/pdf"
-// }
-//
-// OR
-//
-// {
-//     "upload_type": "cover",
-//     "file_name": "cover.jpg",
-//     "content_type": "image/jpeg"
-// }
+// INITIALIZE MULTIPART UPLOAD
+// POST /api/admin/resources/upload/init
 // =====================================================
 
 if (
@@ -6047,84 +6031,60 @@ if (
 
     if (!body) {
 
-        return resourceJson(
-
-            false,
-
-            "Invalid JSON request body.",
-
-            null,
-
-            400
-
+        return resourceUploadError(
+            "Invalid JSON request body."
         );
 
     }
 
 
     const uploadType =
-        normalizeText(
-            body.upload_type
+        String(
+            body.upload_type ?? ""
         )
+        .trim()
         .toLowerCase();
 
 
     const fileName =
-        normalizeText(
-            body.file_name
-        );
+        String(
+            body.file_name ?? ""
+        )
+        .trim();
 
 
     const contentType =
-        normalizeText(
-            body.content_type
+        String(
+            body.content_type ?? ""
         )
+        .trim()
         .toLowerCase();
 
 
-    // -----------------------------------------
-    // VALIDATE UPLOAD TYPE
-    // -----------------------------------------
-
     if (
-
-        !RESOURCE_UPLOAD_TYPES[
-            uploadType
-        ]
-
+        !RESOURCE_UPLOAD_TYPES[uploadType]
     ) {
 
-        return resourceJson(
-
-            false,
-
-            "Invalid upload type.",
-
-            null,
-
-            400
-
+        return resourceUploadError(
+            "Invalid upload type."
         );
 
     }
 
 
-    // -----------------------------------------
-    // VALIDATE FILE NAME
-    // -----------------------------------------
-
     if (!fileName) {
 
-        return resourceJson(
+        return resourceUploadError(
+            "File name is required."
+        );
 
-            false,
+    }
 
-            "File name is required.",
 
-            null,
+    if (!contentType) {
 
-            400
-
+        return resourceUploadError(
+            "File content type is required."
         );
 
     }
@@ -6138,25 +6098,14 @@ if (
         uploadType === "document"
     ) {
 
-        const validDocumentType =
-            Object.values(
+        if (
+            !Object.values(
                 RESOURCE_UPLOAD_MIME_TYPES
-            )
-            .includes(contentType);
+            ).includes(contentType)
+        ) {
 
-
-        if (!validDocumentType) {
-
-            return resourceJson(
-
-                false,
-
-                "Unsupported study resource file type.",
-
-                null,
-
-                400
-
+            return resourceUploadError(
+                "Unsupported study resource file type."
             );
 
         }
@@ -6172,25 +6121,14 @@ if (
         uploadType === "cover"
     ) {
 
-        const validCoverType =
-            Object.keys(
+        if (
+            !Object.keys(
                 RESOURCE_COVER_MIME_TYPES
-            )
-            .includes(contentType);
+            ).includes(contentType)
+        ) {
 
-
-        if (!validCoverType) {
-
-            return resourceJson(
-
-                false,
-
-                "Only JPG, PNG and WebP cover images are supported.",
-
-                null,
-
-                400
-
+            return resourceUploadError(
+                "Only JPG, PNG and WebP cover images are supported."
             );
 
         }
@@ -6200,9 +6138,28 @@ if (
 
     try {
 
-        // -----------------------------------------
-        // UNIQUE OBJECT ID
-        // -----------------------------------------
+        const bucket =
+            uploadType === "document"
+                ? env.DOCUMENTS
+                : env.IMAGES;
+
+
+        if (!bucket) {
+
+            console.error(
+                "Missing R2 binding:",
+                uploadType === "document"
+                    ? "DOCUMENTS"
+                    : "IMAGES"
+            );
+
+            return resourceUploadError(
+                "R2 storage is not configured.",
+                500
+            );
+
+        }
+
 
         const uploadId =
             crypto.randomUUID();
@@ -6228,60 +6185,15 @@ if (
             `${RESOURCE_UPLOAD_TYPES[uploadType].folder}/${uploadId}-${safeName}`;
 
 
-        // -----------------------------------------
-        // SELECT R2 BUCKET
-        // -----------------------------------------
-
-        const bucket =
-            uploadType === "document"
-
-                ? env.DOCUMENTS
-
-                : env.IMAGES;
-
-
-        if (!bucket) {
-
-            console.error(
-                "R2 bucket binding missing:",
-                uploadType
-            );
-
-            return resourceJson(
-
-                false,
-
-                "Storage service is not configured.",
-
-                null,
-
-                500
-
-            );
-
-        }
-
-
-        // -----------------------------------------
-        // CREATE MULTIPART UPLOAD
-        // -----------------------------------------
-
         const multipartUpload =
             await bucket.createMultipartUpload(
-
                 objectKey,
-
                 {
-
                     httpMetadata: {
-
-                        contentType:
-                            contentType
-
+                        contentType
                     },
 
                     customMetadata: {
-
                         resourceUploadId:
                             uploadId,
 
@@ -6290,27 +6202,22 @@ if (
 
                         originalFileName:
                             fileName
-
                     }
-
                 }
-
             );
 
 
-        return resourceJson(
-
-            true,
-
+        return resourceUploadSuccess(
             "Multipart upload initialized successfully.",
-
             {
-
                 upload_id:
                     uploadId,
 
                 object_key:
                     objectKey,
+
+                r2_upload_id:
+                    multipartUpload.uploadId,
 
                 upload_type:
                     uploadType,
@@ -6318,32 +6225,22 @@ if (
                 content_type:
                     contentType,
 
-                r2_upload_id:
-                    multipartUpload.uploadId
-
+                original_file_name:
+                    fileName
             },
-
             201
-
         );
 
     } catch (error) {
 
         console.error(
-            "R2 multipart initialization failed:",
+            "Study resource upload initialization failed:",
             error
         );
 
-        return resourceJson(
-
-            false,
-
+        return resourceUploadError(
             "Unable to initialize file upload.",
-
-            null,
-
             500
-
         );
 
     }
@@ -6352,20 +6249,8 @@ if (
 
 
 // =====================================================
-// UPLOAD ONE PART
-//
-// PUT
-// /api/admin/resources/upload/part
-//
-// Headers:
-//
-// X-Upload-Type
-// X-Object-Key
-// X-R2-Upload-Id
-// X-Part-Number
-//
-// Body:
-// raw binary chunk
+// UPLOAD PART
+// PUT /api/admin/resources/upload/part
 // =====================================================
 
 if (
@@ -6378,64 +6263,47 @@ if (
 ) {
 
     const uploadType =
-        normalizeText(
+        String(
             request.headers.get(
                 "X-Upload-Type"
-            )
+            ) || ""
         )
+        .trim()
         .toLowerCase();
 
 
     const objectKey =
-        normalizeText(
+        String(
             request.headers.get(
                 "X-Object-Key"
-            )
-        );
+            ) || ""
+        )
+        .trim();
 
 
     const r2UploadId =
-        normalizeText(
+        String(
             request.headers.get(
                 "X-R2-Upload-Id"
-            )
-        );
+            ) || ""
+        )
+        .trim();
 
 
-    const partNumberRaw =
-        normalizeText(
+    const partNumber =
+        Number(
             request.headers.get(
                 "X-Part-Number"
             )
         );
 
 
-    const partNumber =
-        Number(partNumberRaw);
-
-
-    // -----------------------------------------
-    // VALIDATION
-    // -----------------------------------------
-
     if (
-
-        !RESOURCE_UPLOAD_TYPES[
-            uploadType
-        ]
-
+        !RESOURCE_UPLOAD_TYPES[uploadType]
     ) {
 
-        return resourceJson(
-
-            false,
-
-            "Invalid upload type.",
-
-            null,
-
-            400
-
+        return resourceUploadError(
+            "Invalid upload type."
         );
 
     }
@@ -6443,16 +6311,8 @@ if (
 
     if (!objectKey) {
 
-        return resourceJson(
-
-            false,
-
-            "Upload object key is required.",
-
-            null,
-
-            400
-
+        return resourceUploadError(
+            "Object key is required."
         );
 
     }
@@ -6460,41 +6320,20 @@ if (
 
     if (!r2UploadId) {
 
-        return resourceJson(
-
-            false,
-
-            "R2 upload ID is required.",
-
-            null,
-
-            400
-
+        return resourceUploadError(
+            "R2 upload ID is required."
         );
 
     }
 
 
     if (
-
-        !Number.isInteger(
-            partNumber
-        ) ||
-
+        !Number.isInteger(partNumber) ||
         partNumber < 1
-
     ) {
 
-        return resourceJson(
-
-            false,
-
-            "Invalid upload part number.",
-
-            null,
-
-            400
-
+        return resourceUploadError(
+            "Invalid upload part number."
         );
 
     }
@@ -6502,16 +6341,8 @@ if (
 
     if (!request.body) {
 
-        return resourceJson(
-
-            false,
-
-            "Upload part is empty.",
-
-            null,
-
-            400
-
+        return resourceUploadError(
+            "Upload part is empty."
         );
 
     }
@@ -6519,96 +6350,57 @@ if (
 
     try {
 
-        // -----------------------------------------
-        // SELECT BUCKET
-        // -----------------------------------------
-
         const bucket =
             uploadType === "document"
-
                 ? env.DOCUMENTS
-
                 : env.IMAGES;
 
 
         if (!bucket) {
 
-            return resourceJson(
-
-                false,
-
-                "Storage service is not configured.",
-
-                null,
-
+            return resourceUploadError(
+                "R2 storage is not configured.",
                 500
-
             );
 
         }
 
 
-        // -----------------------------------------
-        // UPLOAD PART
-        // -----------------------------------------
-
         const multipartUpload =
             bucket.resumeMultipartUpload(
-
                 objectKey,
-
                 r2UploadId
-
             );
 
 
         const uploadedPart =
             await multipartUpload.uploadPart(
-
                 partNumber,
-
                 request.body
-
             );
 
 
-        return resourceJson(
-
-            true,
-
+        return resourceUploadSuccess(
             "Upload part received successfully.",
-
             {
-
                 part_number:
                     partNumber,
 
                 etag:
                     uploadedPart.etag
-
-            },
-
-            200
-
+            }
         );
 
     } catch (error) {
 
         console.error(
-            "R2 multipart part upload failed:",
+            "Study resource upload part failed:",
             error
         );
 
-        return resourceJson(
-
-            false,
-
+        return resourceUploadError(
             "Unable to upload file part.",
-
-            null,
-
             500
-
         );
 
     }
@@ -6618,23 +6410,7 @@ if (
 
 // =====================================================
 // COMPLETE MULTIPART UPLOAD
-//
-// POST
-// /api/admin/resources/upload/complete
-//
-// Body:
-//
-// {
-//     "upload_type": "document",
-//     "object_key": "...",
-//     "r2_upload_id": "...",
-//     "parts": [
-//         {
-//             "part_number": 1,
-//             "etag": "..."
-//         }
-//     ]
-// }
+// POST /api/admin/resources/upload/complete
 // =====================================================
 
 if (
@@ -6652,38 +6428,33 @@ if (
 
     if (!body) {
 
-        return resourceJson(
-
-            false,
-
-            "Invalid JSON request body.",
-
-            null,
-
-            400
-
+        return resourceUploadError(
+            "Invalid JSON request body."
         );
 
     }
 
 
     const uploadType =
-        normalizeText(
-            body.upload_type
+        String(
+            body.upload_type ?? ""
         )
+        .trim()
         .toLowerCase();
 
 
     const objectKey =
-        normalizeText(
-            body.object_key
-        );
+        String(
+            body.object_key ?? ""
+        )
+        .trim();
 
 
     const r2UploadId =
-        normalizeText(
-            body.r2_upload_id
-        );
+        String(
+            body.r2_upload_id ?? ""
+        )
+        .trim();
 
 
     const rawParts =
@@ -6692,28 +6463,12 @@ if (
             : [];
 
 
-    // -----------------------------------------
-    // VALIDATE TYPE
-    // -----------------------------------------
-
     if (
-
-        !RESOURCE_UPLOAD_TYPES[
-            uploadType
-        ]
-
+        !RESOURCE_UPLOAD_TYPES[uploadType]
     ) {
 
-        return resourceJson(
-
-            false,
-
-            "Invalid upload type.",
-
-            null,
-
-            400
-
+        return resourceUploadError(
+            "Invalid upload type."
         );
 
     }
@@ -6721,16 +6476,8 @@ if (
 
     if (!objectKey) {
 
-        return resourceJson(
-
-            false,
-
-            "Object key is required.",
-
-            null,
-
-            400
-
+        return resourceUploadError(
+            "Object key is required."
         );
 
     }
@@ -6738,16 +6485,8 @@ if (
 
     if (!r2UploadId) {
 
-        return resourceJson(
-
-            false,
-
-            "R2 upload ID is required.",
-
-            null,
-
-            400
-
+        return resourceUploadError(
+            "R2 upload ID is required."
         );
 
     }
@@ -6755,50 +6494,26 @@ if (
 
     if (!rawParts.length) {
 
-        return resourceJson(
-
-            false,
-
-            "No upload parts were supplied.",
-
-            null,
-
-            400
-
+        return resourceUploadError(
+            "No upload parts were supplied."
         );
 
     }
 
 
-    // -----------------------------------------
-    // NORMALIZE PARTS
-    // -----------------------------------------
-
     const parts =
         rawParts
             .map(part => ({
-
                 partNumber:
                     Number(
                         part.part_number
                     ),
 
                 etag:
-                    normalizeText(
-                        part.etag
-                    )
-
+                    String(
+                        part.etag ?? ""
+                    ).trim()
             }))
-            .filter(
-                part =>
-                    Number.isInteger(
-                        part.partNumber
-                    ) &&
-
-                    part.partNumber > 0 &&
-
-                    part.etag
-            )
             .sort(
                 (a, b) =>
                     a.partNumber -
@@ -6806,124 +6521,97 @@ if (
             );
 
 
-    if (
-        parts.length !==
-        rawParts.length
+    for (
+        let i = 0;
+        i < parts.length;
+        i++
     ) {
 
-        return resourceJson(
+        if (
+            !Number.isInteger(
+                parts[i].partNumber
+            ) ||
+            parts[i].partNumber < 1 ||
+            !parts[i].etag
+        ) {
 
-            false,
+            return resourceUploadError(
+                "One or more upload parts are invalid."
+            );
 
-            "One or more upload parts are invalid.",
+        }
 
-            null,
 
-            400
+        if (
+            i > 0 &&
+            parts[i].partNumber ===
+                parts[i - 1].partNumber
+        ) {
 
-        );
+            return resourceUploadError(
+                "Duplicate upload part detected."
+            );
+
+        }
 
     }
 
 
     try {
 
-        // -----------------------------------------
-        // SELECT BUCKET
-        // -----------------------------------------
-
         const bucket =
             uploadType === "document"
-
                 ? env.DOCUMENTS
-
                 : env.IMAGES;
 
 
         if (!bucket) {
 
-            return resourceJson(
-
-                false,
-
-                "Storage service is not configured.",
-
-                null,
-
+            return resourceUploadError(
+                "R2 storage is not configured.",
                 500
-
             );
 
         }
 
 
-        // -----------------------------------------
-        // RESUME MULTIPART UPLOAD
-        // -----------------------------------------
-
         const multipartUpload =
             bucket.resumeMultipartUpload(
-
                 objectKey,
-
                 r2UploadId
-
             );
 
-
-        // -----------------------------------------
-        // COMPLETE
-        // -----------------------------------------
 
         const completed =
             await multipartUpload.complete(
-
                 parts
-
             );
 
 
-        // -----------------------------------------
-        // RETURN STORAGE KEY
-        // -----------------------------------------
-
-        return resourceJson(
-
-            true,
-
+        return resourceUploadSuccess(
             "File uploaded successfully.",
-
             {
-
                 object_key:
                     objectKey,
 
                 etag:
-                    completed.etag || null
+                    completed.etag || null,
 
-            },
-
-            200
-
+                upload_type:
+                    uploadType
+            }
         );
 
     } catch (error) {
 
         console.error(
-            "R2 multipart completion failed:",
+            "Study resource multipart completion failed:",
             error
         );
 
-        return resourceJson(
-
-            false,
-
+        return resourceUploadError(
             "Unable to complete file upload.",
-
-            null,
-
             500
-
         );
 
     }
@@ -6933,17 +6621,7 @@ if (
 
 // =====================================================
 // ABORT MULTIPART UPLOAD
-//
-// POST
-// /api/admin/resources/upload/abort
-//
-// Body:
-//
-// {
-//     "upload_type": "document",
-//     "object_key": "...",
-//     "r2_upload_id": "..."
-// }
+// POST /api/admin/resources/upload/abort
 // =====================================================
 
 if (
@@ -6961,58 +6639,41 @@ if (
 
     if (!body) {
 
-        return resourceJson(
-
-            false,
-
-            "Invalid JSON request body.",
-
-            null,
-
-            400
-
+        return resourceUploadError(
+            "Invalid JSON request body."
         );
 
     }
 
 
     const uploadType =
-        normalizeText(
-            body.upload_type
+        String(
+            body.upload_type ?? ""
         )
+        .trim()
         .toLowerCase();
 
 
     const objectKey =
-        normalizeText(
-            body.object_key
-        );
+        String(
+            body.object_key ?? ""
+        )
+        .trim();
 
 
     const r2UploadId =
-        normalizeText(
-            body.r2_upload_id
-        );
+        String(
+            body.r2_upload_id ?? ""
+        )
+        .trim();
 
 
     if (
-
-        !RESOURCE_UPLOAD_TYPES[
-            uploadType
-        ]
-
+        !RESOURCE_UPLOAD_TYPES[uploadType]
     ) {
 
-        return resourceJson(
-
-            false,
-
-            "Invalid upload type.",
-
-            null,
-
-            400
-
+        return resourceUploadError(
+            "Invalid upload type."
         );
 
     }
@@ -7023,16 +6684,8 @@ if (
         !r2UploadId
     ) {
 
-        return resourceJson(
-
-            false,
-
-            "Upload information is incomplete.",
-
-            null,
-
-            400
-
+        return resourceUploadError(
+            "Upload information is incomplete."
         );
 
     }
@@ -7042,24 +6695,15 @@ if (
 
         const bucket =
             uploadType === "document"
-
                 ? env.DOCUMENTS
-
                 : env.IMAGES;
 
 
         if (!bucket) {
 
-            return resourceJson(
-
-                false,
-
-                "Storage service is not configured.",
-
-                null,
-
+            return resourceUploadError(
+                "R2 storage is not configured.",
                 500
-
             );
 
         }
@@ -7067,46 +6711,28 @@ if (
 
         const multipartUpload =
             bucket.resumeMultipartUpload(
-
                 objectKey,
-
                 r2UploadId
-
             );
 
 
         await multipartUpload.abort();
 
 
-        return resourceJson(
-
-            true,
-
-            "File upload cancelled.",
-
-            null,
-
-            200
-
+        return resourceUploadSuccess(
+            "File upload cancelled."
         );
 
     } catch (error) {
 
         console.error(
-            "R2 multipart abort failed:",
+            "Study resource multipart abort failed:",
             error
         );
 
-        return resourceJson(
-
-            false,
-
+        return resourceUploadError(
             "Unable to cancel file upload.",
-
-            null,
-
             500
-
         );
 
     }
