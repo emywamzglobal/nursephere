@@ -1,7 +1,142 @@
 "use strict";
 
 /* =========================================================
+   NURSEPHERE ADMIN
    STUDY RESOURCE MANAGEMENT
+   =========================================================
+   
+   HTML ELEMENTS USED:
+
+   #examSelect
+   #subjectSelect
+   #bookTitle
+   #author
+   #description
+   #coverImage
+   #bookFile
+   #addResourceBtn
+   .form-actions .btn-success
+   .form-actions .btn-secondary
+   #resourcesTableBody
+
+   FEATURES:
+
+   - Load active exams
+   - Load active subjects by exam
+   - Add new study book
+   - Upload PDF to private R2 DOCUMENTS
+   - Upload cover to R2 IMAGES
+   - Multipart uploads for large files
+   - NO APPLICATION FILE-SIZE LIMIT
+   - Publish resource to D1
+   - Edit resource metadata
+   - Replace PDF
+   - Replace cover
+   - Activate / deactivate
+   - Soft delete
+   - Refresh library
+   - Safe HTML escaping
+   - Upload failure cleanup
+   ========================================================= */
+
+
+/* =========================================================
+   CONFIGURATION
+   ========================================================= */
+
+const RESOURCE_UPLOAD_ENDPOINT =
+    "/api/admin/resources/upload";
+
+const RESOURCE_API_ENDPOINT =
+    "/api/admin/resources";
+
+/*
+ * 10 MiB parts.
+
+ * This is NOT a file-size limit.
+ *
+ * It is simply the size of each individual
+ * multipart request sent to the Worker.
+ *
+ * The complete book can therefore be much larger.
+ */
+const MULTIPART_CHUNK_SIZE =
+    10 * 1024 * 1024;
+
+
+/* =========================================================
+   STATE
+   ========================================================= */
+
+let editingResourceId = null;
+
+let resourcesCache = [];
+
+let isSaving = false;
+
+
+/* =========================================================
+   DOM ELEMENTS
+   ========================================================= */
+
+const examSelect =
+    document.getElementById(
+        "examSelect"
+    );
+
+const subjectSelect =
+    document.getElementById(
+        "subjectSelect"
+    );
+
+const bookTitle =
+    document.getElementById(
+        "bookTitle"
+    );
+
+const author =
+    document.getElementById(
+        "author"
+    );
+
+const description =
+    document.getElementById(
+        "description"
+    );
+
+const coverImage =
+    document.getElementById(
+        "coverImage"
+    );
+
+const bookFile =
+    document.getElementById(
+        "bookFile"
+    );
+
+const resourcesTableBody =
+    document.getElementById(
+        "resourcesTableBody"
+    );
+
+const addResourceBtn =
+    document.getElementById(
+        "addResourceBtn"
+    );
+
+const saveButton =
+    document.querySelector(
+        ".form-actions .btn-success"
+    );
+
+const clearButton =
+    document.querySelector(
+        ".form-actions .btn-secondary"
+    );
+
+
+/* =========================================================
+   INITIALIZATION
    ========================================================= */
 
 document.addEventListener(
@@ -10,53 +145,11 @@ document.addEventListener(
 );
 
 
-/* =========================================================
-   STATE
-   ========================================================= */
-
-let editingResourceId = null;
-let resourcesCache = [];
-
-
-/* =========================================================
-   DOM ELEMENTS
-   ========================================================= */
-
-const examSelect =
-    document.getElementById("examSelect");
-
-const subjectSelect =
-    document.getElementById("subjectSelect");
-
-const bookTitle =
-    document.getElementById("bookTitle");
-
-const author =
-    document.getElementById("author");
-
-const description =
-    document.getElementById("description");
-
-const coverImage =
-    document.getElementById("coverImage");
-
-const bookFile =
-    document.getElementById("bookFile");
-
-const resourcesTableBody =
-    document.getElementById("resourcesTableBody");
-
-const addResourceBtn =
-    document.getElementById("addResourceBtn");
-
-
-/* =========================================================
-   INITIALIZE
-   ========================================================= */
-
 async function initializePage() {
 
     try {
+
+        verifyRequiredElements();
 
         bindEvents();
 
@@ -67,14 +160,71 @@ async function initializePage() {
     } catch (error) {
 
         console.error(
-            "Resource page initialization failed:",
+            "Study Resource initialization failed:",
             error
         );
 
         showMessage(
             error.message ||
-            "Failed to initialize study resources.",
+            "Failed to initialize Study Resources.",
             "error"
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   VERIFY HTML
+   ========================================================= */
+
+function verifyRequiredElements() {
+
+    const requiredElements = [
+
+        ["examSelect", examSelect],
+
+        ["subjectSelect", subjectSelect],
+
+        ["bookTitle", bookTitle],
+
+        ["author", author],
+
+        ["description", description],
+
+        ["coverImage", coverImage],
+
+        ["bookFile", bookFile],
+
+        ["resourcesTableBody", resourcesTableBody],
+
+        ["addResourceBtn", addResourceBtn],
+
+        ["saveButton", saveButton],
+
+        ["clearButton", clearButton]
+
+    ];
+
+
+    const missing =
+        requiredElements
+            .filter(
+                ([, element]) =>
+                    !element
+            )
+            .map(
+                ([name]) =>
+                    name
+            );
+
+
+    if (missing.length) {
+
+        throw new Error(
+            "Study Resources page is missing required HTML elements: " +
+            missing.join(", ")
         );
 
     }
@@ -88,94 +238,73 @@ async function initializePage() {
 
 function bindEvents() {
 
-    if (examSelect) {
+    examSelect.addEventListener(
+        "change",
+        handleExamChange
+    );
 
-        examSelect.addEventListener(
-            "change",
-            handleExamChange
-        );
 
-    }
+    subjectSelect.addEventListener(
+        "change",
+        clearValidation
+    );
 
-    if (subjectSelect) {
 
-        subjectSelect.addEventListener(
-            "change",
-            clearValidation
-        );
+    bookTitle.addEventListener(
+        "input",
+        clearValidation
+    );
 
-    }
 
-    if (bookTitle) {
+    author.addEventListener(
+        "input",
+        clearValidation
+    );
 
-        bookTitle.addEventListener(
-            "input",
-            clearValidation
-        );
 
-    }
+    description.addEventListener(
+        "input",
+        clearValidation
+    );
 
-    if (bookFile) {
 
-        bookFile.addEventListener(
-            "change",
-            handleBookFileChange
-        );
+    bookFile.addEventListener(
+        "change",
+        handleBookFileChange
+    );
 
-    }
 
-    if (coverImage) {
+    coverImage.addEventListener(
+        "change",
+        handleCoverChange
+    );
 
-        coverImage.addEventListener(
-            "change",
-            handleCoverChange
-        );
 
-    }
+    addResourceBtn.addEventListener(
+        "click",
+        focusResourceForm
+    );
 
-    if (addResourceBtn) {
 
-        addResourceBtn.addEventListener(
-            "click",
-            focusResourceForm
-        );
+    saveButton.addEventListener(
+        "click",
+        handleSaveResource
+    );
 
-    }
+
+    clearButton.addEventListener(
+        "click",
+        handleClear
+    );
+
 
     /*
-     * The supplied HTML does not wrap the Book Details
-     * fields in a <form>.
-     *
-     * Therefore we handle the Save Book button directly.
+     * Event delegation for table actions.
      */
-
-    const saveButton =
-        document.querySelector(
-            ".form-actions .btn-success"
-        );
-
-    if (saveButton) {
-
-        saveButton.addEventListener(
-            "click",
-            handleSaveResource
-        );
-
-    }
-
-    const clearButton =
-        document.querySelector(
-            ".form-actions .btn-secondary"
-        );
-
-    if (clearButton) {
-
-        clearButton.addEventListener(
-            "click",
-            handleClear
-        );
-
-    }
+    resourcesTableBody.addEventListener(
+        "click",
+        handleTableAction
+    );
 
 }
 
@@ -191,6 +320,7 @@ async function loadExams() {
         "Loading Exams..."
     );
 
+
     try {
 
         const response =
@@ -198,13 +328,18 @@ async function loadExams() {
                 "/api/admin/exams"
             );
 
+
         const result =
-            await parseResponse(response);
+            await parseResponse(
+                response
+            );
+
 
         const exams =
             Array.isArray(result.data)
                 ? result.data
                 : [];
+
 
         examSelect.innerHTML = `
             <option value="">
@@ -212,37 +347,51 @@ async function loadExams() {
             </option>
         `;
 
+
         exams
             .filter(
                 exam =>
-                    exam.status === "active"
+                    exam.status ===
+                    "active"
             )
             .forEach(
                 exam => {
 
-                    examSelect.insertAdjacentHTML(
-                        "beforeend",
-                        `
-                        <option value="${escapeAttribute(exam.id)}">
-                            ${escapeHtml(exam.name)}
-                        </option>
-                        `
+                    const option =
+                        document.createElement(
+                            "option"
+                        );
+
+                    option.value =
+                        String(
+                            exam.id
+                        );
+
+                    option.textContent =
+                        exam.name ||
+                        "Unnamed Exam";
+
+                    examSelect.appendChild(
+                        option
                     );
 
                 }
             );
 
+
     } catch (error) {
 
         console.error(
-            "Load exams:",
+            "Load exams failed:",
             error
         );
+
 
         setSelectError(
             examSelect,
             "Failed to load exams"
         );
+
 
         throw error;
 
@@ -257,10 +406,14 @@ async function loadExams() {
 
 async function handleExamChange() {
 
+    clearValidation();
+
+    resetSubjectSelect();
+
+
     const examId =
         examSelect.value;
 
-    resetSubjectSelect();
 
     if (!examId) {
 
@@ -268,51 +421,70 @@ async function handleExamChange() {
 
     }
 
-    await loadSubjects(examId);
+
+    await loadSubjects(
+        examId
+    );
 
 }
 
 
 /* =========================================================
-   LOAD SUBJECTS FOR SELECTED EXAM
+   LOAD SUBJECTS
    ========================================================= */
 
-async function loadSubjects(examId) {
+async function loadSubjects(
+    examId
+) {
 
     setSelectLoading(
         subjectSelect,
         "Loading Subjects..."
     );
 
+
     try {
 
         const response =
             await fetch(
-                `/api/admin/subjects?exam_id=${encodeURIComponent(examId)}`
+                `/api/admin/subjects?exam_id=${encodeURIComponent(
+                    examId
+                )}`
             );
 
+
         const result =
-            await parseResponse(response);
+            await parseResponse(
+                response
+            );
+
 
         let subjects =
             Array.isArray(result.data)
                 ? result.data
                 : [];
 
-        /*
-         * The endpoint may return all subjects.
-         * Filter again client-side to guarantee that
-         * only subjects belonging to the selected exam
-         * appear in this form.
-         */
 
+        /*
+         * Client-side protection:
+         * only show subjects belonging
+         * to selected exam and active subjects.
+         */
         subjects =
             subjects.filter(
                 subject =>
-                    String(subject.exam_id) ===
-                    String(examId) &&
-                    subject.status === "active"
+
+                    String(
+                        subject.exam_id
+                    ) ===
+                    String(
+                        examId
+                    ) &&
+
+                    subject.status ===
+                    "active"
             );
+
 
         subjectSelect.innerHTML = `
             <option value="">
@@ -320,20 +492,31 @@ async function loadSubjects(examId) {
             </option>
         `;
 
+
         subjects.forEach(
             subject => {
 
-                subjectSelect.insertAdjacentHTML(
-                    "beforeend",
-                    `
-                    <option value="${escapeAttribute(subject.id)}">
-                        ${escapeHtml(subject.name)}
-                    </option>
-                    `
+                const option =
+                    document.createElement(
+                        "option"
+                    );
+
+                option.value =
+                    String(
+                        subject.id
+                    );
+
+                option.textContent =
+                    subject.name ||
+                    "Unnamed Subject";
+
+                subjectSelect.appendChild(
+                    option
                 );
 
             }
         );
+
 
         if (!subjects.length) {
 
@@ -345,16 +528,25 @@ async function loadSubjects(examId) {
 
         }
 
+
     } catch (error) {
 
         console.error(
-            "Load subjects:",
+            "Load subjects failed:",
             error
         );
+
 
         setSelectError(
             subjectSelect,
             "Failed to load subjects"
+        );
+
+
+        showMessage(
+            error.message ||
+            "Failed to load subjects.",
+            "error"
         );
 
     }
@@ -370,29 +562,39 @@ async function loadResources() {
 
     setTableLoading();
 
+
     try {
 
         const response =
             await fetch(
-                "/api/admin/resources"
+                RESOURCE_API_ENDPOINT
             );
 
+
         const result =
-            await parseResponse(response);
+            await parseResponse(
+                response
+            );
+
 
         resourcesCache =
-            Array.isArray(result.data)
+            Array.isArray(
+                result.data
+            )
                 ? result.data
                 : [];
 
+
         renderResources();
+
 
     } catch (error) {
 
         console.error(
-            "Load resources:",
+            "Load resources failed:",
             error
         );
+
 
         resourcesTableBody.innerHTML = `
             <tr>
@@ -401,6 +603,7 @@ async function loadResources() {
                 </td>
             </tr>
         `;
+
 
         showMessage(
             error.message ||
@@ -419,7 +622,9 @@ async function loadResources() {
 
 function renderResources() {
 
-    if (!resourcesCache.length) {
+    if (
+        !resourcesCache.length
+    ) {
 
         resourcesTableBody.innerHTML = `
             <tr>
@@ -433,10 +638,14 @@ function renderResources() {
 
     }
 
+
     resourcesTableBody.innerHTML =
         resourcesCache
             .map(
-                (resource, index) =>
+                (
+                    resource,
+                    index
+                ) =>
                     createResourceRow(
                         resource,
                         index
@@ -456,26 +665,57 @@ function createResourceRow(
     index
 ) {
 
+    const title =
+        resource.title ||
+        "Untitled Book";
+
+
+    const authorName =
+        resource.author ||
+        "—";
+
+
+    const examName =
+        resource.exam_name ||
+        "—";
+
+
+    const subjectName =
+        resource.subject_name ||
+        "—";
+
+
+    const status =
+        resource.status ===
+        "active";
+
+
     const cover =
         resource.cover_image
             ? `
                 <img
-                    src="${escapeAttribute(resource.cover_image)}"
-                    alt="${escapeAttribute(resource.title || "Book cover")}"
+                    src="${escapeAttribute(
+                        resource.cover_image
+                    )}"
+                    alt="${escapeAttribute(
+                        title
+                    )}"
                     class="resource-cover"
                     loading="lazy"
                 >
-              `
+            `
             : `
-                <div class="resource-cover-placeholder">
-                    <i class="fas fa-book"></i>
+                <div
+                    class="resource-cover-placeholder"
+                    aria-label="No cover image"
+                >
+                    <i
+                        class="fas fa-book"
+                        aria-hidden="true"
+                    ></i>
                 </div>
-              `;
+            `;
 
-    const status =
-        resource.status === "active"
-            ? `<span class="status-active">Active</span>`
-            : `<span class="status-inactive">Inactive</span>`;
 
     return `
         <tr>
@@ -487,78 +727,112 @@ function createResourceRow(
             <td>
 
                 <strong>
-                    ${escapeHtml(resource.title || "Untitled")}
+                    ${escapeHtml(title)}
                 </strong>
 
                 <br>
 
-                ${status}
+                ${
+                    status
+                        ? `
+                            <span
+                                class="status-active"
+                            >
+                                Active
+                            </span>
+                        `
+                        : `
+                            <span
+                                class="status-inactive"
+                            >
+                                Inactive
+                            </span>
+                        `
+                }
 
             </td>
 
             <td>
-                ${escapeHtml(resource.exam_name || "—")}
+                ${escapeHtml(examName)}
             </td>
 
             <td>
-                ${escapeHtml(resource.subject_name || "—")}
+                ${escapeHtml(subjectName)}
             </td>
 
             <td>
-                ${escapeHtml(resource.author || "—")}
+                ${escapeHtml(authorName)}
             </td>
 
             <td>
 
-                <div class="resource-actions">
-
-                    ${
-                        resource.file_url
-                            ? `
-                                <a
-                                    href="${escapeAttribute(resource.file_url)}"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    class="btn btn-sm btn-primary"
-                                >
-                                    <i class="fas fa-eye"></i>
-                                    View
-                                </a>
-                              `
-                            : ""
-                    }
+                <div
+                    class="resource-actions"
+                >
 
                     <button
                         type="button"
                         class="btn btn-sm btn-secondary"
                         data-action="edit"
-                        data-id="${escapeAttribute(resource.id)}"
+                        data-id="${escapeAttribute(
+                            resource.id
+                        )}"
                     >
-                        <i class="fas fa-pen"></i>
+                        <i
+                            class="fas fa-pen"
+                            aria-hidden="true"
+                        ></i>
+
                         Edit
                     </button>
+
 
                     <button
                         type="button"
                         class="btn btn-sm ${
-                            resource.status === "active"
+                            status
                                 ? "btn-danger"
                                 : "btn-success"
                         }"
                         data-action="toggle"
-                        data-id="${escapeAttribute(resource.id)}"
+                        data-id="${escapeAttribute(
+                            resource.id
+                        )}"
                     >
-                        <i class="fas ${
-                            resource.status === "active"
-                                ? "fa-ban"
-                                : "fa-check"
-                        }"></i>
+
+                        <i
+                            class="fas ${
+                                status
+                                    ? "fa-ban"
+                                    : "fa-check"
+                            }"
+                            aria-hidden="true"
+                        ></i>
 
                         ${
-                            resource.status === "active"
+                            status
                                 ? "Deactivate"
                                 : "Activate"
                         }
+
+                    </button>
+
+
+                    <button
+                        type="button"
+                        class="btn btn-sm btn-danger"
+                        data-action="delete"
+                        data-id="${escapeAttribute(
+                            resource.id
+                        )}"
+                    >
+
+                        <i
+                            class="fas fa-trash"
+                            aria-hidden="true"
+                        ></i>
+
+                        Delete
 
                     </button>
 
@@ -576,47 +850,78 @@ function createResourceRow(
    TABLE ACTIONS
    ========================================================= */
 
-document.addEventListener(
-    "click",
-    async event => {
+async function handleTableAction(
+    event
+) {
 
-        const button =
-            event.target.closest(
-                "[data-action]"
-            );
+    const button =
+        event.target.closest(
+            "[data-action]"
+        );
 
-        if (!button) {
 
-            return;
+    if (!button) {
 
-        }
-
-        const action =
-            button.dataset.action;
-
-        const id =
-            button.dataset.id;
-
-        if (!id) {
-
-            return;
-
-        }
-
-        if (action === "edit") {
-
-            await editResource(id);
-
-        }
-
-        if (action === "toggle") {
-
-            await toggleResource(id);
-
-        }
+        return;
 
     }
-);
+
+
+    const action =
+        button.dataset.action;
+
+
+    const resourceId =
+        button.dataset.id;
+
+
+    if (!resourceId) {
+
+        return;
+
+    }
+
+
+    if (
+        action ===
+        "edit"
+    ) {
+
+        await editResource(
+            resourceId
+        );
+
+        return;
+
+    }
+
+
+    if (
+        action ===
+        "toggle"
+    ) {
+
+        await toggleResource(
+            resourceId
+        );
+
+        return;
+
+    }
+
+
+    if (
+        action ===
+        "delete"
+    ) {
+
+        await deleteResource(
+            resourceId
+        );
+
+    }
+
+}
 
 
 /* =========================================================
@@ -625,13 +930,45 @@ document.addEventListener(
 
 async function handleSaveResource() {
 
+    if (isSaving) {
+
+        return;
+
+    }
+
+
     clearValidation();
+
+
+    const subjectId =
+        subjectSelect.value.trim();
+
 
     const title =
         bookTitle.value.trim();
 
-    const subjectId =
-        subjectSelect.value;
+
+    const authorName =
+        author.value.trim();
+
+
+    const descriptionText =
+        description.value.trim();
+
+
+    const selectedBook =
+        bookFile.files[0] ||
+        null;
+
+
+    const selectedCover =
+        coverImage.files[0] ||
+        null;
+
+
+    /* -----------------------------------------
+       BASIC VALIDATION
+       ----------------------------------------- */
 
     if (!examSelect.value) {
 
@@ -646,6 +983,7 @@ async function handleSaveResource() {
 
     }
 
+
     if (!subjectId) {
 
         showMessage(
@@ -658,6 +996,7 @@ async function handleSaveResource() {
         return;
 
     }
+
 
     if (!title) {
 
@@ -672,40 +1011,49 @@ async function handleSaveResource() {
 
     }
 
-    /*
-     * IMPORTANT:
-     *
-     * Your current /api/admin/resources endpoint expects
-     * file_url and cover_image.
-     *
-     * A browser File object is NOT an R2 URL.
-     *
-     * Do not send fake URLs.
-     */
 
-    if (!editingResourceId) {
+    if (!authorName) {
 
-        if (!bookFile.files.length) {
+        showMessage(
+            "Book author is required.",
+            "error"
+        );
 
-            showMessage(
-                "Please select the PDF book.",
-                "error"
-            );
+        author.focus();
 
-            bookFile.focus();
-
-            return;
-
-        }
+        return;
 
     }
 
-    const selectedFile =
-        bookFile.files[0];
+
+    /*
+     * New resource requires a book.
+     *
+     * Existing resource may keep its
+     * current PDF.
+     */
+    if (
+        !editingResourceId &&
+        !selectedBook
+    ) {
+
+        showMessage(
+            "Please select the PDF book.",
+            "error"
+        );
+
+        bookFile.focus();
+
+        return;
+
+    }
+
 
     if (
-        selectedFile &&
-        selectedFile.type !== "application/pdf"
+        selectedBook &&
+        !isPdfFile(
+            selectedBook
+        )
     ) {
 
         showMessage(
@@ -717,18 +1065,16 @@ async function handleSaveResource() {
 
     }
 
-    /*
-     * At this point an R2 upload handler is required
-     * to convert the selected File into file_url.
-     *
-     * We deliberately stop here rather than uploading
-     * to a nonexistent endpoint.
-     */
 
-    if (!editingResourceId) {
+    if (
+        selectedCover &&
+        !isSupportedCover(
+            selectedCover
+        )
+    ) {
 
         showMessage(
-            "The PDF must be uploaded to R2 before the resource can be saved. Connect the existing worker R2 upload handler here.",
+            "Cover must be JPG, PNG or WebP.",
             "error"
         );
 
@@ -736,24 +1082,28 @@ async function handleSaveResource() {
 
     }
 
-    /*
-     * Editing existing resource.
-     *
-     * Preserve its current R2 URLs unless the worker
-     * upload flow is used to replace them.
-     */
 
     const existing =
-        resourcesCache.find(
-            resource =>
-                String(resource.id) ===
-                String(editingResourceId)
-        );
+        editingResourceId
+            ? resourcesCache.find(
+                resource =>
+                    String(
+                        resource.id
+                    ) ===
+                    String(
+                        editingResourceId
+                    )
+            )
+            : null;
 
-    if (!existing) {
+
+    if (
+        editingResourceId &&
+        !existing
+    ) {
 
         showMessage(
-            "Resource could not be found.",
+            "The resource being edited could not be found.",
             "error"
         );
 
@@ -761,124 +1111,778 @@ async function handleSaveResource() {
 
     }
 
-    const payload = {
 
-        subject_id:
-            subjectId,
+    isSaving = true;
 
-        title:
-            title,
 
-        description:
-            description.value.trim(),
+    const originalButtonHTML =
+        saveButton.innerHTML;
 
-        file_url:
-            existing.file_url || "",
 
-        cover_image:
-            existing.cover_image || "",
+    try {
 
-        file_type:
-            "pdf",
+        setSaveButton(
+            true,
+            selectedBook
+                ? "Preparing upload..."
+                : "Saving..."
+        );
 
-        status:
-            existing.status || "active"
 
-    };
+        let fileKey =
+            existing?.file_url ||
+            "";
 
-    await submitResource(
-        payload,
-        editingResourceId
+
+        let coverKey =
+            existing?.cover_image ||
+            "";
+
+
+        /*
+         * -----------------------------------------
+         * UPLOAD PDF
+         * -----------------------------------------
+         */
+
+        if (selectedBook) {
+
+            const upload =
+                await uploadFileToR2(
+                    selectedBook,
+                    "document",
+                    progress =>
+                        setSaveButton(
+                            true,
+                            `Uploading book ${progress}%...`
+                        )
+                );
+
+
+            fileKey =
+                upload.object_key;
+
+        }
+
+
+        /*
+         * -----------------------------------------
+         * UPLOAD COVER
+         * -----------------------------------------
+         */
+
+        if (selectedCover) {
+
+            const upload =
+                await uploadFileToR2(
+                    selectedCover,
+                    "cover",
+                    progress =>
+                        setSaveButton(
+                            true,
+                            `Uploading cover ${progress}%...`
+                        )
+                );
+
+
+            coverKey =
+                upload.object_key;
+
+        }
+
+
+        /*
+         * -----------------------------------------
+         * FINAL DATABASE PUBLISH
+         * -----------------------------------------
+         */
+
+        setSaveButton(
+            true,
+            editingResourceId
+                ? "Publishing update..."
+                : "Publishing book..."
+        );
+
+
+        const payload = {
+
+            subject_id:
+                subjectId,
+
+            title:
+                title,
+
+            author:
+                authorName,
+
+            description:
+                descriptionText,
+
+            file_url:
+                fileKey,
+
+            cover_image:
+                coverKey,
+
+            file_type:
+                "pdf",
+
+            status:
+                existing?.status ||
+                "active"
+
+        };
+
+
+        const resourceId =
+            editingResourceId;
+
+
+        const response =
+            await fetch(
+                resourceId
+                    ? `${RESOURCE_API_ENDPOINT}/${encodeURIComponent(
+                        resourceId
+                    )}`
+                    : RESOURCE_API_ENDPOINT,
+                {
+                    method:
+                        resourceId
+                            ? "PUT"
+                            : "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body:
+                        JSON.stringify(
+                            payload
+                        )
+                }
+            );
+
+
+        const result =
+            await parseResponse(
+                response
+            );
+
+
+        showMessage(
+            result.message ||
+            (
+                resourceId
+                    ? "Study resource updated successfully."
+                    : "Study book published successfully."
+            ),
+            "success"
+        );
+
+
+        clearForm();
+
+
+        await loadResources();
+
+
+    } catch (error) {
+
+        console.error(
+            "Save/publish study resource failed:",
+            error
+        );
+
+
+        showMessage(
+            error.message ||
+            "Failed to publish the study book.",
+            "error"
+        );
+
+
+    } finally {
+
+        isSaving = false;
+
+        saveButton.innerHTML =
+            originalButtonHTML;
+
+        saveButton.disabled =
+            false;
+
+    }
+
+}
+
+
+/* =========================================================
+   R2 FILE UPLOAD
+   ========================================================= */
+
+async function uploadFileToR2(
+    file,
+    uploadType,
+    onProgress
+) {
+
+    let uploadState =
+        null;
+
+
+    try {
+
+        /*
+         * -----------------------------------------
+         * INITIALIZE MULTIPART UPLOAD
+         * -----------------------------------------
+         */
+
+        const initResponse =
+            await fetch(
+                `${RESOURCE_UPLOAD_ENDPOINT}/init`,
+                {
+                    method:
+                        "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body:
+                        JSON.stringify({
+
+                            upload_type:
+                                uploadType,
+
+                            file_name:
+                                file.name,
+
+                            content_type:
+                                getContentType(
+                                    file,
+                                    uploadType
+                                )
+
+                        })
+                }
+            );
+
+
+        const initResult =
+            await parseResponse(
+                initResponse
+            );
+
+
+        uploadState =
+            initResult.data;
+
+
+        if (
+            !uploadState ||
+            !uploadState.object_key ||
+            !uploadState.r2_upload_id
+        ) {
+
+            throw new Error(
+                "The server did not return a valid R2 upload session."
+            );
+
+        }
+
+
+        /*
+         * -----------------------------------------
+         * SPLIT INTO PARTS
+         * -----------------------------------------
+         */
+
+        const totalParts =
+            Math.max(
+                1,
+                Math.ceil(
+                    file.size /
+                    MULTIPART_CHUNK_SIZE
+                )
+            );
+
+
+        const parts = [];
+
+
+        /*
+         * -----------------------------------------
+         * UPLOAD EACH PART
+         * -----------------------------------------
+         */
+
+        for (
+            let index = 0;
+            index < totalParts;
+            index++
+        ) {
+
+            const partNumber =
+                index + 1;
+
+
+            const start =
+                index *
+                MULTIPART_CHUNK_SIZE;
+
+
+            const end =
+                Math.min(
+                    start +
+                    MULTIPART_CHUNK_SIZE,
+                    file.size
+                );
+
+
+            const chunk =
+                file.slice(
+                    start,
+                    end
+                );
+
+
+            const partResponse =
+                await fetch(
+                    `${RESOURCE_UPLOAD_ENDPOINT}/part`,
+                    {
+                        method:
+                            "PUT",
+
+                        headers: {
+
+                            "Content-Type":
+                                "application/octet-stream",
+
+                            "X-Upload-Type":
+                                uploadType,
+
+                            "X-Object-Key":
+                                uploadState.object_key,
+
+                            "X-R2-Upload-Id":
+                                uploadState.r2_upload_id,
+
+                            "X-Part-Number":
+                                String(
+                                    partNumber
+                                )
+
+                        },
+
+                        body:
+                            chunk
+                    }
+                );
+
+
+            const partResult =
+                await parseResponse(
+                    partResponse
+                );
+
+
+            const partData =
+                partResult.data;
+
+
+            if (
+                !partData ||
+                !partData.etag
+            ) {
+
+                throw new Error(
+                    `R2 did not return an ETag for upload part ${partNumber}.`
+                );
+
+            }
+
+
+            parts.push({
+
+                part_number:
+                    partNumber,
+
+                etag:
+                    partData.etag
+
+            });
+
+
+            const progress =
+                Math.round(
+                    (
+                        partNumber /
+                        totalParts
+                    ) *
+                    100
+                );
+
+
+            if (
+                typeof onProgress ===
+                "function"
+            ) {
+
+                onProgress(
+                    progress
+                );
+
+            }
+
+        }
+
+
+        /*
+         * -----------------------------------------
+         * COMPLETE MULTIPART UPLOAD
+         * -----------------------------------------
+         */
+
+        if (
+            typeof onProgress ===
+            "function"
+        ) {
+
+            onProgress(
+                100
+            );
+
+        }
+
+
+        const completeResponse =
+            await fetch(
+                `${RESOURCE_UPLOAD_ENDPOINT}/complete`,
+                {
+                    method:
+                        "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body:
+                        JSON.stringify({
+
+                            upload_type:
+                                uploadType,
+
+                            object_key:
+                                uploadState.object_key,
+
+                            r2_upload_id:
+                                uploadState.r2_upload_id,
+
+                            parts:
+                                parts
+
+                        })
+                }
+            );
+
+
+        const completeResult =
+            await parseResponse(
+                completeResponse
+            );
+
+
+        if (
+            !completeResult.data ||
+            !completeResult.data.object_key
+        ) {
+
+            throw new Error(
+                "R2 upload completed without a storage key."
+            );
+
+        }
+
+
+        return {
+
+            object_key:
+                completeResult.data.object_key,
+
+            etag:
+                completeResult.data.etag ||
+                null
+
+        };
+
+
+    } catch (error) {
+
+        /*
+         * -----------------------------------------
+         * CLEAN UP FAILED MULTIPART UPLOAD
+         * -----------------------------------------
+         */
+
+        if (
+            uploadState &&
+            uploadState.object_key &&
+            uploadState.r2_upload_id
+        ) {
+
+            await abortR2Upload(
+                uploadType,
+                uploadState.object_key,
+                uploadState.r2_upload_id
+            );
+
+        }
+
+
+        throw error;
+
+    }
+
+}
+
+
+/* =========================================================
+   ABORT R2 UPLOAD
+   ========================================================= */
+
+async function abortR2Upload(
+    uploadType,
+    objectKey,
+    r2UploadId
+) {
+
+    try {
+
+        await fetch(
+            `${RESOURCE_UPLOAD_ENDPOINT}/abort`,
+            {
+                method:
+                    "POST",
+
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
+
+                body:
+                    JSON.stringify({
+
+                        upload_type:
+                            uploadType,
+
+                        object_key:
+                            objectKey,
+
+                        r2_upload_id:
+                            r2UploadId
+
+                    })
+            }
+        );
+
+    } catch (error) {
+
+        console.error(
+            "R2 upload cleanup failed:",
+            error
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   FILE VALIDATION
+   ========================================================= */
+
+function handleBookFileChange() {
+
+    clearValidation();
+
+
+    const file =
+        bookFile.files[0];
+
+
+    if (!file) {
+
+        return;
+
+    }
+
+
+    if (
+        !isPdfFile(
+            file
+        )
+    ) {
+
+        bookFile.value =
+            "";
+
+        showMessage(
+            "Only PDF books are supported.",
+            "error"
+        );
+
+        return;
+
+    }
+
+
+    /*
+     * IMPORTANT:
+     *
+     * There is intentionally NO
+     * file-size restriction here.
+     */
+
+    showMessage(
+        `Book selected: ${file.name} (${formatFileSize(file.size)})`,
+        "success"
+    );
+
+}
+
+
+function handleCoverChange() {
+
+    clearValidation();
+
+
+    const file =
+        coverImage.files[0];
+
+
+    if (!file) {
+
+        return;
+
+    }
+
+
+    if (
+        !isSupportedCover(
+            file
+        )
+    ) {
+
+        coverImage.value =
+            "";
+
+        showMessage(
+            "Cover must be JPG, PNG or WebP.",
+            "error"
+        );
+
+        return;
+
+    }
+
+
+    showMessage(
+        `Cover selected: ${file.name}`,
+        "success"
+    );
+
+}
+
+
+function isPdfFile(
+    file
+) {
+
+    if (!file) {
+
+        return false;
+
+    }
+
+
+    const name =
+        String(
+            file.name ||
+            ""
+        ).toLowerCase();
+
+
+    return (
+        file.type ===
+        "application/pdf"
+    ) ||
+    name.endsWith(
+        ".pdf"
+    );
+
+}
+
+
+function isSupportedCover(
+    file
+) {
+
+    if (!file) {
+
+        return false;
+
+    }
+
+
+    const allowed =
+        [
+            "image/jpeg",
+            "image/png",
+            "image/webp"
+        ];
+
+
+    return allowed.includes(
+        file.type
     );
 
 }
 
 
 /* =========================================================
-   SUBMIT RESOURCE
+   CONTENT TYPE
    ========================================================= */
 
-async function submitResource(
-    payload,
-    resourceId = null
+function getContentType(
+    file,
+    uploadType
 ) {
 
-    const method =
-        resourceId
-            ? "PUT"
-            : "POST";
+    if (
+        uploadType ===
+        "document"
+    ) {
 
-    const url =
-        resourceId
-            ? `/api/admin/resources/${encodeURIComponent(resourceId)}`
-            : "/api/admin/resources";
-
-    const saveButton =
-        document.querySelector(
-            ".form-actions .btn-success"
-        );
-
-    setButtonLoading(
-        saveButton,
-        true,
-        resourceId
-            ? "Updating..."
-            : "Saving..."
-    );
-
-    try {
-
-        const response =
-            await fetch(
-                url,
-                {
-                    method,
-                    headers: {
-                        "Content-Type":
-                            "application/json"
-                    },
-                    body:
-                        JSON.stringify(payload)
-                }
-            );
-
-        const result =
-            await parseResponse(response);
-
-        showMessage(
-            result.message ||
-            "Study resource saved successfully.",
-            "success"
-        );
-
-        clearForm();
-
-        await loadResources();
-
-    } catch (error) {
-
-        console.error(
-            "Save resource:",
-            error
-        );
-
-        showMessage(
-            error.message ||
-            "Failed to save study resource.",
-            "error"
-        );
-
-    } finally {
-
-        setButtonLoading(
-            saveButton,
-            false,
-            resourceId
-                ? "Update Book"
-                : "Save Book"
-        );
+        return "application/pdf";
 
     }
+
+
+    if (
+        file.type
+    ) {
+
+        return file.type;
+
+    }
+
+
+    return "application/octet-stream";
 
 }
 
@@ -887,14 +1891,21 @@ async function submitResource(
    EDIT RESOURCE
    ========================================================= */
 
-async function editResource(id) {
+async function editResource(
+    id
+) {
 
     const resource =
         resourcesCache.find(
             item =>
-                String(item.id) ===
-                String(id)
+                String(
+                    item.id
+                ) ===
+                String(
+                    id
+                )
         );
+
 
     if (!resource) {
 
@@ -907,105 +1918,156 @@ async function editResource(id) {
 
     }
 
+
     editingResourceId =
         resource.id;
 
+
+    /*
+     * Exam is derived from
+     * the resource's subject.
+     */
+
     examSelect.value =
-        resource.exam_id || "";
+        resource.exam_id ||
+        "";
+
 
     await loadSubjects(
         resource.exam_id
     );
 
+
     subjectSelect.value =
-        resource.subject_id || "";
+        resource.subject_id ||
+        "";
+
 
     bookTitle.value =
-        resource.title || "";
+        resource.title ||
+        "";
 
-    /*
-     * Current API does not expose/store author.
-     * Therefore we don't fabricate one.
-     */
 
     author.value =
-        resource.author || "";
+        resource.author ||
+        "";
+
 
     description.value =
-        resource.description || "";
+        resource.description ||
+        "";
+
 
     /*
-     * File inputs cannot be populated with an existing
-     * R2 URL for security reasons.
+     * Browser security prevents us
+     * from placing an existing file
+     * into <input type="file">.
+     *
+     * Leaving it empty means:
+     * keep existing PDF unless a
+     * replacement is selected.
      */
 
-    bookFile.value = "";
+    bookFile.value =
+        "";
 
-    coverImage.value = "";
 
-    const saveButton =
-        document.querySelector(
-            ".form-actions .btn-success"
-        );
+    coverImage.value =
+        "";
 
-    if (saveButton) {
 
-        saveButton.innerHTML = `
-            <i class="fas fa-save"></i>
-            Update Book
-        `;
+    saveButton.innerHTML = `
+        <i
+            class="fas fa-save"
+            aria-hidden="true"
+        ></i>
 
-    }
+        Update Book
+    `;
 
-    if (addResourceBtn) {
-
-        addResourceBtn.innerHTML = `
-            <i class="fas fa-plus"></i>
-            Add New Book
-        `;
-
-    }
-
-    focusResourceForm();
 
     showMessage(
-        "Editing selected study resource.",
+        "Editing selected study resource. Select a new PDF or cover only if you want to replace it.",
         "success"
     );
+
+
+    /*
+     * Put the form near the top
+     * of the visible page.
+     */
+
+    const detailsCard =
+        document.querySelector(
+            ".content-card"
+        );
+
+
+    if (
+        detailsCard &&
+        typeof detailsCard.scrollIntoView ===
+        "function"
+    ) {
+
+        detailsCard.scrollIntoView({
+            behavior:
+                "smooth",
+            block:
+                "start"
+        });
+
+    }
 
 }
 
 
 /* =========================================================
-   TOGGLE RESOURCE STATUS
+   TOGGLE ACTIVE / INACTIVE
    ========================================================= */
 
-async function toggleResource(id) {
+async function toggleResource(
+    id
+) {
 
     const resource =
         resourcesCache.find(
             item =>
-                String(item.id) ===
-                String(id)
+                String(
+                    item.id
+                ) ===
+                String(
+                    id
+                )
         );
 
+
     if (!resource) {
+
+        showMessage(
+            "Study resource not found.",
+            "error"
+        );
 
         return;
 
     }
 
+
     const newStatus =
-        resource.status === "active"
+        resource.status ===
+        "active"
             ? "inactive"
             : "active";
 
+
     const confirmed =
         window.confirm(
-            newStatus === "inactive"
-                ? "Deactivate this study resource?"
-                : "Activate this study resource?"
+            newStatus ===
+            "inactive"
+                ? "Deactivate this study book? Students will no longer see it as active."
+                : "Activate this study book?"
         );
+
 
     if (!confirmed) {
 
@@ -1013,13 +2075,17 @@ async function toggleResource(id) {
 
     }
 
+
     try {
 
         const response =
             await fetch(
-                `/api/admin/resources/${encodeURIComponent(id)}/status`,
+                `${RESOURCE_API_ENDPOINT}/${encodeURIComponent(
+                    id
+                )}/status`,
                 {
-                    method: "PATCH",
+                    method:
+                        "PATCH",
 
                     headers: {
                         "Content-Type":
@@ -1028,28 +2094,36 @@ async function toggleResource(id) {
 
                     body:
                         JSON.stringify({
-                            status: newStatus
+                            status:
+                                newStatus
                         })
                 }
             );
 
+
         const result =
-            await parseResponse(response);
+            await parseResponse(
+                response
+            );
+
 
         showMessage(
             result.message ||
-            "Resource status updated.",
+            "Study resource status updated.",
             "success"
         );
 
+
         await loadResources();
+
 
     } catch (error) {
 
         console.error(
-            "Toggle resource:",
+            "Toggle resource failed:",
             error
         );
+
 
         showMessage(
             error.message ||
@@ -1063,16 +2137,113 @@ async function toggleResource(id) {
 
 
 /* =========================================================
+   SOFT DELETE
+   ========================================================= */
+
+async function deleteResource(
+    id
+) {
+
+    const resource =
+        resourcesCache.find(
+            item =>
+                String(
+                    item.id
+                ) ===
+                String(
+                    id
+                )
+        );
+
+
+    if (!resource) {
+
+        showMessage(
+            "Study resource not found.",
+            "error"
+        );
+
+        return;
+
+    }
+
+
+    const confirmed =
+        window.confirm(
+            `Deactivate "${resource.title || "this study book"}"?`
+        );
+
+
+    if (!confirmed) {
+
+        return;
+
+    }
+
+
+    try {
+
+        const response =
+            await fetch(
+                `${RESOURCE_API_ENDPOINT}/${encodeURIComponent(
+                    id
+                )}`,
+                {
+                    method:
+                        "DELETE"
+                }
+            );
+
+
+        const result =
+            await parseResponse(
+                response
+            );
+
+
+        showMessage(
+            result.message ||
+            "Study resource deactivated successfully.",
+            "success"
+        );
+
+
+        await loadResources();
+
+
+    } catch (error) {
+
+        console.error(
+            "Delete resource failed:",
+            error
+        );
+
+
+        showMessage(
+            error.message ||
+            "Failed to deactivate study resource.",
+            "error"
+        );
+
+    }
+
+}
+
+
+/* =========================================================
    CLEAR FORM
    ========================================================= */
 
-function handleClear(event) {
+function handleClear(
+    event
+) {
 
     if (event) {
 
         event.preventDefault();
 
     }
+
 
     clearForm();
 
@@ -1084,57 +2255,47 @@ function clearForm() {
     editingResourceId =
         null;
 
-    if (examSelect) {
 
-        examSelect.value = "";
+    examSelect.value =
+        "";
 
-    }
 
     resetSubjectSelect();
 
-    if (bookTitle) {
 
-        bookTitle.value = "";
+    bookTitle.value =
+        "";
 
-    }
 
-    if (author) {
+    author.value =
+        "";
 
-        author.value = "";
 
-    }
+    description.value =
+        "";
 
-    if (description) {
 
-        description.value = "";
+    coverImage.value =
+        "";
 
-    }
 
-    if (coverImage) {
+    bookFile.value =
+        "";
 
-        coverImage.value = "";
 
-    }
+    saveButton.disabled =
+        false;
 
-    if (bookFile) {
 
-        bookFile.value = "";
+    saveButton.innerHTML = `
+        <i
+            class="fas fa-save"
+            aria-hidden="true"
+        ></i>
 
-    }
+        Save Book
+    `;
 
-    const saveButton =
-        document.querySelector(
-            ".form-actions .btn-success"
-        );
-
-    if (saveButton) {
-
-        saveButton.innerHTML = `
-            <i class="fas fa-save"></i>
-            Save Book
-        `;
-
-    }
 
     clearValidation();
 
@@ -1142,16 +2303,51 @@ function clearForm() {
 
 
 /* =========================================================
-   ADD NEW RESOURCE
+   ADD NEW BOOK
    ========================================================= */
 
-function focusResourceForm() {
+function focusResourceForm(
+    event
+) {
+
+    if (event) {
+
+        event.preventDefault();
+
+    }
+
+
+    if (isSaving) {
+
+        return;
+
+    }
+
 
     clearForm();
 
-    if (examSelect) {
 
-        examSelect.focus();
+    examSelect.focus();
+
+
+    const detailsCard =
+        document.querySelector(
+            ".content-card"
+        );
+
+
+    if (
+        detailsCard &&
+        typeof detailsCard.scrollIntoView ===
+        "function"
+    ) {
+
+        detailsCard.scrollIntoView({
+            behavior:
+                "smooth",
+            block:
+                "start"
+        });
 
     }
 
@@ -1159,111 +2355,10 @@ function focusResourceForm() {
 
 
 /* =========================================================
-   FILE SELECTION
-   ========================================================= */
-
-function handleBookFileChange() {
-
-    const file =
-        bookFile.files[0];
-
-    if (!file) {
-
-        return;
-
-    }
-
-    if (
-        file.type !==
-        "application/pdf"
-    ) {
-
-        bookFile.value = "";
-
-        showMessage(
-            "Only PDF files are supported.",
-            "error"
-        );
-
-        return;
-
-    }
-
-    if (
-        file.size >
-        50 * 1024 * 1024
-    ) {
-
-        bookFile.value = "";
-
-        showMessage(
-            "The PDF must be 50 MB or smaller.",
-            "error"
-        );
-
-        return;
-
-    }
-
-}
-
-
-function handleCoverChange() {
-
-    const file =
-        coverImage.files[0];
-
-    if (!file) {
-
-        return;
-
-    }
-
-    if (
-        !file.type.startsWith(
-            "image/"
-        )
-    ) {
-
-        coverImage.value = "";
-
-        showMessage(
-            "Please select a valid image file.",
-            "error"
-        );
-
-        return;
-
-    }
-
-    if (
-        file.size >
-        5 * 1024 * 1024
-    ) {
-
-        coverImage.value = "";
-
-        showMessage(
-            "The cover image must be 5 MB or smaller.",
-            "error"
-        );
-
-    }
-
-}
-
-
-/* =========================================================
-   SUBJECT RESET
+   RESET SUBJECT
    ========================================================= */
 
 function resetSubjectSelect() {
-
-    if (!subjectSelect) {
-
-        return;
-
-    }
 
     subjectSelect.innerHTML = `
         <option value="">
@@ -1275,12 +2370,15 @@ function resetSubjectSelect() {
 
 
 /* =========================================================
-   RESPONSE HANDLING
+   RESPONSE PARSER
    ========================================================= */
 
-async function parseResponse(response) {
+async function parseResponse(
+    response
+) {
 
     let result;
+
 
     try {
 
@@ -1295,37 +2393,21 @@ async function parseResponse(response) {
 
     }
 
+
     if (
         !response.ok ||
-        result.success === false
+        result?.success === false
     ) {
 
         throw new Error(
-            result.message ||
+            result?.message ||
             `Request failed (${response.status}).`
         );
 
     }
 
+
     return result;
-
-}
-
-
-/* =========================================================
-   TABLE LOADING
-   ========================================================= */
-
-function setTableLoading() {
-
-    resourcesTableBody.innerHTML = `
-        <tr>
-            <td colspan="6">
-                <i class="fas fa-spinner fa-spin"></i>
-                Loading study resources...
-            </td>
-        </tr>
-    `;
 
 }
 
@@ -1345,14 +2427,23 @@ function setSelectLoading(
 
     }
 
+
     select.innerHTML = `
         <option value="">
             ${escapeHtml(message)}
         </option>
     `;
 
+
+    select.disabled =
+        true;
+
 }
 
+
+/* =========================================================
+   SELECT ERROR
+   ========================================================= */
 
 function setSelectError(
     select,
@@ -1365,49 +2456,156 @@ function setSelectError(
 
     }
 
+
     select.innerHTML = `
         <option value="">
             ${escapeHtml(message)}
         </option>
     `;
 
+
+    select.disabled =
+        false;
+
 }
 
 
 /* =========================================================
-   BUTTON LOADING
+   RE-ENABLE SELECT
    ========================================================= */
 
-function setButtonLoading(
-    button,
-    loading,
-    text
+function enableSelect(
+    select
 ) {
 
-    if (!button) {
+    if (!select) {
 
         return;
 
     }
 
-    button.disabled =
+
+    select.disabled =
+        false;
+
+}
+
+
+/* =========================================================
+   PATCH SELECT STATE
+   ========================================================= */
+
+const originalLoadExams =
+    loadExams;
+
+
+/*
+ * Re-enable exam after loading.
+ */
+loadExams = async function () {
+
+    try {
+
+        await originalLoadExams();
+
+    } finally {
+
+        enableSelect(
+            examSelect
+        );
+
+    }
+
+};
+
+
+/*
+ * Re-enable subject after loading.
+ */
+const originalLoadSubjects =
+    loadSubjects;
+
+
+loadSubjects = async function (
+    examId
+) {
+
+    try {
+
+        await originalLoadSubjects(
+            examId
+        );
+
+    } finally {
+
+        enableSelect(
+            subjectSelect
+        );
+
+    }
+
+};
+
+
+/* =========================================================
+   TABLE LOADING
+   ========================================================= */
+
+function setTableLoading() {
+
+    resourcesTableBody.innerHTML = `
+        <tr>
+            <td colspan="6">
+                <i
+                    class="fas fa-spinner fa-spin"
+                    aria-hidden="true"
+                ></i>
+
+                Loading study resources...
+            </td>
+        </tr>
+    `;
+
+}
+
+
+/* =========================================================
+   SAVE BUTTON STATE
+   ========================================================= */
+
+function setSaveButton(
+    loading,
+    text
+) {
+
+    saveButton.disabled =
         loading;
+
 
     if (loading) {
 
-        button.innerHTML = `
-            <i class="fas fa-spinner fa-spin"></i>
+        saveButton.innerHTML = `
+            <i
+                class="fas fa-spinner fa-spin"
+                aria-hidden="true"
+            ></i>
+
             ${escapeHtml(text)}
         `;
 
-    } else {
-
-        button.innerHTML = `
-            <i class="fas fa-save"></i>
-            ${escapeHtml(text)}
-        `;
+        return;
 
     }
+
+
+    saveButton.innerHTML = `
+        <i
+            class="fas fa-save"
+            aria-hidden="true"
+        ></i>
+
+        ${escapeHtml(text)}
+    `;
 
 }
 
@@ -1431,7 +2629,7 @@ function clearValidation() {
 
 
 /* =========================================================
-   MESSAGE
+   MESSAGE SYSTEM
    ========================================================= */
 
 function showMessage(
@@ -1444,6 +2642,7 @@ function showMessage(
             "resourceMessage"
         );
 
+
     if (!container) {
 
         container =
@@ -1451,18 +2650,22 @@ function showMessage(
                 "div"
             );
 
+
         container.id =
             "resourceMessage";
+
 
         container.setAttribute(
             "role",
             "alert"
         );
 
+
         const section =
             document.querySelector(
                 ".content-section"
             );
+
 
         if (section) {
 
@@ -1470,29 +2673,107 @@ function showMessage(
                 container
             );
 
+        } else {
+
+            document.body.prepend(
+                container
+            );
+
         }
 
     }
 
+
     container.className =
         `resource-message ${type}`;
 
+
     container.textContent =
         message;
+
 
     clearTimeout(
         container._timer
     );
 
+
     container._timer =
         setTimeout(
             () => {
 
-                container.remove();
+                if (
+                    container &&
+                    container.parentNode
+                ) {
+
+                    container.remove();
+
+                }
 
             },
-            5000
+            6000
         );
+
+}
+
+
+/* =========================================================
+   FILE SIZE FORMATTER
+   ========================================================= */
+
+function formatFileSize(
+    bytes
+) {
+
+    if (
+        !Number.isFinite(
+            bytes
+        ) ||
+        bytes <= 0
+    ) {
+
+        return "0 B";
+
+    }
+
+
+    const units =
+        [
+            "B",
+            "KB",
+            "MB",
+            "GB",
+            "TB"
+        ];
+
+
+    const exponent =
+        Math.min(
+            Math.floor(
+                Math.log(
+                    bytes
+                ) /
+                Math.log(
+                    1024
+                )
+            ),
+            units.length - 1
+        );
+
+
+    const value =
+        bytes /
+        Math.pow(
+            1024,
+            exponent
+        );
+
+
+    return `${value.toFixed(
+        exponent === 0
+            ? 0
+            : 2
+    )} ${units[exponent]}`;
 
 }
 
@@ -1501,20 +2782,49 @@ function showMessage(
    HTML ESCAPING
    ========================================================= */
 
-function escapeHtml(value) {
+function escapeHtml(
+    value
+) {
 
-    return String(value ?? "")
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
+    return String(
+        value ??
+        ""
+    )
+        .replaceAll(
+            "&",
+            "&amp;"
+        )
+        .replaceAll(
+            "<",
+            "&lt;"
+        )
+        .replaceAll(
+            ">",
+            "&gt;"
+        )
+        .replaceAll(
+            '"',
+            "&quot;"
+        )
+        .replaceAll(
+            "'",
+            "&#039;"
+        );
 
 }
 
 
-function escapeAttribute(value) {
+function escapeAttribute(
+    value
+) {
 
-    return escapeHtml(value);
+    return escapeHtml(
+        value
+    );
 
 }
+
+
+/* =========================================================
+   END
+   ========================================================= */

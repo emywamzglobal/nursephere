@@ -4315,12 +4315,107 @@ if (
 
 // =====================================================
 // STUDY RESOURCE MANAGEMENT
+// Production-ready CRUD layer
 // =====================================================
 
-// -----------------------------------------
+
+// =====================================================
+// CONSTANTS
+// =====================================================
+
+const STUDY_RESOURCE_FILE_TYPES = [
+    "pdf",
+    "docx",
+    "xlsx",
+    "csv"
+];
+
+const STUDY_RESOURCE_STATUSES = [
+    "active",
+    "inactive"
+];
+
+
+// =====================================================
+// HELPERS
+// =====================================================
+
+function normalizeText(value) {
+
+    return String(value ?? "")
+        .trim();
+
+}
+
+
+function normalizeFileType(value) {
+
+    return String(value ?? "")
+        .trim()
+        .toLowerCase();
+
+}
+
+
+function normalizeStatus(value) {
+
+    return String(value ?? "")
+        .trim()
+        .toLowerCase();
+
+}
+
+
+function resourceJson(
+    success,
+    message,
+    data = null,
+    status = 200
+) {
+
+    const body = {
+        success,
+        message
+    };
+
+    if (data !== null) {
+
+        body.data = data;
+
+    }
+
+    return Response.json(
+        body,
+        {
+            status,
+            headers: {
+                "Cache-Control": "no-store"
+            }
+        }
+    );
+
+}
+
+
+async function readJsonBody(request) {
+
+    try {
+
+        return await request.json();
+
+    } catch {
+
+        return null;
+
+    }
+
+}
+
+
+// =====================================================
 // GET ALL STUDY RESOURCES
 // GET /api/admin/resources
-// -----------------------------------------
+// =====================================================
 
 if (
 
@@ -4330,171 +4425,254 @@ if (
 
 ) {
 
-    const { results } = await env.DB.prepare(
+    try {
 
-        `SELECT
+        const { results } =
+            await env.DB.prepare(
 
-            r.id,
+                `SELECT
 
-            r.subject_id,
+                    r.id,
 
-            s.name AS subject_name,
+                    r.subject_id,
 
-            s.exam_id,
+                    s.name AS subject_name,
 
-            e.name AS exam_name,
+                    s.exam_id,
 
-            r.title,
+                    e.name AS exam_name,
 
-            r.author,
+                    r.title,
 
-            r.description,
+                    r.author,
 
-            r.file_url,
+                    r.description,
 
-            r.cover_image,
+                    r.file_url,
 
-            r.file_type,
+                    r.cover_image,
 
-            r.status,
+                    r.file_type,
 
-            r.created_at,
+                    r.status,
 
-            r.updated_at
+                    r.created_at,
 
-        FROM study_resources r
+                    r.updated_at
 
-        INNER JOIN subjects s
+                FROM study_resources r
 
-            ON r.subject_id = s.id
+                INNER JOIN subjects s
+                    ON r.subject_id = s.id
 
-        INNER JOIN exams e
+                INNER JOIN exams e
+                    ON s.exam_id = e.id
 
-            ON s.exam_id = e.id
+                ORDER BY
 
-        ORDER BY
+                    e.display_order ASC,
 
-            e.display_order,
+                    s.display_order ASC,
 
-            s.display_order,
+                    r.created_at DESC`
 
-            r.created_at DESC`
+            )
+            .all();
 
-    ).all();
 
-    return Response.json({
+        return resourceJson(
 
-        success: true,
+            true,
 
-        message: "Study resources retrieved successfully.",
+            "Study resources retrieved successfully.",
 
-        data: results
+            results || [],
 
-    });
+            200
+
+        );
+
+    } catch (error) {
+
+        console.error(
+            "GET study resources failed:",
+            error
+        );
+
+        return resourceJson(
+
+            false,
+
+            "Failed to retrieve study resources.",
+
+            null,
+
+            500
+
+        );
+
+    }
 
 }
 
 
-// -----------------------------------------
+// =====================================================
 // GET SINGLE STUDY RESOURCE
 // GET /api/admin/resources/:id
-// -----------------------------------------
+// =====================================================
 
 if (
 
     method === "GET" &&
 
-    pathname.startsWith("/api/admin/resources/")
+    pathname.startsWith(
+        "/api/admin/resources/"
+    ) &&
+
+    !pathname.endsWith("/status")
 
 ) {
 
-    const resourceId = pathname.split("/").pop();
+    const resourceId =
+        pathname
+            .split("/")
+            .filter(Boolean)
+            .pop();
 
-    const resource = await env.DB.prepare(
 
-        `SELECT
+    if (!resourceId) {
 
-            r.id,
+        return resourceJson(
 
-            r.subject_id,
+            false,
 
-            s.name AS subject_name,
+            "Study resource ID is required.",
 
-            s.exam_id,
+            null,
 
-            e.name AS exam_name,
+            400
 
-            r.title,
-
-            r.author,
-
-            r.description,
-
-            r.file_url,
-
-            r.cover_image,
-
-            r.file_type,
-
-            r.status,
-
-            r.created_at,
-
-            r.updated_at
-
-        FROM study_resources r
-
-        INNER JOIN subjects s
-
-            ON r.subject_id = s.id
-
-        INNER JOIN exams e
-
-            ON s.exam_id = e.id
-
-        WHERE
-
-            r.id = ?`
-
-    )
-
-    .bind(resourceId)
-
-    .first();
-
-    if (!resource) {
-
-        return Response.json({
-
-            success: false,
-
-            message: "Study resource not found."
-
-        }, {
-
-            status: 404
-
-        });
+        );
 
     }
 
-    return Response.json({
 
-        success: true,
+    try {
 
-        message: "Study resource retrieved successfully.",
+        const resource =
+            await env.DB.prepare(
 
-        data: resource
+                `SELECT
 
-    });
+                    r.id,
+
+                    r.subject_id,
+
+                    s.name AS subject_name,
+
+                    s.exam_id,
+
+                    e.name AS exam_name,
+
+                    r.title,
+
+                    r.author,
+
+                    r.description,
+
+                    r.file_url,
+
+                    r.cover_image,
+
+                    r.file_type,
+
+                    r.status,
+
+                    r.created_at,
+
+                    r.updated_at
+
+                FROM study_resources r
+
+                INNER JOIN subjects s
+                    ON r.subject_id = s.id
+
+                INNER JOIN exams e
+                    ON s.exam_id = e.id
+
+                WHERE r.id = ?
+
+                LIMIT 1`
+
+            )
+            .bind(resourceId)
+            .first();
+
+
+        if (!resource) {
+
+            return resourceJson(
+
+                false,
+
+                "Study resource not found.",
+
+                null,
+
+                404
+
+            );
+
+        }
+
+
+        return resourceJson(
+
+            true,
+
+            "Study resource retrieved successfully.",
+
+            resource,
+
+            200
+
+        );
+
+    } catch (error) {
+
+        console.error(
+            "GET single study resource failed:",
+            error
+        );
+
+        return resourceJson(
+
+            false,
+
+            "Failed to retrieve the study resource.",
+
+            null,
+
+            500
+
+        );
+
+    }
 
 }
 
 
-// -----------------------------------------
+// =====================================================
 // ADD STUDY RESOURCE
 // POST /api/admin/resources
-// -----------------------------------------
+//
+// IMPORTANT:
+// This endpoint creates the D1 record.
+// The actual R2 upload will be handled by the
+// dedicated upload pipeline we connect next.
+//
+// file_url must therefore be a valid stored URL.
+// =====================================================
 
 if (
 
@@ -4504,273 +4682,349 @@ if (
 
 ) {
 
-    const body = await request.json();
-
-    const {
-
-        subject_id,
-
-        title,
-
-        author,
-
-        description,
-
-        file_url,
-
-        cover_image,
-
-        file_type
-
-    } = body;
+    const body =
+        await readJsonBody(request);
 
 
-    // -----------------------------------------
-    // VALIDATION
-    // -----------------------------------------
+    if (!body) {
 
-    if (!subject_id || !String(subject_id).trim()) {
+        return resourceJson(
 
-        return Response.json({
+            false,
 
-            success: false,
+            "Invalid JSON request body.",
 
-            message: "Please select a subject."
+            null,
 
-        }, {
+            400
 
-            status: 400
-
-        });
-
-    }
-
-    if (!title || !String(title).trim()) {
-
-        return Response.json({
-
-            success: false,
-
-            message: "Resource title is required."
-
-        }, {
-
-            status: 400
-
-        });
-
-    }
-
-    if (!author || !String(author).trim()) {
-
-        return Response.json({
-
-            success: false,
-
-            message: "Book author is required."
-
-        }, {
-
-            status: 400
-
-        });
+        );
 
     }
 
 
+    const subjectId =
+        normalizeText(body.subject_id);
+
+    const title =
+        normalizeText(body.title);
+
+    const author =
+        normalizeText(body.author);
+
+    const description =
+        normalizeText(body.description);
+
+    const fileUrl =
+        normalizeText(body.file_url);
+
+    const coverImage =
+        normalizeText(body.cover_image);
+
+    const fileType =
+        normalizeFileType(body.file_type);
+
+
     // -----------------------------------------
-    // FILE URL VALIDATION
+    // REQUIRED FIELDS
+    // -----------------------------------------
+
+    if (!subjectId) {
+
+        return resourceJson(
+
+            false,
+
+            "Please select a subject.",
+
+            null,
+
+            400
+
+        );
+
+    }
+
+
+    if (!title) {
+
+        return resourceJson(
+
+            false,
+
+            "Resource title is required.",
+
+            null,
+
+            400
+
+        );
+
+    }
+
+
+    if (!author) {
+
+        return resourceJson(
+
+            false,
+
+            "Book author is required.",
+
+            null,
+
+            400
+
+        );
+
+    }
+
+
+    // -----------------------------------------
+    // FILE URL
+    // -----------------------------------------
+
+    if (!fileUrl) {
+
+        return resourceJson(
+
+            false,
+
+            "Study resource file URL is required.",
+
+            null,
+
+            400
+
+        );
+
+    }
+
+
+    // -----------------------------------------
+    // FILE TYPE
     // -----------------------------------------
 
     if (
 
-        !file_url ||
+        !fileType ||
 
-        !String(file_url).trim()
-
-    ) {
-
-        return Response.json({
-
-            success: false,
-
-            message: "Study resource file URL is required."
-
-        }, {
-
-            status: 400
-
-        });
-
-    }
-
-
-    // -----------------------------------------
-    // FILE TYPE VALIDATION
-    // -----------------------------------------
-
-    const validTypes = [
-
-        "pdf",
-
-        "docx",
-
-        "xlsx",
-
-        "csv"
-
-    ];
-
-    const normalizedFileType =
-
-        String(file_type || "")
-
-            .trim()
-
-            .toLowerCase();
-
-    if (
-
-        !normalizedFileType ||
-
-        !validTypes.includes(normalizedFileType)
+        !STUDY_RESOURCE_FILE_TYPES.includes(
+            fileType
+        )
 
     ) {
 
-        return Response.json({
+        return resourceJson(
 
-            success: false,
+            false,
 
-            message: "Invalid file type."
+            "Invalid study resource file type.",
 
-        }, {
+            null,
 
-            status: 400
+            400
 
-        });
-
-    }
-
-
-// -----------------------------------------
-// VERIFY SUBJECT BELONGS TO EXAM
-// -----------------------------------------
-
-const subject = await env.DB.prepare(
-
-    `SELECT
-
-        s.id,
-        s.exam_id,
-        s.status AS subject_status,
-        e.status AS exam_status
-
-     FROM subjects s
-
-     INNER JOIN exams e
-        ON s.exam_id = e.id
-
-     WHERE s.id = ?
-       AND e.id = ?
-
-     LIMIT 1`
-
-)
-
-.bind(
-
-    subject_id,
-    exam_id
-
-)
-
-.first();
-
-if (
-
-    !subject ||
-
-    subject.subject_status !== "active" ||
-
-    subject.exam_status !== "active"
-
-) {
-
-    return Response.json({
-
-        success: false,
-
-        message:
-            "Selected subject does not belong to the selected exam or is inactive."
-
-    }, {
-
-        status: 404
-
-    });
-
-}
-
-    // -----------------------------------------
-    // CHECK DUPLICATE
-    // -----------------------------------------
-
-    const duplicate = await env.DB.prepare(
-
-        `SELECT id
-
-         FROM study_resources
-
-         WHERE subject_id = ?
-
-         AND LOWER(title) = LOWER(?)`
-
-    )
-
-    .bind(
-
-        subject_id,
-
-        String(title).trim()
-
-    )
-
-    .first();
-
-    if (duplicate) {
-
-        return Response.json({
-
-            success: false,
-
-            message:
-                "A study resource with this title already exists."
-
-        }, {
-
-            status: 409
-
-        });
+        );
 
     }
 
 
-    const resourceId = crypto.randomUUID();
-
-    const now = new Date().toISOString();
-
-
     // -----------------------------------------
-    // CREATE RESOURCE
+    // VERIFY SUBJECT
+    //
+    // The exam is deliberately NOT accepted
+    // from the browser.
+    //
+    // The exam is derived from the database.
     // -----------------------------------------
 
-    await env.DB.prepare(
+    try {
 
-        `INSERT INTO study_resources (
+        const subject =
+            await env.DB.prepare(
 
-            id,
+                `SELECT
 
-            subject_id,
+                    s.id,
+
+                    s.exam_id,
+
+                    s.status AS subject_status,
+
+                    e.status AS exam_status
+
+                FROM subjects s
+
+                INNER JOIN exams e
+                    ON s.exam_id = e.id
+
+                WHERE s.id = ?
+
+                LIMIT 1`
+
+            )
+            .bind(subjectId)
+            .first();
+
+
+        if (!subject) {
+
+            return resourceJson(
+
+                false,
+
+                "Selected subject does not exist.",
+
+                null,
+
+                404
+
+            );
+
+        }
+
+
+        if (
+
+            subject.subject_status !==
+            "active"
+
+        ) {
+
+            return resourceJson(
+
+                false,
+
+                "Selected subject is inactive.",
+
+                null,
+
+                409
+
+            );
+
+        }
+
+
+        if (
+
+            subject.exam_status !==
+            "active"
+
+        ) {
+
+            return resourceJson(
+
+                false,
+
+                "The examination associated with this subject is inactive.",
+
+                null,
+
+                409
+
+            );
+
+        }
+
+
+        // -----------------------------------------
+        // DUPLICATE TITLE
+        // -----------------------------------------
+
+        const duplicate =
+            await env.DB.prepare(
+
+                `SELECT id
+
+                FROM study_resources
+
+                WHERE subject_id = ?
+
+                AND LOWER(title) = LOWER(?)
+
+                LIMIT 1`
+
+            )
+            .bind(
+
+                subjectId,
+
+                title
+
+            )
+            .first();
+
+
+        if (duplicate) {
+
+            return resourceJson(
+
+                false,
+
+                "A study resource with this title already exists for this subject.",
+
+                null,
+
+                409
+
+            );
+
+        }
+
+
+        // -----------------------------------------
+        // CREATE RESOURCE
+        // -----------------------------------------
+
+        const resourceId =
+            crypto.randomUUID();
+
+        const now =
+            new Date().toISOString();
+
+
+        await env.DB.prepare(
+
+            `INSERT INTO study_resources (
+
+                id,
+
+                subject_id,
+
+                title,
+
+                author,
+
+                description,
+
+                file_url,
+
+                cover_image,
+
+                file_type,
+
+                status,
+
+                created_at,
+
+                updated_at
+
+            )
+
+            VALUES (
+
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+
+            )`
+
+        )
+        .bind(
+
+            resourceId,
+
+            subjectId,
 
             title,
 
@@ -4778,468 +5032,549 @@ if (
 
             description,
 
-            file_url,
+            fileUrl,
 
-            cover_image,
+            coverImage,
 
-            file_type,
+            fileType,
 
-            status,
+            "active",
 
-            created_at,
+            now,
 
-            updated_at
+            now
 
         )
-
-        VALUES (
-
-            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-
-        )`
-
-    )
-
-    .bind(
-
-        resourceId,
-
-        subject_id,
-
-        String(title).trim(),
-
-        String(author).trim(),
-
-        description
-
-            ? String(description).trim()
-
-            : "",
-
-        String(file_url).trim(),
-
-        cover_image
-
-            ? String(cover_image).trim()
-
-            : "",
-
-        normalizedFileType,
-
-        "active",
-
-        now,
-
-        now
-
-    )
-
-    .run();
+        .run();
 
 
-    return Response.json({
+        return resourceJson(
 
-        success: true,
+            true,
 
-        message:
             "Study resource created successfully.",
 
-        data: {
+            {
+                id: resourceId
+            },
 
-            id: resourceId
+            201
 
-        }
+        );
 
-    }, {
+    } catch (error) {
 
-        status: 201
+        console.error(
+            "CREATE study resource failed:",
+            error
+        );
 
-    });
+        return resourceJson(
+
+            false,
+
+            "Failed to create the study resource.",
+
+            null,
+
+            500
+
+        );
+
+    }
 
 }
 
 
-// -----------------------------------------
+// =====================================================
 // UPDATE STUDY RESOURCE
 // PUT /api/admin/resources/:id
-// -----------------------------------------
+//
+// Metadata can be changed without replacing the
+// existing R2 files.
+//
+// R2 replacement will be handled separately.
+// =====================================================
 
 if (
 
     method === "PUT" &&
 
-    pathname.startsWith("/api/admin/resources/")
+    pathname.startsWith(
+        "/api/admin/resources/"
+    ) &&
+
+    !pathname.endsWith("/status")
 
 ) {
 
-    const resourceId = pathname.split("/").pop();
+    const resourceId =
+        pathname
+            .split("/")
+            .filter(Boolean)
+            .pop();
 
-    const body = await request.json();
 
-    const {
+    if (!resourceId) {
 
-        subject_id,
+        return resourceJson(
 
-        title,
+            false,
 
-        author,
+            "Study resource ID is required.",
 
-        description,
+            null,
 
-        file_url,
+            400
 
-        cover_image,
+        );
 
-        file_type,
+    }
 
-        status
 
-    } = body;
+    const body =
+        await readJsonBody(request);
+
+
+    if (!body) {
+
+        return resourceJson(
+
+            false,
+
+            "Invalid JSON request body.",
+
+            null,
+
+            400
+
+        );
+
+    }
+
+
+    const subjectId =
+        normalizeText(body.subject_id);
+
+    const title =
+        normalizeText(body.title);
+
+    const author =
+        normalizeText(body.author);
+
+    const description =
+        normalizeText(body.description);
+
+    const fileUrl =
+        normalizeText(body.file_url);
+
+    const coverImage =
+        normalizeText(body.cover_image);
+
+    const fileType =
+        normalizeFileType(body.file_type);
+
+    const status =
+        normalizeStatus(
+            body.status || "active"
+        );
 
 
     // -----------------------------------------
     // VALIDATION
     // -----------------------------------------
 
-    if (!subject_id || !String(subject_id).trim()) {
+    if (!subjectId) {
 
-        return Response.json({
+        return resourceJson(
 
-            success: false,
+            false,
 
-            message: "Please select a subject."
+            "Please select a subject.",
 
-        }, {
+            null,
 
-            status: 400
+            400
 
-        });
-
-    }
-
-    if (!title || !String(title).trim()) {
-
-        return Response.json({
-
-            success: false,
-
-            message: "Resource title is required."
-
-        }, {
-
-            status: 400
-
-        });
-
-    }
-
-    if (!author || !String(author).trim()) {
-
-        return Response.json({
-
-            success: false,
-
-            message: "Book author is required."
-
-        }, {
-
-            status: 400
-
-        });
+        );
 
     }
 
 
-    // -----------------------------------------
-    // FILE URL VALIDATION
-    // -----------------------------------------
+    if (!title) {
 
-    if (
+        return resourceJson(
 
-        !file_url ||
+            false,
 
-        !String(file_url).trim()
+            "Resource title is required.",
 
-    ) {
+            null,
 
-        return Response.json({
+            400
 
-            success: false,
-
-            message: "Study resource file URL is required."
-
-        }, {
-
-            status: 400
-
-        });
+        );
 
     }
 
 
-    // -----------------------------------------
-    // FILE TYPE VALIDATION
-    // -----------------------------------------
+    if (!author) {
 
-    const validTypes = [
+        return resourceJson(
 
-        "pdf",
+            false,
 
-        "docx",
+            "Book author is required.",
 
-        "xlsx",
+            null,
 
-        "csv"
+            400
 
-    ];
+        );
 
-    const normalizedFileType =
+    }
 
-        String(file_type || "")
 
-            .trim()
+    if (!fileUrl) {
 
-            .toLowerCase();
+        return resourceJson(
 
-    if (
+            false,
 
-        !normalizedFileType ||
+            "Study resource file URL is required.",
 
-        !validTypes.includes(normalizedFileType)
+            null,
 
-    ) {
+            400
 
-        return Response.json({
-
-            success: false,
-
-            message: "Invalid file type."
-
-        }, {
-
-            status: 400
-
-        });
+        );
 
     }
 
 
     if (
 
-        status &&
-
-        !["active", "inactive"].includes(status)
+        !STUDY_RESOURCE_FILE_TYPES.includes(
+            fileType
+        )
 
     ) {
 
-        return Response.json({
+        return resourceJson(
 
-            success: false,
+            false,
 
-            message: "Invalid resource status."
+            "Invalid study resource file type.",
 
-        }, {
+            null,
 
-            status: 400
+            400
 
-        });
-
-    }
-
-
-    // -----------------------------------------
-    // VERIFY RESOURCE EXISTS
-    // -----------------------------------------
-
-    const existing = await env.DB.prepare(
-
-        `SELECT id
-
-         FROM study_resources
-
-         WHERE id = ?`
-
-    )
-
-    .bind(resourceId)
-
-    .first();
-
-    if (!existing) {
-
-        return Response.json({
-
-            success: false,
-
-            message: "Study resource not found."
-
-        }, {
-
-            status: 404
-
-        });
+        );
 
     }
 
 
-    // -----------------------------------------
-    // VERIFY SUBJECT EXISTS
-    // -----------------------------------------
+    if (
 
-    const subject = await env.DB.prepare(
+        !STUDY_RESOURCE_STATUSES.includes(
+            status
+        )
 
-        `SELECT id
+    ) {
 
-         FROM subjects
+        return resourceJson(
 
-         WHERE id = ?
+            false,
 
-         AND status = 'active'`
+            "Invalid resource status.",
 
-    )
+            null,
 
-    .bind(subject_id)
+            400
 
-    .first();
-
-    if (!subject) {
-
-        return Response.json({
-
-            success: false,
-
-            message: "Selected subject does not exist."
-
-        }, {
-
-            status: 404
-
-        });
+        );
 
     }
 
 
-    // -----------------------------------------
-    // CHECK DUPLICATE TITLE
-    // -----------------------------------------
+    try {
 
-    const duplicate = await env.DB.prepare(
+        // -----------------------------------------
+        // VERIFY RESOURCE
+        // -----------------------------------------
 
-        `SELECT id
+        const existing =
+            await env.DB.prepare(
 
-         FROM study_resources
+                `SELECT
 
-         WHERE subject_id = ?
+                    id,
 
-         AND LOWER(title) = LOWER(?)
+                    subject_id,
 
-         AND id <> ?`
+                    file_url,
 
-    )
+                    cover_image
 
-    .bind(
+                FROM study_resources
 
-        subject_id,
+                WHERE id = ?
 
-        String(title).trim(),
+                LIMIT 1`
 
-        resourceId
+            )
+            .bind(resourceId)
+            .first();
 
-    )
 
-    .first();
+        if (!existing) {
 
-    if (duplicate) {
+            return resourceJson(
 
-        return Response.json({
+                false,
 
-            success: false,
+                "Study resource not found.",
 
-            message:
-                "Another study resource with this title already exists."
+                null,
 
-        }, {
+                404
 
-            status: 409
+            );
 
-        });
+        }
+
+
+        // -----------------------------------------
+        // VERIFY SUBJECT + EXAM
+        // -----------------------------------------
+
+        const subject =
+            await env.DB.prepare(
+
+                `SELECT
+
+                    s.id,
+
+                    s.status AS subject_status,
+
+                    e.status AS exam_status
+
+                FROM subjects s
+
+                INNER JOIN exams e
+                    ON e.id = s.exam_id
+
+                WHERE s.id = ?
+
+                LIMIT 1`
+
+            )
+            .bind(subjectId)
+            .first();
+
+
+        if (!subject) {
+
+            return resourceJson(
+
+                false,
+
+                "Selected subject does not exist.",
+
+                null,
+
+                404
+
+            );
+
+        }
+
+
+        if (
+
+            subject.subject_status !==
+            "active"
+
+        ) {
+
+            return resourceJson(
+
+                false,
+
+                "Selected subject is inactive.",
+
+                null,
+
+                409
+
+            );
+
+        }
+
+
+        if (
+
+            subject.exam_status !==
+            "active"
+
+        ) {
+
+            return resourceJson(
+
+                false,
+
+                "The examination associated with this subject is inactive.",
+
+                null,
+
+                409
+
+            );
+
+        }
+
+
+        // -----------------------------------------
+        // DUPLICATE TITLE
+        // -----------------------------------------
+
+        const duplicate =
+            await env.DB.prepare(
+
+                `SELECT id
+
+                FROM study_resources
+
+                WHERE subject_id = ?
+
+                AND LOWER(title) = LOWER(?)
+
+                AND id <> ?
+
+                LIMIT 1`
+
+            )
+            .bind(
+
+                subjectId,
+
+                title,
+
+                resourceId
+
+            )
+            .first();
+
+
+        if (duplicate) {
+
+            return resourceJson(
+
+                false,
+
+                "Another study resource with this title already exists for this subject.",
+
+                null,
+
+                409
+
+            );
+
+        }
+
+
+        // -----------------------------------------
+        // UPDATE
+        // -----------------------------------------
+
+        await env.DB.prepare(
+
+            `UPDATE study_resources
+
+            SET
+
+                subject_id = ?,
+
+                title = ?,
+
+                author = ?,
+
+                description = ?,
+
+                file_url = ?,
+
+                cover_image = ?,
+
+                file_type = ?,
+
+                status = ?,
+
+                updated_at = ?
+
+            WHERE id = ?`
+
+        )
+        .bind(
+
+            subjectId,
+
+            title,
+
+            author,
+
+            description,
+
+            fileUrl,
+
+            coverImage,
+
+            fileType,
+
+            status,
+
+            new Date().toISOString(),
+
+            resourceId
+
+        )
+        .run();
+
+
+        return resourceJson(
+
+            true,
+
+            "Study resource updated successfully.",
+
+            {
+                id: resourceId
+            },
+
+            200
+
+        );
+
+    } catch (error) {
+
+        console.error(
+            "UPDATE study resource failed:",
+            error
+        );
+
+        return resourceJson(
+
+            false,
+
+            "Failed to update the study resource.",
+
+            null,
+
+            500
+
+        );
 
     }
-
-
-    // -----------------------------------------
-    // UPDATE RESOURCE
-    // -----------------------------------------
-
-    await env.DB.prepare(
-
-        `UPDATE study_resources
-
-         SET
-
-            subject_id = ?,
-
-            title = ?,
-
-            author = ?,
-
-            description = ?,
-
-            file_url = ?,
-
-            cover_image = ?,
-
-            file_type = ?,
-
-            status = ?,
-
-            updated_at = ?
-
-         WHERE id = ?`
-
-    )
-
-    .bind(
-
-        subject_id,
-
-        String(title).trim(),
-
-        String(author).trim(),
-
-        description
-
-            ? String(description).trim()
-
-            : "",
-
-        String(file_url).trim(),
-
-        cover_image
-
-            ? String(cover_image).trim()
-
-            : "",
-
-        normalizedFileType,
-
-        status || "active",
-
-        new Date().toISOString(),
-
-        resourceId
-
-    )
-
-    .run();
-
-    return Response.json({
-
-        success: true,
-
-        message: "Study resource updated successfully."
-
-    });
 
 }
 
@@ -5253,111 +5588,192 @@ if (
 
     method === "PATCH" &&
 
-    pathname.startsWith("/api/admin/resources/") &&
+    pathname.startsWith(
+        "/api/admin/resources/"
+    ) &&
 
     pathname.endsWith("/status")
 
 ) {
 
-    const parts = pathname.split("/");
+    const parts =
+        pathname
+            .split("/")
+            .filter(Boolean);
 
-    const resourceId = parts[parts.length - 2];
 
-    const body = await request.json();
+    const statusIndex =
+        parts.length - 1;
 
-    const { status } = body;
+
+    const resourceId =
+        parts[statusIndex - 1];
+
+
+    if (!resourceId) {
+
+        return resourceJson(
+
+            false,
+
+            "Study resource ID is required.",
+
+            null,
+
+            400
+
+        );
+
+    }
+
+
+    const body =
+        await readJsonBody(request);
+
+
+    if (!body) {
+
+        return resourceJson(
+
+            false,
+
+            "Invalid JSON request body.",
+
+            null,
+
+            400
+
+        );
+
+    }
+
+
+    const status =
+        normalizeStatus(body.status);
 
 
     if (
 
-        !status ||
-
-        !["active", "inactive"].includes(status)
+        !STUDY_RESOURCE_STATUSES.includes(
+            status
+        )
 
     ) {
 
-        return Response.json({
+        return resourceJson(
 
-            success: false,
+            false,
 
-            message:
-                "Status must be 'active' or 'inactive'."
+            "Status must be 'active' or 'inactive'.",
 
-        }, {
+            null,
 
-            status: 400
+            400
 
-        });
-
-    }
-
-
-    const resource = await env.DB.prepare(
-
-        `SELECT id
-
-         FROM study_resources
-
-         WHERE id = ?`
-
-    )
-
-    .bind(resourceId)
-
-    .first();
-
-    if (!resource) {
-
-        return Response.json({
-
-            success: false,
-
-            message: "Study resource not found."
-
-        }, {
-
-            status: 404
-
-        });
+        );
 
     }
 
 
-    await env.DB.prepare(
+    try {
 
-        `UPDATE study_resources
+        const resource =
+            await env.DB.prepare(
 
-         SET
+                `SELECT id
 
-            status = ?,
+                FROM study_resources
 
-            updated_at = ?
+                WHERE id = ?
 
-         WHERE id = ?`
+                LIMIT 1`
 
-    )
-
-    .bind(
-
-        status,
-
-        new Date().toISOString(),
-
-        resourceId
-
-    )
-
-    .run();
+            )
+            .bind(resourceId)
+            .first();
 
 
-    return Response.json({
+        if (!resource) {
 
-        success: true,
+            return resourceJson(
 
-        message:
-            `Study resource ${status} successfully.`
+                false,
 
-    });
+                "Study resource not found.",
+
+                null,
+
+                404
+
+            );
+
+        }
+
+
+        await env.DB.prepare(
+
+            `UPDATE study_resources
+
+            SET
+
+                status = ?,
+
+                updated_at = ?
+
+            WHERE id = ?`
+
+        )
+        .bind(
+
+            status,
+
+            new Date().toISOString(),
+
+            resourceId
+
+        )
+        .run();
+
+
+        return resourceJson(
+
+            true,
+
+            status === "active"
+
+                ? "Study resource activated successfully."
+
+                : "Study resource deactivated successfully.",
+
+            {
+                id: resourceId,
+                status
+            },
+
+            200
+
+        );
+
+    } catch (error) {
+
+        console.error(
+            "UPDATE study resource status failed:",
+            error
+        );
+
+        return resourceJson(
+
+            false,
+
+            "Failed to update study resource status.",
+
+            null,
+
+            500
+
+        );
+
+    }
 
 }
 
@@ -5365,82 +5781,1335 @@ if (
 // =====================================================
 // SOFT DELETE STUDY RESOURCE
 // DELETE /api/admin/resources/:id
+//
+// We deliberately do NOT delete the R2 files here.
+// R2 cleanup will be handled by the dedicated storage
+// cleanup flow so that a database deletion cannot
+// accidentally orphan or destroy files incorrectly.
 // =====================================================
 
 if (
 
     method === "DELETE" &&
 
-    pathname.startsWith("/api/admin/resources/")
+    pathname.startsWith(
+        "/api/admin/resources/"
+    )
 
 ) {
 
-    const resourceId = pathname.split("/").pop();
+    const parts =
+        pathname
+            .split("/")
+            .filter(Boolean);
 
-    const resource = await env.DB.prepare(
 
-        `SELECT id
+    const resourceId =
+        parts[parts.length - 1];
 
-         FROM study_resources
 
-         WHERE id = ?`
+    if (!resourceId) {
 
-    )
+        return resourceJson(
 
-    .bind(resourceId)
+            false,
 
-    .first();
+            "Study resource ID is required.",
 
-    if (!resource) {
+            null,
 
-        return Response.json({
+            400
 
-            success: false,
-
-            message: "Study resource not found."
-
-        }, {
-
-            status: 404
-
-        });
+        );
 
     }
 
 
-    await env.DB.prepare(
+    try {
 
-        `UPDATE study_resources
+        const resource =
+            await env.DB.prepare(
 
-         SET
+                `SELECT
 
-            status = 'inactive',
+                    id,
 
-            updated_at = ?
+                    status
 
-         WHERE id = ?`
+                FROM study_resources
 
-    )
+                WHERE id = ?
 
-    .bind(
+                LIMIT 1`
 
-        new Date().toISOString(),
-
-        resourceId
-
-    )
-
-    .run();
+            )
+            .bind(resourceId)
+            .first();
 
 
-    return Response.json({
+        if (!resource) {
 
-        success: true,
+            return resourceJson(
 
-        message:
-            "Study resource deleted successfully."
+                false,
 
-    });
+                "Study resource not found.",
+
+                null,
+
+                404
+
+            );
+
+        }
+
+
+        await env.DB.prepare(
+
+            `UPDATE study_resources
+
+            SET
+
+                status = 'inactive',
+
+                updated_at = ?
+
+            WHERE id = ?`
+
+        )
+        .bind(
+
+            new Date().toISOString(),
+
+            resourceId
+
+        )
+        .run();
+
+
+        return resourceJson(
+
+            true,
+
+            "Study resource deactivated successfully.",
+
+            {
+                id: resourceId,
+                status: "inactive"
+            },
+
+            200
+
+        );
+
+    } catch (error) {
+
+        console.error(
+            "DELETE study resource failed:",
+            error
+        );
+
+        return resourceJson(
+
+            false,
+
+            "Failed to delete the study resource.",
+
+            null,
+
+            500
+
+        );
+
+    }
+
+}
+
+// =====================================================
+// STUDY RESOURCE R2 MULTIPART UPLOAD
+// =====================================================
+//
+// Large-file upload architecture:
+//
+// Browser
+//    ↓
+// /api/admin/resources/upload/init
+//    ↓
+// R2 multipart upload created
+//    ↓
+// Browser sends chunks
+//    ↓
+// /api/admin/resources/upload/part
+//    ↓
+// R2 uploadPart()
+//    ↓
+// /api/admin/resources/upload/complete
+//    ↓
+// R2 multipart upload completed
+//
+// NO APPLICATION FILE-SIZE LIMIT.
+// =====================================================
+
+
+// =====================================================
+// UPLOAD CONSTANTS
+// =====================================================
+
+const RESOURCE_UPLOAD_TYPES = {
+
+    document: {
+        bucket: "DOCUMENTS",
+        folder: "study-resources/documents"
+    },
+
+    cover: {
+        bucket: "IMAGES",
+        folder: "study-resources/covers"
+    }
+
+};
+
+
+// =====================================================
+// ALLOWED DOCUMENT TYPES
+// =====================================================
+
+const RESOURCE_UPLOAD_MIME_TYPES = {
+
+    pdf:
+        "application/pdf",
+
+    docx:
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+
+    xlsx:
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+
+    csv:
+        "text/csv"
+
+};
+
+
+// =====================================================
+// ALLOWED COVER TYPES
+// =====================================================
+
+const RESOURCE_COVER_MIME_TYPES = {
+
+    "image/jpeg":
+        "jpg",
+
+    "image/png":
+        "png",
+
+    "image/webp":
+        "webp"
+
+};
+
+
+// =====================================================
+// CREATE MULTIPART UPLOAD
+//
+// POST
+// /api/admin/resources/upload/init
+//
+// Body:
+//
+// {
+//     "upload_type": "document",
+//     "file_name": "book.pdf",
+//     "content_type": "application/pdf"
+// }
+//
+// OR
+//
+// {
+//     "upload_type": "cover",
+//     "file_name": "cover.jpg",
+//     "content_type": "image/jpeg"
+// }
+// =====================================================
+
+if (
+
+    method === "POST" &&
+
+    pathname ===
+        "/api/admin/resources/upload/init"
+
+) {
+
+    const body =
+        await readJsonBody(request);
+
+
+    if (!body) {
+
+        return resourceJson(
+
+            false,
+
+            "Invalid JSON request body.",
+
+            null,
+
+            400
+
+        );
+
+    }
+
+
+    const uploadType =
+        normalizeText(
+            body.upload_type
+        )
+        .toLowerCase();
+
+
+    const fileName =
+        normalizeText(
+            body.file_name
+        );
+
+
+    const contentType =
+        normalizeText(
+            body.content_type
+        )
+        .toLowerCase();
+
+
+    // -----------------------------------------
+    // VALIDATE UPLOAD TYPE
+    // -----------------------------------------
+
+    if (
+
+        !RESOURCE_UPLOAD_TYPES[
+            uploadType
+        ]
+
+    ) {
+
+        return resourceJson(
+
+            false,
+
+            "Invalid upload type.",
+
+            null,
+
+            400
+
+        );
+
+    }
+
+
+    // -----------------------------------------
+    // VALIDATE FILE NAME
+    // -----------------------------------------
+
+    if (!fileName) {
+
+        return resourceJson(
+
+            false,
+
+            "File name is required.",
+
+            null,
+
+            400
+
+        );
+
+    }
+
+
+    // -----------------------------------------
+    // DOCUMENT VALIDATION
+    // -----------------------------------------
+
+    if (
+        uploadType === "document"
+    ) {
+
+        const validDocumentType =
+            Object.values(
+                RESOURCE_UPLOAD_MIME_TYPES
+            )
+            .includes(contentType);
+
+
+        if (!validDocumentType) {
+
+            return resourceJson(
+
+                false,
+
+                "Unsupported study resource file type.",
+
+                null,
+
+                400
+
+            );
+
+        }
+
+    }
+
+
+    // -----------------------------------------
+    // COVER VALIDATION
+    // -----------------------------------------
+
+    if (
+        uploadType === "cover"
+    ) {
+
+        const validCoverType =
+            Object.keys(
+                RESOURCE_COVER_MIME_TYPES
+            )
+            .includes(contentType);
+
+
+        if (!validCoverType) {
+
+            return resourceJson(
+
+                false,
+
+                "Only JPG, PNG and WebP cover images are supported.",
+
+                null,
+
+                400
+
+            );
+
+        }
+
+    }
+
+
+    try {
+
+        // -----------------------------------------
+        // UNIQUE OBJECT ID
+        // -----------------------------------------
+
+        const uploadId =
+            crypto.randomUUID();
+
+
+        const safeName =
+            fileName
+                .replace(
+                    /[^a-zA-Z0-9._-]/g,
+                    "-"
+                )
+                .replace(
+                    /-+/g,
+                    "-"
+                )
+                .slice(
+                    0,
+                    180
+                );
+
+
+        const objectKey =
+            `${RESOURCE_UPLOAD_TYPES[uploadType].folder}/${uploadId}-${safeName}`;
+
+
+        // -----------------------------------------
+        // SELECT R2 BUCKET
+        // -----------------------------------------
+
+        const bucket =
+            uploadType === "document"
+
+                ? env.DOCUMENTS
+
+                : env.IMAGES;
+
+
+        if (!bucket) {
+
+            console.error(
+                "R2 bucket binding missing:",
+                uploadType
+            );
+
+            return resourceJson(
+
+                false,
+
+                "Storage service is not configured.",
+
+                null,
+
+                500
+
+            );
+
+        }
+
+
+        // -----------------------------------------
+        // CREATE MULTIPART UPLOAD
+        // -----------------------------------------
+
+        const multipartUpload =
+            await bucket.createMultipartUpload(
+
+                objectKey,
+
+                {
+
+                    httpMetadata: {
+
+                        contentType:
+                            contentType
+
+                    },
+
+                    customMetadata: {
+
+                        resourceUploadId:
+                            uploadId,
+
+                        resourceType:
+                            uploadType,
+
+                        originalFileName:
+                            fileName
+
+                    }
+
+                }
+
+            );
+
+
+        return resourceJson(
+
+            true,
+
+            "Multipart upload initialized successfully.",
+
+            {
+
+                upload_id:
+                    uploadId,
+
+                object_key:
+                    objectKey,
+
+                upload_type:
+                    uploadType,
+
+                content_type:
+                    contentType,
+
+                r2_upload_id:
+                    multipartUpload.uploadId
+
+            },
+
+            201
+
+        );
+
+    } catch (error) {
+
+        console.error(
+            "R2 multipart initialization failed:",
+            error
+        );
+
+        return resourceJson(
+
+            false,
+
+            "Unable to initialize file upload.",
+
+            null,
+
+            500
+
+        );
+
+    }
+
+}
+
+
+// =====================================================
+// UPLOAD ONE PART
+//
+// PUT
+// /api/admin/resources/upload/part
+//
+// Headers:
+//
+// X-Upload-Type
+// X-Object-Key
+// X-R2-Upload-Id
+// X-Part-Number
+//
+// Body:
+// raw binary chunk
+// =====================================================
+
+if (
+
+    method === "PUT" &&
+
+    pathname ===
+        "/api/admin/resources/upload/part"
+
+) {
+
+    const uploadType =
+        normalizeText(
+            request.headers.get(
+                "X-Upload-Type"
+            )
+        )
+        .toLowerCase();
+
+
+    const objectKey =
+        normalizeText(
+            request.headers.get(
+                "X-Object-Key"
+            )
+        );
+
+
+    const r2UploadId =
+        normalizeText(
+            request.headers.get(
+                "X-R2-Upload-Id"
+            )
+        );
+
+
+    const partNumberRaw =
+        normalizeText(
+            request.headers.get(
+                "X-Part-Number"
+            )
+        );
+
+
+    const partNumber =
+        Number(partNumberRaw);
+
+
+    // -----------------------------------------
+    // VALIDATION
+    // -----------------------------------------
+
+    if (
+
+        !RESOURCE_UPLOAD_TYPES[
+            uploadType
+        ]
+
+    ) {
+
+        return resourceJson(
+
+            false,
+
+            "Invalid upload type.",
+
+            null,
+
+            400
+
+        );
+
+    }
+
+
+    if (!objectKey) {
+
+        return resourceJson(
+
+            false,
+
+            "Upload object key is required.",
+
+            null,
+
+            400
+
+        );
+
+    }
+
+
+    if (!r2UploadId) {
+
+        return resourceJson(
+
+            false,
+
+            "R2 upload ID is required.",
+
+            null,
+
+            400
+
+        );
+
+    }
+
+
+    if (
+
+        !Number.isInteger(
+            partNumber
+        ) ||
+
+        partNumber < 1
+
+    ) {
+
+        return resourceJson(
+
+            false,
+
+            "Invalid upload part number.",
+
+            null,
+
+            400
+
+        );
+
+    }
+
+
+    if (!request.body) {
+
+        return resourceJson(
+
+            false,
+
+            "Upload part is empty.",
+
+            null,
+
+            400
+
+        );
+
+    }
+
+
+    try {
+
+        // -----------------------------------------
+        // SELECT BUCKET
+        // -----------------------------------------
+
+        const bucket =
+            uploadType === "document"
+
+                ? env.DOCUMENTS
+
+                : env.IMAGES;
+
+
+        if (!bucket) {
+
+            return resourceJson(
+
+                false,
+
+                "Storage service is not configured.",
+
+                null,
+
+                500
+
+            );
+
+        }
+
+
+        // -----------------------------------------
+        // UPLOAD PART
+        // -----------------------------------------
+
+        const multipartUpload =
+            bucket.resumeMultipartUpload(
+
+                objectKey,
+
+                r2UploadId
+
+            );
+
+
+        const uploadedPart =
+            await multipartUpload.uploadPart(
+
+                partNumber,
+
+                request.body
+
+            );
+
+
+        return resourceJson(
+
+            true,
+
+            "Upload part received successfully.",
+
+            {
+
+                part_number:
+                    partNumber,
+
+                etag:
+                    uploadedPart.etag
+
+            },
+
+            200
+
+        );
+
+    } catch (error) {
+
+        console.error(
+            "R2 multipart part upload failed:",
+            error
+        );
+
+        return resourceJson(
+
+            false,
+
+            "Unable to upload file part.",
+
+            null,
+
+            500
+
+        );
+
+    }
+
+}
+
+
+// =====================================================
+// COMPLETE MULTIPART UPLOAD
+//
+// POST
+// /api/admin/resources/upload/complete
+//
+// Body:
+//
+// {
+//     "upload_type": "document",
+//     "object_key": "...",
+//     "r2_upload_id": "...",
+//     "parts": [
+//         {
+//             "part_number": 1,
+//             "etag": "..."
+//         }
+//     ]
+// }
+// =====================================================
+
+if (
+
+    method === "POST" &&
+
+    pathname ===
+        "/api/admin/resources/upload/complete"
+
+) {
+
+    const body =
+        await readJsonBody(request);
+
+
+    if (!body) {
+
+        return resourceJson(
+
+            false,
+
+            "Invalid JSON request body.",
+
+            null,
+
+            400
+
+        );
+
+    }
+
+
+    const uploadType =
+        normalizeText(
+            body.upload_type
+        )
+        .toLowerCase();
+
+
+    const objectKey =
+        normalizeText(
+            body.object_key
+        );
+
+
+    const r2UploadId =
+        normalizeText(
+            body.r2_upload_id
+        );
+
+
+    const rawParts =
+        Array.isArray(body.parts)
+            ? body.parts
+            : [];
+
+
+    // -----------------------------------------
+    // VALIDATE TYPE
+    // -----------------------------------------
+
+    if (
+
+        !RESOURCE_UPLOAD_TYPES[
+            uploadType
+        ]
+
+    ) {
+
+        return resourceJson(
+
+            false,
+
+            "Invalid upload type.",
+
+            null,
+
+            400
+
+        );
+
+    }
+
+
+    if (!objectKey) {
+
+        return resourceJson(
+
+            false,
+
+            "Object key is required.",
+
+            null,
+
+            400
+
+        );
+
+    }
+
+
+    if (!r2UploadId) {
+
+        return resourceJson(
+
+            false,
+
+            "R2 upload ID is required.",
+
+            null,
+
+            400
+
+        );
+
+    }
+
+
+    if (!rawParts.length) {
+
+        return resourceJson(
+
+            false,
+
+            "No upload parts were supplied.",
+
+            null,
+
+            400
+
+        );
+
+    }
+
+
+    // -----------------------------------------
+    // NORMALIZE PARTS
+    // -----------------------------------------
+
+    const parts =
+        rawParts
+            .map(part => ({
+
+                partNumber:
+                    Number(
+                        part.part_number
+                    ),
+
+                etag:
+                    normalizeText(
+                        part.etag
+                    )
+
+            }))
+            .filter(
+                part =>
+                    Number.isInteger(
+                        part.partNumber
+                    ) &&
+
+                    part.partNumber > 0 &&
+
+                    part.etag
+            )
+            .sort(
+                (a, b) =>
+                    a.partNumber -
+                    b.partNumber
+            );
+
+
+    if (
+        parts.length !==
+        rawParts.length
+    ) {
+
+        return resourceJson(
+
+            false,
+
+            "One or more upload parts are invalid.",
+
+            null,
+
+            400
+
+        );
+
+    }
+
+
+    try {
+
+        // -----------------------------------------
+        // SELECT BUCKET
+        // -----------------------------------------
+
+        const bucket =
+            uploadType === "document"
+
+                ? env.DOCUMENTS
+
+                : env.IMAGES;
+
+
+        if (!bucket) {
+
+            return resourceJson(
+
+                false,
+
+                "Storage service is not configured.",
+
+                null,
+
+                500
+
+            );
+
+        }
+
+
+        // -----------------------------------------
+        // RESUME MULTIPART UPLOAD
+        // -----------------------------------------
+
+        const multipartUpload =
+            bucket.resumeMultipartUpload(
+
+                objectKey,
+
+                r2UploadId
+
+            );
+
+
+        // -----------------------------------------
+        // COMPLETE
+        // -----------------------------------------
+
+        const completed =
+            await multipartUpload.complete(
+
+                parts
+
+            );
+
+
+        // -----------------------------------------
+        // RETURN STORAGE KEY
+        // -----------------------------------------
+
+        return resourceJson(
+
+            true,
+
+            "File uploaded successfully.",
+
+            {
+
+                object_key:
+                    objectKey,
+
+                etag:
+                    completed.etag || null
+
+            },
+
+            200
+
+        );
+
+    } catch (error) {
+
+        console.error(
+            "R2 multipart completion failed:",
+            error
+        );
+
+        return resourceJson(
+
+            false,
+
+            "Unable to complete file upload.",
+
+            null,
+
+            500
+
+        );
+
+    }
+
+}
+
+
+// =====================================================
+// ABORT MULTIPART UPLOAD
+//
+// POST
+// /api/admin/resources/upload/abort
+//
+// Body:
+//
+// {
+//     "upload_type": "document",
+//     "object_key": "...",
+//     "r2_upload_id": "..."
+// }
+// =====================================================
+
+if (
+
+    method === "POST" &&
+
+    pathname ===
+        "/api/admin/resources/upload/abort"
+
+) {
+
+    const body =
+        await readJsonBody(request);
+
+
+    if (!body) {
+
+        return resourceJson(
+
+            false,
+
+            "Invalid JSON request body.",
+
+            null,
+
+            400
+
+        );
+
+    }
+
+
+    const uploadType =
+        normalizeText(
+            body.upload_type
+        )
+        .toLowerCase();
+
+
+    const objectKey =
+        normalizeText(
+            body.object_key
+        );
+
+
+    const r2UploadId =
+        normalizeText(
+            body.r2_upload_id
+        );
+
+
+    if (
+
+        !RESOURCE_UPLOAD_TYPES[
+            uploadType
+        ]
+
+    ) {
+
+        return resourceJson(
+
+            false,
+
+            "Invalid upload type.",
+
+            null,
+
+            400
+
+        );
+
+    }
+
+
+    if (
+        !objectKey ||
+        !r2UploadId
+    ) {
+
+        return resourceJson(
+
+            false,
+
+            "Upload information is incomplete.",
+
+            null,
+
+            400
+
+        );
+
+    }
+
+
+    try {
+
+        const bucket =
+            uploadType === "document"
+
+                ? env.DOCUMENTS
+
+                : env.IMAGES;
+
+
+        if (!bucket) {
+
+            return resourceJson(
+
+                false,
+
+                "Storage service is not configured.",
+
+                null,
+
+                500
+
+            );
+
+        }
+
+
+        const multipartUpload =
+            bucket.resumeMultipartUpload(
+
+                objectKey,
+
+                r2UploadId
+
+            );
+
+
+        await multipartUpload.abort();
+
+
+        return resourceJson(
+
+            true,
+
+            "File upload cancelled.",
+
+            null,
+
+            200
+
+        );
+
+    } catch (error) {
+
+        console.error(
+            "R2 multipart abort failed:",
+            error
+        );
+
+        return resourceJson(
+
+            false,
+
+            "Unable to cancel file upload.",
+
+            null,
+
+            500
+
+        );
+
+    }
 
 }
 
