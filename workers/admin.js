@@ -2971,6 +2971,9 @@ if (
     }
 
 
+    const exam_id =
+        cleanQuestionText(body.exam_id);
+
     const subject_id =
         cleanQuestionText(body.subject_id);
 
@@ -3008,6 +3011,21 @@ if (
     // -----------------------------------------
     // VALIDATION
     // -----------------------------------------
+
+    if (!exam_id) {
+
+    return Response.json({
+
+        success: false,
+
+        message:
+            "Please select an exam."
+
+    }, {
+        status: 400
+    });
+
+}
 
     if (!subject_id) {
 
@@ -4354,42 +4372,64 @@ if (
     }
 
 
-    // -----------------------------------------
-    // VERIFY SUBJECT EXISTS
-    // -----------------------------------------
+// -----------------------------------------
+// VERIFY SUBJECT BELONGS TO EXAM
+// -----------------------------------------
 
-    const subject = await env.DB.prepare(
+const subject = await env.DB.prepare(
 
-        `SELECT id
+    `SELECT
 
-         FROM subjects
+        s.id,
+        s.exam_id,
+        s.status AS subject_status,
+        e.status AS exam_status
 
-         WHERE id = ?
+     FROM subjects s
 
-         AND status = 'active'`
+     INNER JOIN exams e
+        ON s.exam_id = e.id
 
-    )
+     WHERE s.id = ?
+       AND e.id = ?
 
-    .bind(subject_id)
+     LIMIT 1`
 
-    .first();
+)
 
-    if (!subject) {
+.bind(
 
-        return Response.json({
+    subject_id,
+    exam_id
 
-            success: false,
+)
 
-            message: "Selected subject does not exist."
+.first();
 
-        }, {
+if (
 
-            status: 404
+    !subject ||
 
-        });
+    subject.subject_status !== "active" ||
 
-    }
+    subject.exam_status !== "active"
 
+) {
+
+    return Response.json({
+
+        success: false,
+
+        message:
+            "Selected subject does not belong to the selected exam or is inactive."
+
+    }, {
+
+        status: 404
+
+    });
+
+}
 
     // -----------------------------------------
     // CHECK DUPLICATE

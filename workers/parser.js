@@ -1,145 +1,753 @@
-"use strict";
+/*
+=========================================================
+    NURSEPHERE QUESTION IMPORT WORKER
+=========================================================
 
-/*=========================================================
-    PRACTICE QUESTION IMPORT PARSER
-    Supports:
+    Purpose:
+        Parse and bulk-import practice questions.
+
+    Supported:
         - DOCX
         - XLSX
-=========================================================*/
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+    Flow:
+        Admin
+          ↓
+        Upload DOCX/XLSX
+          ↓
+        Parse
+          ↓
+        Validate every question
+          ↓
+        Verify Exam → Subject
+          ↓
+        Check duplicates
+          ↓
+        D1 batch insert
+          ↓
+        Return import result
+
+=========================================================
+*/
+
+"use strict";
+
+import * as XLSX from "xlsx";
+import mammoth from "mammoth";
+
+
+const MAX_FILE_SIZE =
+    25 * 1024 * 1024;
+
+const MAX_IMPORT_QUESTIONS =
+    500;
 
 const ALLOWED_EXTENSIONS = [
     "docx",
-    "xlsx"
+    "xlsx",
+    "xls"
 ];
 
-/*=========================================================
-    PUBLIC ENTRY POINT
-=========================================================*/
 
-async function parseQuestionFile(file) {
+export default async function parserHandler(
+    request,
+    env
+) {
 
-    if (!(file instanceof File)) {
+    try {
 
-        throw new Error(
-            "Invalid question file."
+        const url =
+            new URL(request.url);
+
+        const pathname =
+            url.pathname;
+
+        const method =
+            request.method;
+
+
+        /*
+        =================================================
+        IMPORT QUESTIONS
+        POST /api/admin/questions/import
+        =================================================
+        */
+
+        if (
+
+            method === "POST" &&
+
+            pathname ===
+                "/api/admin/questions/import"
+
+        ) {
+
+            const formData =
+                await request.formData();
+
+
+            const file =
+                formData.get("file");
+
+
+            const examId =
+                clean(
+                    formData.get("exam_id")
+                );
+
+
+            const subjectId =
+                clean(
+                    formData.get("subject_id")
+                );
+
+
+            if (!file) {
+
+                return Response.json({
+
+                    success: false,
+
+                    message:
+                        "No question file was uploaded."
+
+                }, {
+                    status: 400
+                });
+
+            }
+
+
+            if (
+                !examId
+            ) {
+
+                return Response.json({
+
+                    success: false,
+
+                    message:
+                        "Exam is required."
+
+                }, {
+                    status: 400
+                });
+
+            }
+
+
+            if (
+                !subjectId
+            ) {
+
+                return Response.json({
+
+                    success: false,
+
+                    message:
+                        "Subject is required."
+
+                }, {
+                    status: 400
+                });
+
+            }
+
+
+            if (
+                typeof file.arrayBuffer !==
+                "function"
+            ) {
+
+                return Response.json({
+
+                    success: false,
+
+                    message:
+                        "Invalid uploaded file."
+
+                }, {
+                    status: 400
+                });
+
+            }
+
+
+            if (
+                file.size >
+                MAX_FILE_SIZE
+            ) {
+
+                return Response.json({
+
+                    success: false,
+
+                    message:
+                        "The uploaded file is too large. Maximum size is 25 MB."
+
+                }, {
+                    status: 400
+                });
+
+            }
+
+
+            const fileName =
+                String(
+                    file.name || ""
+                )
+                .trim()
+                .toLowerCase();
+
+
+            const extension =
+                fileName
+                    .split(".")
+                    .pop();
+
+
+            if (
+                !ALLOWED_EXTENSIONS.includes(
+                    extension
+                )
+            ) {
+
+                return Response.json({
+
+                    success: false,
+
+                    message:
+                        "Only DOCX, XLSX and XLS files are supported."
+
+                }, {
+                    status: 400
+                });
+
+            }
+
+
+            /*
+            =================================================
+            VERIFY EXAM → SUBJECT
+            =================================================
+            */
+
+            const subject =
+                await env.DB.prepare(
+
+                    `SELECT
+                        s.id,
+                        s.exam_id,
+                        s.status AS subject_status,
+                        e.status AS exam_status
+
+                     FROM subjects s
+
+                     INNER JOIN exams e
+                        ON s.exam_id = e.id
+
+                     WHERE s.id = ?
+                       AND e.id = ?
+
+                     LIMIT 1`
+
+                )
+                .bind(
+                    subjectId,
+                    examId
+                )
+                .first();
+
+
+            if (
+
+                !subject ||
+
+                subject.subject_status !==
+                    "active" ||
+
+                subject.exam_status !==
+                    "active"
+
+            ) {
+
+                return Response.json({
+
+                    success: false,
+
+                    message:
+                        "Selected subject does not belong to the selected exam or is inactive."
+
+                }, {
+                    status: 404
+                });
+
+            }
+
+
+            /*
+            =================================================
+            PARSE FILE
+            =================================================
+            */
+
+            const buffer =
+                await file.arrayBuffer();
+
+
+            let parsedQuestions;
+
+
+            if (
+                extension === "docx"
+            ) {
+
+                parsedQuestions =
+                    await parseDOCX(
+                        buffer
+                    );
+
+            }
+
+            else {
+
+                parsedQuestions =
+                    await parseXLSX(
+                        buffer
+                    );
+
+            }
+
+
+            if (
+                !parsedQuestions.length
+            ) {
+
+                return Response.json({
+
+                    success: false,
+
+                    message:
+                        "No valid questions were found in the uploaded file."
+
+                }, {
+                    status: 400
+                });
+
+            }
+
+
+            if (
+                parsedQuestions.length >
+                MAX_IMPORT_QUESTIONS
+            ) {
+
+                return Response.json({
+
+                    success: false,
+
+                    message:
+                        `A maximum of ${MAX_IMPORT_QUESTIONS} questions can be imported at once.`
+
+                }, {
+                    status: 400
+                });
+
+            }
+
+
+            /*
+            =================================================
+            VALIDATE ALL QUESTIONS BEFORE INSERTING
+            =================================================
+            */
+
+            const validation =
+                validateQuestions(
+                    parsedQuestions
+                );
+
+
+            if (
+                !validation.valid
+            ) {
+
+                return Response.json({
+
+                    success: false,
+
+                    message:
+                        "Question validation failed.",
+
+                    errors:
+                        validation.errors,
+
+                    total_questions:
+                        parsedQuestions.length
+
+                }, {
+                    status: 400
+                });
+
+            }
+
+
+            /*
+            =================================================
+            DUPLICATE CHECK
+            =================================================
+            */
+
+            const existing =
+                await env.DB.prepare(
+
+                    `SELECT
+                        LOWER(TRIM(question)) AS question
+
+                     FROM practice_questions
+
+                     WHERE subject_id = ?`
+
+                )
+                .bind(
+                    subjectId
+                )
+                .all();
+
+
+            const existingQuestions =
+                new Set(
+
+                    (existing.results || [])
+                        .map(
+                            row =>
+                                String(
+                                    row.question || ""
+                                )
+                                .trim()
+                                .toLowerCase()
+                        )
+
+                );
+
+
+            const seen =
+                new Set();
+
+            const importable =
+                [];
+
+            const skipped =
+                [];
+
+
+            parsedQuestions.forEach(
+                (question, index) => {
+
+                    const key =
+                        question.question
+                            .trim()
+                            .toLowerCase();
+
+
+                    if (
+                        existingQuestions.has(
+                            key
+                        )
+                    ) {
+
+                        skipped.push({
+
+                            question:
+                                index + 1,
+
+                            reason:
+                                "Question already exists."
+
+                        });
+
+                        return;
+
+                    }
+
+
+                    if (
+                        seen.has(key)
+                    ) {
+
+                        skipped.push({
+
+                            question:
+                                index + 1,
+
+                            reason:
+                                "Duplicate question in uploaded file."
+
+                        });
+
+                        return;
+
+                    }
+
+
+                    seen.add(key);
+
+                    importable.push(
+                        question
+                    );
+
+                }
+            );
+
+
+            if (
+                !importable.length
+            ) {
+
+                return Response.json({
+
+                    success: false,
+
+                    message:
+                        "No new questions are available for import.",
+
+                    imported:
+                        0,
+
+                    skipped:
+                        skipped.length,
+
+                    errors:
+                        skipped
+
+                }, {
+                    status: 409
+                });
+
+            }
+
+
+            /*
+            =================================================
+            BUILD D1 BATCH
+            =================================================
+            */
+
+            const now =
+                new Date().toISOString();
+
+
+            const statements =
+                importable.map(
+                    question => {
+
+                        const id =
+                            crypto.randomUUID();
+
+
+                        return env.DB.prepare(
+
+                            `INSERT INTO practice_questions (
+
+                                id,
+                                subject_id,
+
+                                question,
+                                image_url,
+
+                                option_a,
+                                option_b,
+                                option_c,
+                                option_d,
+
+                                correct_answer,
+                                explanation,
+                                difficulty,
+                                status,
+
+                                created_at,
+                                updated_at
+
+                            )
+
+                            VALUES (
+
+                                ?,
+                                ?,
+
+                                ?,
+                                ?,
+
+                                ?,
+                                ?,
+                                ?,
+                                ?,
+
+                                ?,
+                                ?,
+                                ?,
+                                ?,
+
+                                ?,
+                                ?
+
+                            )`
+
+                        )
+                        .bind(
+
+                            id,
+
+                            subjectId,
+
+                            question.question,
+
+                            question.image_url,
+
+                            question.option_a,
+
+                            question.option_b,
+
+                            question.option_c,
+
+                            question.option_d,
+
+                            question.correct_answer,
+
+                            question.explanation,
+
+                            question.difficulty,
+
+                            "active",
+
+                            now,
+
+                            now
+
+                        );
+
+                    }
+                );
+
+
+            /*
+            =================================================
+            ATOMIC D1 BATCH
+            =================================================
+            */
+
+            await env.DB.batch(
+                statements
+            );
+
+
+            return Response.json({
+
+                success: true,
+
+                message:
+                    "Questions imported successfully.",
+
+                total_questions:
+                    parsedQuestions.length,
+
+                imported:
+                    importable.length,
+
+                skipped:
+                    skipped.length,
+
+                errors:
+                    skipped
+
+            }, {
+                status: 201
+            });
+
+        }
+
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Endpoint not found."
+
+        }, {
+            status: 404
+        });
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Question Import Worker Error:",
+            error
         );
 
-    }
 
-    if (!file.name) {
+        return Response.json({
 
-        throw new Error(
-            "Question file name is required."
-        );
+            success: false,
 
-    }
+            message:
+                "Question import failed.",
 
-    if (!file.size) {
+            error:
+                error?.message ||
+                "Unknown error."
 
-        throw new Error(
-            "The uploaded question file is empty."
-        );
-
-    }
-
-    if (file.size > MAX_FILE_SIZE) {
-
-        throw new Error(
-            "Question file must not exceed 10 MB."
-        );
+        }, {
+            status: 500
+        });
 
     }
-
-    const extension =
-        getFileExtension(file.name);
-
-    if (
-        !ALLOWED_EXTENSIONS.includes(
-            extension
-        )
-    ) {
-
-        throw new Error(
-            "Only DOCX and XLSX files are supported."
-        );
-
-    }
-
-    if (extension === "docx") {
-
-        return parseDOCX(file);
-
-    }
-
-    if (extension === "xlsx") {
-
-        return parseXLSX(file);
-
-    }
-
-    throw new Error(
-        "Unsupported question file format."
-    );
 
 }
 
-/*=========================================================
-    FILE EXTENSION
-=========================================================*/
 
-function getFileExtension(filename) {
+/*
+=========================================================
+HELPERS
+=========================================================
+*/
 
-    return String(filename)
+function clean(value) {
 
-        .trim()
-
-        .toLowerCase()
-
-        .split(".")
-
-        .pop();
+    return String(
+        value ?? ""
+    )
+    .trim();
 
 }
 
-/*=========================================================
-    DOCX PARSER
-=========================================================*/
 
-async function parseDOCX(file) {
+/*
+=========================================================
+DOCX
+=========================================================
+*/
 
-    if (
-        typeof mammoth === "undefined"
-    ) {
-
-        throw new Error(
-            "DOCX parser is not available."
-        );
-
-    }
-
-    const arrayBuffer =
-        await file.arrayBuffer();
+async function parseDOCX(
+    buffer
+) {
 
     const result =
         await mammoth.extractRawText({
-            arrayBuffer
+
+            arrayBuffer:
+                buffer
+
         });
 
-    if (
-        !result ||
-        typeof result.value !== "string"
-    ) {
-
-        throw new Error(
-            "Unable to read the DOCX file."
-        );
-
-    }
 
     const text =
-        normalizeText(result.value);
+        normalizeText(
+            result.value
+        );
+
 
     if (!text) {
 
@@ -149,89 +757,35 @@ async function parseDOCX(file) {
 
     }
 
-    return parseDOCXText(text);
+
+    return parseDOCXText(
+        text
+    );
 
 }
 
-/*=========================================================
-    DOCX TEXT NORMALIZATION
-=========================================================*/
 
-function normalizeText(text) {
-
-    return String(text)
-
-        .replace(/\r\n/g, "\n")
-
-        .replace(/\r/g, "\n")
-
-        .replace(/\u00A0/g, " ")
-
-        .replace(/[ \t]+/g, " ")
-
-        .replace(/\n{3,}/g, "\n\n")
-
-        .trim();
-
-}
-
-/*=========================================================
-    DOCX QUESTION PARSER
-=========================================================
-
-    Supported structure:
-
-    1. Question text
-    A. Option A
-    B. Option B
-    C. Option C
-    D. Option D
-    Answer: A
-    Explanation: ...
-
-=========================================================*/
-
-function parseDOCXText(text) {
+function parseDOCXText(
+    text
+) {
 
     const lines =
         text
             .split("\n")
-            .map(line => line.trim())
+            .map(
+                line =>
+                    line.trim()
+            )
             .filter(Boolean);
 
-    const questions = [];
 
-    let current = null;
+    const questions =
+        [];
 
-    function startQuestion(number, text) {
 
-        current = {
+    let current =
+        null;
 
-            question_number:
-                number || null,
-
-            question:
-                text || "",
-
-            option_a: "",
-
-            option_b: "",
-
-            option_c: "",
-
-            option_d: "",
-
-            correct_answer: "",
-
-            explanation: "",
-
-            difficulty: "medium",
-
-            image_url: ""
-
-        };
-
-    }
 
     function saveCurrent() {
 
@@ -241,8 +795,12 @@ function parseDOCXText(text) {
 
         }
 
+
         const normalized =
-            normalizeQuestion(current);
+            normalizeQuestion(
+                current
+            );
+
 
         if (
             normalized
@@ -254,36 +812,70 @@ function parseDOCXText(text) {
 
         }
 
-        current = null;
+
+        current =
+            null;
 
     }
 
-    for (const line of lines) {
 
-        /*-----------------------------------------------
-            QUESTION
-        -----------------------------------------------*/
+    for (
+        const line
+        of lines
+    ) {
 
         const questionMatch =
             line.match(
                 /^(\d+)[.)]\s*(.+)$/i
             );
 
-        if (questionMatch) {
+
+        if (
+            questionMatch
+        ) {
 
             saveCurrent();
 
-            startQuestion(
 
-                questionMatch[1],
+            current = {
 
-                questionMatch[2]
+                question_number:
+                    questionMatch[1],
 
-            );
+                question:
+                    questionMatch[2],
+
+                option_a:
+                    "",
+
+                option_b:
+                    "",
+
+                option_c:
+                    "",
+
+                option_d:
+                    "",
+
+                correct_answer:
+                    "",
+
+                explanation:
+                    "",
+
+                difficulty:
+                    "medium",
+
+                image_url:
+                    ""
+
+            };
+
 
             continue;
 
         }
+
 
         if (!current) {
 
@@ -291,160 +883,166 @@ function parseDOCXText(text) {
 
         }
 
-        /*-----------------------------------------------
-            OPTIONS
-        -----------------------------------------------*/
 
         const optionMatch =
             line.match(
                 /^([ABCD])[.)]\s*(.+)$/i
             );
 
-        if (optionMatch) {
 
-            const option =
-                optionMatch[1]
-                    .toUpperCase();
+        if (
+            optionMatch
+        ) {
 
             current[
-                `option_${option.toLowerCase()}`
-            ] = optionMatch[2].trim();
+                `option_${optionMatch[1]
+                    .toLowerCase()}`
+            ] =
+                optionMatch[2].trim();
+
 
             continue;
 
         }
 
-        /*-----------------------------------------------
-            ANSWER
-        -----------------------------------------------*/
 
         const answerMatch =
             line.match(
+
                 /^(?:answer|correct\s*answer)\s*[:\-]?\s*([ABCD])\b/i
+
             );
 
-        if (answerMatch) {
+
+        if (
+            answerMatch
+        ) {
 
             current.correct_answer =
                 answerMatch[1]
                     .toUpperCase();
 
+
             continue;
 
         }
 
-        /*-----------------------------------------------
-            EXPLANATION
-        -----------------------------------------------*/
 
         const explanationMatch =
             line.match(
+
                 /^explanation\s*[:\-]?\s*(.*)$/i
+
             );
 
-        if (explanationMatch) {
+
+        if (
+            explanationMatch
+        ) {
 
             current.explanation =
                 explanationMatch[1].trim();
 
+
             continue;
 
         }
 
-        /*-----------------------------------------------
-            DIFFICULTY
-        -----------------------------------------------*/
 
         const difficultyMatch =
             line.match(
+
                 /^difficulty\s*[:\-]?\s*(easy|medium|hard)\b/i
+
             );
 
-        if (difficultyMatch) {
+
+        if (
+            difficultyMatch
+        ) {
 
             current.difficulty =
                 difficultyMatch[1]
                     .toLowerCase();
 
-            continue;
-
-        }
-
-        /*-----------------------------------------------
-            EXPLANATION CONTINUATION
-        -----------------------------------------------*/
-
-        if (
-            current.explanation &&
-            !current.option_a &&
-            !current.option_b &&
-            !current.option_c &&
-            !current.option_d
-        ) {
-
-            current.explanation +=
-                ` ${line}`;
 
             continue;
 
         }
 
-        /*-----------------------------------------------
-            QUESTION CONTINUATION
-        -----------------------------------------------*/
+
+        /*
+        Continue question text until
+        the first option appears.
+        */
 
         if (
+
             !current.option_a &&
             !current.option_b &&
             !current.option_c &&
-            !current.option_d
+            !current.option_d &&
+            !current.explanation
+
         ) {
 
             current.question +=
                 ` ${line}`;
 
+            continue;
+
+        }
+
+
+        /*
+        Continue explanation text.
+        */
+
+        if (
+            current.explanation
+        ) {
+
+            current.explanation +=
+                ` ${line}`;
+
         }
 
     }
 
+
     saveCurrent();
 
-    return validateParsedQuestions(
-        questions
-    );
+
+    return questions;
 
 }
 
-/*=========================================================
-    XLSX PARSER
-=========================================================*/
 
-async function parseXLSX(file) {
+/*
+=========================================================
+XLSX / XLS
+=========================================================
+*/
 
-    if (
-        typeof XLSX === "undefined"
-    ) {
-
-        throw new Error(
-            "Spreadsheet parser is not available."
-        );
-
-    }
-
-    const arrayBuffer =
-        await file.arrayBuffer();
+async function parseXLSX(
+    buffer
+) {
 
     const workbook =
         XLSX.read(
-            arrayBuffer,
+
+            buffer,
+
             {
-                type: "array"
+                type: "array",
+                raw: false
             }
+
         );
 
+
     if (
-        !workbook.SheetNames ||
-        !workbook.SheetNames.length
+        !workbook.SheetNames?.length
     ) {
 
         throw new Error(
@@ -453,28 +1051,34 @@ async function parseXLSX(file) {
 
     }
 
-    const sheetName =
-        workbook.SheetNames[0];
 
     const sheet =
-        workbook.Sheets[sheetName];
+        workbook.Sheets[
+            workbook.SheetNames[0]
+        ];
+
 
     if (!sheet) {
 
         throw new Error(
-            "Unable to read the spreadsheet worksheet."
+            "Unable to read the spreadsheet."
         );
 
     }
 
+
     const rows =
         XLSX.utils.sheet_to_json(
+
             sheet,
+
             {
                 defval: "",
                 raw: false
             }
+
         );
+
 
     if (!rows.length) {
 
@@ -484,87 +1088,80 @@ async function parseXLSX(file) {
 
     }
 
-    const questions =
-        rows.map(
-            (row, index) =>
-                normalizeSpreadsheetQuestion(
-                    row,
-                    index + 2
-                )
-        );
 
-    return validateParsedQuestions(
-        questions
+    return rows.map(
+
+        (row, index) =>
+
+            normalizeSpreadsheetQuestion(
+                row,
+                index + 2
+            )
+
     );
 
 }
 
-/*=========================================================
-    XLSX ROW NORMALIZATION
-=========================================================*/
 
 function normalizeSpreadsheetQuestion(
     row,
     rowNumber
 ) {
 
-    const normalizedRow = {};
+    const values =
+        {};
 
-    Object.keys(row).forEach(key => {
 
-        const normalizedKey =
-            String(key)
+    Object.keys(row)
+        .forEach(
+            key => {
 
-                .trim()
+                const normalized =
+                    String(key)
+                        .trim()
+                        .toLowerCase()
+                        .replace(
+                            /[\s_-]+/g,
+                            ""
+                        );
 
-                .toLowerCase()
 
-                .replace(/[\s_-]+/g, "");
+                values[normalized] =
+                    String(
+                        row[key] ?? ""
+                    ).trim();
 
-        normalizedRow[
-            normalizedKey
-        ] = String(
-            row[key] ?? ""
-        ).trim();
+            }
+        );
 
-    });
 
     const getValue =
         (...keys) => {
 
-            for (const key of keys) {
+            for (
+                const key
+                of keys
+            ) {
 
                 if (
-                    normalizedRow[key] !==
-                    undefined &&
-                    normalizedRow[key] !== ""
+                    values[key] !==
+                        undefined &&
+                    values[key] !== ""
                 ) {
 
-                    return normalizedRow[key];
+                    return values[key];
 
                 }
 
             }
 
+
             return "";
 
         };
 
-    const answer =
-        getValue(
-            "answer",
-            "correctanswer",
-            "correct",
-            "correctoption"
-        );
 
-    const difficulty =
-        getValue(
-            "difficulty"
-        )
-        .toLowerCase() || "medium";
-
-    return {
+    return normalizeQuestion({
 
         question_number:
             rowNumber,
@@ -572,47 +1169,62 @@ function normalizeSpreadsheetQuestion(
         question:
             getValue(
                 "question",
-                "questiontext"
+                "questiontext",
+                "text"
             ),
 
         option_a:
             getValue(
                 "optiona",
                 "a",
-                "choicea"
+                "choicea",
+                "answera"
             ),
 
         option_b:
             getValue(
                 "optionb",
                 "b",
-                "choiceb"
+                "choiceb",
+                "answerb"
             ),
 
         option_c:
             getValue(
                 "optionc",
                 "c",
-                "choicec"
+                "choicec",
+                "answerc"
             ),
 
         option_d:
             getValue(
                 "optiond",
                 "d",
-                "choiced"
+                "choiced",
+                "answerd"
             ),
 
         correct_answer:
-            normalizeAnswer(answer),
+            getValue(
+                "answer",
+                "correctanswer",
+                "correct",
+                "correctoption"
+            ),
 
         explanation:
             getValue(
                 "explanation",
-                "answerexplanation"
+                "answerexplanation",
+                "rationale"
             ),
 
-        difficulty,
+        difficulty:
+            getValue(
+                "difficulty",
+                "level"
+            ),
 
         image_url:
             getValue(
@@ -621,45 +1233,20 @@ function normalizeSpreadsheetQuestion(
                 "image_url"
             )
 
-    };
+    });
 
 }
 
-/*=========================================================
-    ANSWER NORMALIZATION
-=========================================================*/
 
-function normalizeAnswer(answer) {
+/*
+=========================================================
+NORMALIZATION
+=========================================================
+*/
 
-    const value =
-        String(answer || "")
-            .trim()
-            .toUpperCase();
-
-    if (
-        /^[ABCD]$/.test(value)
-    ) {
-
-        return value;
-
-    }
-
-    const match =
-        value.match(
-            /^(?:OPTION\s*)?([ABCD])(?:[.)]|\s|$)/i
-        );
-
-    return match
-        ? match[1].toUpperCase()
-        : value;
-
-}
-
-/*=========================================================
-    QUESTION NORMALIZATION
-=========================================================*/
-
-function normalizeQuestion(question) {
+function normalizeQuestion(
+    question
+) {
 
     if (!question) {
 
@@ -667,183 +1254,267 @@ function normalizeQuestion(question) {
 
     }
 
+
+    const answer =
+        normalizeAnswer(
+            question.correct_answer
+        );
+
+
+    const difficulty =
+        normalizeDifficulty(
+            question.difficulty
+        );
+
+
     return {
 
         question_number:
-            question.question_number || null,
+            question.question_number ||
+            null,
 
         question:
-            String(
-                question.question || ""
-            ).trim(),
+            clean(
+                question.question
+            ),
 
         option_a:
-            String(
-                question.option_a || ""
-            ).trim(),
+            clean(
+                question.option_a
+            ),
 
         option_b:
-            String(
-                question.option_b || ""
-            ).trim(),
+            clean(
+                question.option_b
+            ),
 
         option_c:
-            String(
-                question.option_c || ""
-            ).trim(),
+            clean(
+                question.option_c
+            ),
 
         option_d:
-            String(
-                question.option_d || ""
-            ).trim(),
+            clean(
+                question.option_d
+            ),
 
         correct_answer:
-            normalizeAnswer(
-                question.correct_answer
-            ),
+            answer,
 
         explanation:
-            String(
-                question.explanation || ""
-            ).trim(),
-
-        difficulty:
-            normalizeDifficulty(
-                question.difficulty
+            clean(
+                question.explanation
             ),
 
+        difficulty,
+
         image_url:
-            String(
-                question.image_url || ""
-            ).trim()
+            clean(
+                question.image_url
+            )
 
     };
 
 }
 
-/*=========================================================
-    DIFFICULTY
-=========================================================*/
 
-function normalizeDifficulty(
-    difficulty
+function normalizeAnswer(
+    value
 ) {
 
-    const value =
-        String(
-            difficulty || "medium"
+    const answer =
+        clean(value)
+            .toUpperCase();
+
+
+    if (
+        /^[ABCD]$/.test(
+            answer
         )
-        .trim()
-        .toLowerCase();
+    ) {
+
+        return answer;
+
+    }
+
+
+    const match =
+        answer.match(
+            /(?:OPTION\s*)?([ABCD])(?:[.)]|\s|$)/
+        );
+
+
+    return match
+        ? match[1]
+        : answer;
+
+}
+
+
+function normalizeDifficulty(
+    value
+) {
+
+    const difficulty =
+        clean(value)
+            .toLowerCase();
+
 
     return [
+
         "easy",
         "medium",
         "hard"
-    ].includes(value)
 
-        ? value
+    ].includes(
+        difficulty
+    )
+
+        ? difficulty
 
         : "medium";
 
 }
 
-/*=========================================================
-    VALIDATE IMPORTED QUESTIONS
-=========================================================*/
 
-function validateParsedQuestions(
+/*
+=========================================================
+VALIDATION
+=========================================================
+*/
+
+function validateQuestions(
     questions
 ) {
 
-    if (!Array.isArray(questions)) {
+    const errors =
+        [];
 
-        throw new Error(
-            "Invalid parsed question data."
-        );
-
-    }
-
-    if (!questions.length) {
-
-        throw new Error(
-            "No questions could be extracted from the file."
-        );
-
-    }
-
-    const validQuestions = [];
-
-    const errors = [];
 
     questions.forEach(
         (question, index) => {
 
-            const row =
+            const number =
                 question.question_number ||
                 index + 1;
+
 
             if (
                 !question.question
             ) {
 
-                errors.push(
-                    `Question ${row}: question text is missing.`
-                );
+                errors.push({
 
-                return;
+                    question:
+                        number,
+
+                    error:
+                        "Question text is missing."
+
+                });
 
             }
 
+
             if (
-                !question.option_a ||
-                !question.option_b ||
-                !question.option_c ||
+                !question.option_a
+            ) {
+
+                errors.push({
+
+                    question:
+                        number,
+
+                    error:
+                        "Option A is missing."
+
+                });
+
+            }
+
+
+            if (
+                !question.option_b
+            ) {
+
+                errors.push({
+
+                    question:
+                        number,
+
+                    error:
+                        "Option B is missing."
+
+                });
+
+            }
+
+
+            if (
+                !question.option_c
+            ) {
+
+                errors.push({
+
+                    question:
+                        number,
+
+                    error:
+                        "Option C is missing."
+
+                });
+
+            }
+
+
+            if (
                 !question.option_d
             ) {
 
-                errors.push(
-                    `Question ${row}: all four answer options are required.`
-                );
+                errors.push({
 
-                return;
+                    question:
+                        number,
+
+                    error:
+                        "Option D is missing."
+
+                });
 
             }
+
 
             if (
-                !["A", "B", "C", "D"]
-                    .includes(
-                        question.correct_answer
-                    )
+                ![
+                    "A",
+                    "B",
+                    "C",
+                    "D"
+                ].includes(
+                    question.correct_answer
+                )
             ) {
 
-                errors.push(
-                    `Question ${row}: correct answer must be A, B, C or D.`
-                );
+                errors.push({
 
-                return;
+                    question:
+                        number,
+
+                    error:
+                        "Correct answer must be A, B, C or D."
+
+                });
 
             }
-
-            validQuestions.push(
-                question
-            );
 
         }
     );
 
-    if (!validQuestions.length) {
-
-        throw new Error(
-            errors.join(" ")
-        );
-
-    }
 
     return {
 
-        questions:
-            validQuestions,
+        valid:
+            errors.length === 0,
 
         errors
 
@@ -851,159 +1522,46 @@ function validateParsedQuestions(
 
 }
 
-/*=========================================================
-    PREPARE QUESTIONS FOR API IMPORT
-=========================================================*/
 
-function prepareQuestionsForImport(
-    questions,
-    subjectId
+/*
+=========================================================
+TEXT NORMALIZATION
+=========================================================
+*/
+
+function normalizeText(
+    text
 ) {
 
-    if (
-        !subjectId ||
-        !String(subjectId).trim()
-    ) {
+    return String(
+        text || ""
+    )
 
-        throw new Error(
-            "Please select a subject."
-        );
+    .replace(
+        /\r\n/g,
+        "\n"
+    )
 
-    }
+    .replace(
+        /\r/g,
+        "\n"
+    )
 
-    if (
-        !Array.isArray(questions) ||
-        !questions.length
-    ) {
+    .replace(
+        /\u00A0/g,
+        " "
+    )
 
-        throw new Error(
-            "There are no valid questions to import."
-        );
+    .replace(
+        /[ \t]+/g,
+        " "
+    )
 
-    }
+    .replace(
+        /\n{3,}/g,
+        "\n\n"
+    )
 
-    return questions.map(
-        question => ({
-
-            subject_id:
-                String(subjectId).trim(),
-
-            question:
-                question.question.trim(),
-
-            image_url:
-                question.image_url || "",
-
-            option_a:
-                question.option_a.trim(),
-
-            option_b:
-                question.option_b.trim(),
-
-            option_c:
-                question.option_c.trim(),
-
-            option_d:
-                question.option_d.trim(),
-
-            correct_answer:
-                question.correct_answer
-                    .toUpperCase(),
-
-            explanation:
-                question.explanation || "",
-
-            difficulty:
-                normalizeDifficulty(
-                    question.difficulty
-                )
-
-        })
-    );
+    .trim();
 
 }
-
-/*=========================================================
-    API IMPORT
-=========================================================*/
-
-async function importQuestions(
-    questions,
-    subjectId
-) {
-
-    const payload =
-        prepareQuestionsForImport(
-            questions,
-            subjectId
-        );
-
-    const response =
-        await fetch(
-            "/api/admin/questions/import",
-            {
-                method: "POST",
-
-                headers: {
-                    "Content-Type":
-                        "application/json"
-                },
-
-                body:
-                    JSON.stringify({
-                        subject_id:
-                            String(subjectId).trim(),
-
-                        questions:
-                            payload
-                    })
-            }
-        );
-
-    let result;
-
-    try {
-
-        result =
-            await response.json();
-
-    } catch {
-
-        throw new Error(
-            "The server returned an invalid response."
-        );
-
-    }
-
-    if (!response.ok || !result.success) {
-
-        throw new Error(
-            result.message ||
-            "Question import failed."
-        );
-
-    }
-
-    return result;
-
-}
-
-/*=========================================================
-    EXPORT
-=========================================================*/
-
-window.QuestionParser = {
-
-    parseQuestionFile,
-
-    parseDOCX,
-
-    parseXLSX,
-
-    parseDOCXText,
-
-    prepareQuestionsForImport,
-
-    importQuestions
-
-};

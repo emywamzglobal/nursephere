@@ -2,53 +2,55 @@
 
 /*
 =========================================================
-    Nursephere Admin
-    File: admin/js/questions-import.js
-
-    PURPOSE
-    -----------------------------------------------------
-    Handles bulk practice-question importing.
+    NURSEPHERE ADMIN
+    BULK QUESTION IMPORT
+=========================================================
 
     Supported:
-        - DOCX
-        - XLSX
-        - XLS
+        DOCX
+        XLSX
+        XLS
 
     Flow:
-        Admin selects subject
+
+        Selected Exam
              ↓
-        Upload file
+        Selected Subject
+             ↓
+        Upload File
              ↓
         /api/admin/questions/import
              ↓
-        Server parses DOCX/XLSX
+        Parser Worker
              ↓
-        Parsed questions returned
+        Validate
              ↓
-        POST /api/admin/questions
+        Duplicate Check
              ↓
-        Questions become available to students
+        D1 Batch Insert
 
-    IMPORTANT
-    -----------------------------------------------------
-    Mammoth and XLSX are server-side dependencies.
-    They are NOT loaded into this browser file.
+    IMPORTANT:
+        This file owns the import form.
+
+        questions.js must NOT contain another
+        import submit handler.
 
 =========================================================
 */
 
 
-/* ======================================================
-   CONFIGURATION
-====================================================== */
+/*=========================================================
+    API
+=========================================================*/
 
 const QUESTIONS_IMPORT_API =
-    "https://nursephere.wamalwaemily.workers.dev/api";
+
+    "/api/admin/questions/import";
 
 
-/* ======================================================
-   DOM ELEMENTS
-====================================================== */
+/*=========================================================
+    DOM
+=========================================================*/
 
 const importForm =
     document.getElementById(
@@ -66,28 +68,24 @@ const questionFile =
     );
 
 
-/* ======================================================
-   STATE
-====================================================== */
+/*=========================================================
+    STATE
+=========================================================*/
 
-const importState = {
-
-    importing: false,
-
-    imported: 0,
-
-    failed: 0
-
-};
+let importInProgress =
+    false;
 
 
-/* ======================================================
-   INITIALIZATION
-====================================================== */
+/*=========================================================
+    INITIALIZE
+=========================================================*/
 
 document.addEventListener(
+
     "DOMContentLoaded",
+
     initializeQuestionImporter
+
 );
 
 
@@ -95,194 +93,34 @@ function initializeQuestionImporter() {
 
     if (!importForm) {
 
-        console.warn(
-            "Question import form was not found."
-        );
-
         return;
 
     }
 
 
     importForm.addEventListener(
+
         "submit",
+
         handleQuestionImport
+
     );
 
 
-    if (questionFile) {
+    questionFile?.addEventListener(
 
-        questionFile.addEventListener(
-            "change",
-            validateSelectedFile
-        );
+        "change",
 
-    }
-
-}
-
-
-/* ======================================================
-   AUTHENTICATION
-====================================================== */
-
-function getAdminToken() {
-
-    /*
-        Keep compatibility with the existing
-        Nursephere authentication/session setup.
-    */
-
-    const possibleTokens = [
-
-        localStorage.getItem(
-            "adminToken"
-        ),
-
-        localStorage.getItem(
-            "admin_token"
-        ),
-
-        localStorage.getItem(
-            "session_token"
-        ),
-
-        localStorage.getItem(
-            "token"
-        ),
-
-        window.authState?.token,
-
-        localStorage.getItem(
-            "studentToken"
-        )
-
-    ];
-
-
-    return (
-
-        possibleTokens.find(
-            token =>
-                typeof token === "string" &&
-                token.trim()
-        ) || null
+        validateSelectedFile
 
     );
 
 }
 
 
-/* ======================================================
-   FILE VALIDATION
-====================================================== */
-
-function validateSelectedFile() {
-
-    if (!questionFile) {
-
-        return false;
-
-    }
-
-
-    const file =
-        questionFile.files?.[0];
-
-
-    if (!file) {
-
-        return false;
-
-    }
-
-
-    const fileName =
-        file.name.toLowerCase();
-
-
-    const allowedExtensions = [
-
-        ".docx",
-
-        ".xlsx",
-
-        ".xls"
-
-    ];
-
-
-    const valid =
-        allowedExtensions.some(
-            extension =>
-                fileName.endsWith(
-                    extension
-                )
-        );
-
-
-    if (!valid) {
-
-        showImportMessage(
-
-            "Please select a DOCX or spreadsheet file.",
-
-            "error"
-
-        );
-
-
-        questionFile.value = "";
-
-
-        return false;
-
-    }
-
-
-    /*
-        Prevent unnecessarily large uploads.
-        25 MB is more than enough for question-bank
-        documents while protecting the endpoint.
-    */
-
-    const MAX_FILE_SIZE =
-        25 * 1024 * 1024;
-
-
-    if (
-        file.size >
-        MAX_FILE_SIZE
-    ) {
-
-        showImportMessage(
-
-            "The selected file is too large. Maximum size is 25 MB.",
-
-            "error"
-
-        );
-
-
-        questionFile.value = "";
-
-
-        return false;
-
-    }
-
-
-    clearImportMessage();
-
-
-    return true;
-
-}
-
-
-/* ======================================================
-   MAIN IMPORT
-====================================================== */
+/*=========================================================
+    MAIN IMPORT
+=========================================================*/
 
 async function handleQuestionImport(
     event
@@ -292,7 +130,7 @@ async function handleQuestionImport(
 
 
     if (
-        importState.importing
+        importInProgress
     ) {
 
         return;
@@ -300,20 +138,56 @@ async function handleQuestionImport(
     }
 
 
-    clearImportMessage();
+    const examSelect =
+        document.getElementById(
+            "examSelect"
+        );
 
 
-    /* --------------------------------------------------
-       SUBJECT
-    -------------------------------------------------- */
+    const examId =
+        String(
+            examSelect?.value || ""
+        ).trim();
+
 
     const subjectId =
-        importSubject?.value?.trim();
+        String(
+            importSubject?.value || ""
+        ).trim();
 
+
+    const file =
+        questionFile?.files?.[0];
+
+
+    /*-----------------------------------------------------
+        EXAM
+    -----------------------------------------------------*/
+
+    if (!examId) {
+
+        notifyUser(
+
+            "Please select an exam.",
+
+            "error"
+
+        );
+
+        examSelect?.focus();
+
+        return;
+
+    }
+
+
+    /*-----------------------------------------------------
+        SUBJECT
+    -----------------------------------------------------*/
 
     if (!subjectId) {
 
-        showImportMessage(
+        notifyUser(
 
             "Please select a subject.",
 
@@ -328,17 +202,13 @@ async function handleQuestionImport(
     }
 
 
-    /* --------------------------------------------------
-       FILE
-    -------------------------------------------------- */
-
-    const file =
-        questionFile?.files?.[0];
-
+    /*-----------------------------------------------------
+        FILE
+    -----------------------------------------------------*/
 
     if (!file) {
 
-        showImportMessage(
+        notifyUser(
 
             "Please select a question file.",
 
@@ -362,60 +232,36 @@ async function handleQuestionImport(
     }
 
 
-    /* --------------------------------------------------
-       AUTH
-    -------------------------------------------------- */
+    /*-----------------------------------------------------
+        START
+    -----------------------------------------------------*/
 
-    const token =
-        getAdminToken();
-
-
-    if (!token) {
-
-        showImportMessage(
-
-            "Your admin session has expired. Please log in again.",
-
-            "error"
-
-        );
-
-        return;
-
-    }
-
-
-    /* --------------------------------------------------
-       START
-    -------------------------------------------------- */
-
-    importState.importing =
+    importInProgress =
         true;
-
-    importState.imported =
-        0;
-
-    importState.failed =
-        0;
 
 
     const submitButton =
         importForm.querySelector(
+
             'button[type="submit"]'
+
         );
 
 
-    setImportButtonState(
+    setButtonLoading(
+
         submitButton,
-        true
+
+        "Importing Questions..."
+
     );
 
 
     try {
 
-        showImportMessage(
+        notifyUser(
 
-            "Uploading and parsing questions...",
+            "Uploading and importing questions...",
 
             "info"
 
@@ -423,13 +269,15 @@ async function handleQuestionImport(
 
 
         /*
-        =================================================
-        STEP 1
-        Send original document to parser worker.
+        -------------------------------------------------
+            FORM DATA
 
-        Mammoth handles DOCX.
-        XLSX handles spreadsheet parsing.
-        =================================================
+            IMPORTANT:
+            Do NOT manually set Content-Type.
+
+            Browser must generate the multipart
+            boundary automatically.
+        -------------------------------------------------
         */
 
         const formData =
@@ -437,22 +285,44 @@ async function handleQuestionImport(
 
 
         formData.append(
-            "subject_id",
-            subjectId
+
+            "exam_id",
+
+            examId
+
         );
 
 
         formData.append(
-            "file",
-            file,
-            file.name
+
+            "subject_id",
+
+            subjectId
+
         );
 
 
-        const parserResponse =
+        formData.append(
+
+            "file",
+
+            file,
+
+            file.name
+
+        );
+
+
+        /*
+        -------------------------------------------------
+            REQUEST
+        -------------------------------------------------
+        */
+
+        const response =
             await fetch(
 
-                `${QUESTIONS_IMPORT_API}/admin/questions/import`,
+                QUESTIONS_IMPORT_API,
 
                 {
 
@@ -460,9 +330,6 @@ async function handleQuestionImport(
                         "POST",
 
                     headers: {
-
-                        "Authorization":
-                            `Bearer ${token}`,
 
                         "Accept":
                             "application/json"
@@ -480,159 +347,129 @@ async function handleQuestionImport(
             );
 
 
-        const parserResult =
-            await parseApiResponse(
-                parserResponse
-            );
-
-
-        if (
-            parserResponse.status ===
-            401
-        ) {
-
-            handleSessionExpired();
-
-            return;
-
-        }
-
-
-        if (
-            !parserResponse.ok ||
-            parserResult?.success === false
-        ) {
-
-            throw new Error(
-
-                parserResult?.message ||
-
-                "The question file could not be parsed."
-
-            );
-
-        }
-
-
-        /*
-        =================================================
-        STEP 2
-        Extract parsed question collection.
-
-        Supports several safe response structures so
-        parser.js can return:
-
-            { questions: [...] }
-
-        or
-
-            { data: [...] }
-
-        or
-
-            { data: { questions: [...] } }
-        =================================================
-        */
-
-        const questions =
-            extractQuestions(
-                parserResult
-            );
-
-
-        if (
-            !questions.length
-        ) {
-
-            throw new Error(
-
-                "No valid questions were found in the uploaded file."
-
-            );
-
-        }
-
-
-        showImportMessage(
-
-            `${questions.length} question(s) parsed. Publishing...`,
-
-            "info"
-
-        );
-
-
-        /*
-        =================================================
-        STEP 3
-        Validate and publish each question through the
-        EXISTING production question endpoint.
-
-        This preserves your existing worker logic:
-            POST /api/admin/questions
-        =================================================
-        */
-
         const result =
-            await publishQuestions(
-
-                questions,
-
-                subjectId,
-
-                token
-
+            await parseJSON(
+                response
             );
-
-
-        importState.imported =
-            result.imported;
-
-        importState.failed =
-            result.failed;
 
 
         /*
-        =================================================
-        FINAL RESULT
-        =================================================
+        -------------------------------------------------
+            HTTP ERROR
+        -------------------------------------------------
         */
 
         if (
-            result.imported === 0
+            !response.ok
         ) {
 
-            throw new Error(
+            const error =
+                new Error(
 
-                result.errors?.[0] ||
+                    result?.message ||
 
-                "No questions were imported."
+                    `Import failed (${response.status}).`
 
-            );
+                );
+
+
+            error.details =
+                Array.isArray(
+                    result?.errors
+                )
+
+                    ? result.errors
+
+                    : [];
+
+
+            throw error;
 
         }
+
+
+        /*
+        -------------------------------------------------
+            API ERROR
+        -------------------------------------------------
+        */
+
+        if (
+            result?.success !== true
+        ) {
+
+            const error =
+                new Error(
+
+                    result?.message ||
+
+                    "Question import failed."
+
+                );
+
+
+            error.details =
+                Array.isArray(
+                    result?.errors
+                )
+
+                    ? result.errors
+
+                    : [];
+
+
+            throw error;
+
+        }
+
+
+        /*
+        -------------------------------------------------
+            SUCCESS
+        -------------------------------------------------
+        */
+
+        const imported =
+            Number(
+                result.imported || 0
+            );
+
+
+        const skipped =
+            Number(
+                result.skipped || 0
+            );
 
 
         let message =
-            `${result.imported} question(s) imported successfully.`;
+
+            `${imported} question` +
+
+            (
+                imported === 1
+                    ? ""
+                    : "s"
+            ) +
+
+            " imported successfully.";
 
 
         if (
-            result.failed > 0
+            skipped > 0
         ) {
 
             message +=
 
-                ` ${result.failed} question(s) were skipped.`;
+                ` ${skipped} skipped.`;
 
         }
 
 
-        showImportMessage(
+        notifyUser(
 
             message,
 
-            result.failed > 0
+            skipped > 0
                 ? "warning"
                 : "success"
 
@@ -640,79 +477,116 @@ async function handleQuestionImport(
 
 
         /*
-        =================================================
-        RESET IMPORT FORM
-        =================================================
+        -------------------------------------------------
+            RESET FILE
+        -------------------------------------------------
         */
 
         importForm.reset();
 
 
         /*
-        =================================================
-        REFRESH QUESTION BANK
-
-        questions.js can listen for this event.
-
-        We also use a short reload fallback so the
-        question table is guaranteed to show new data.
-        =================================================
+        -------------------------------------------------
+            REFRESH QUESTION BANK
+        -------------------------------------------------
         */
 
-        window.dispatchEvent(
+        if (
 
-            new CustomEvent(
-                "nursephere:questions-imported",
-                {
-                    detail: {
-                        imported:
-                            result.imported,
-                        failed:
-                            result.failed
-                    }
-                }
-            )
+            typeof window.loadQuestions ===
+            "function"
 
-        );
+        ) {
 
+            await window.loadQuestions();
 
-        window.setTimeout(
+        }
 
-            () => {
+        else {
 
-                window.location.reload();
+            /*
+                If questions.js keeps loadQuestions
+                private, refresh the page so the
+                newly imported questions appear.
+            */
 
-            },
+            window.setTimeout(
 
-            800
+                () => {
 
-        );
+                    window.location.reload();
+
+                },
+
+                500
+
+            );
+
+        }
 
     }
 
     catch (error) {
 
         console.error(
-            "QUESTION IMPORT ERROR:",
+
+            "Question Import:",
+
             error
+
         );
 
 
+        let message =
+
+            error?.message ||
+
+            "Question import failed.";
+
+
+        /*
+        -------------------------------------------------
+            DISPLAY FIRST VALIDATION ERROR
+        -------------------------------------------------
+        */
+
         if (
-            error?.message ===
-            "SESSION_EXPIRED"
+
+            Array.isArray(
+                error?.details
+            ) &&
+
+            error.details.length
+
         ) {
 
-            return;
+            const firstError =
+                error.details[0];
+
+
+            if (
+                firstError?.question
+            ) {
+
+                message +=
+
+                    ` Question ${firstError.question}: ` +
+
+                    (
+                        firstError.error ||
+
+                        "Invalid question."
+
+                    );
+
+            }
 
         }
 
 
-        showImportMessage(
+        notifyUser(
 
-            error?.message ||
-
-            "Question import failed. Please try again.",
+            message,
 
             "error"
 
@@ -722,15 +596,15 @@ async function handleQuestionImport(
 
     finally {
 
-        importState.importing =
+        importInProgress =
             false;
 
 
-        setImportButtonState(
+        restoreButton(
 
             submitButton,
 
-            false
+            "Import Questions"
 
         );
 
@@ -739,662 +613,168 @@ async function handleQuestionImport(
 }
 
 
-/* ======================================================
-   PUBLISH QUESTIONS
-====================================================== */
+/*=========================================================
+    FILE VALIDATION
+=========================================================*/
 
-async function publishQuestions(
+function validateSelectedFile() {
 
-    questions,
+    if (!questionFile) {
 
-    subjectId,
-
-    token
-
-) {
-
-    let imported = 0;
-
-    let failed = 0;
-
-    const errors = [];
-
-
-    /*
-        Publish sequentially.
-
-        This deliberately avoids firing hundreds of
-        simultaneous D1 requests.
-    */
-
-    for (
-        let index = 0;
-        index < questions.length;
-        index++
-    ) {
-
-        const raw =
-            questions[index];
-
-
-        const question =
-            normalizeQuestion(
-                raw
-            );
-
-
-        const validation =
-            validateQuestion(
-                question
-            );
-
-
-        if (
-            !validation.valid
-        ) {
-
-            failed++;
-
-            errors.push(
-
-                `Question ${index + 1}: ${validation.message}`
-
-            );
-
-            continue;
-
-        }
-
-
-        try {
-
-            const response =
-                await fetch(
-
-                    `${QUESTIONS_IMPORT_API}/admin/questions`,
-
-                    {
-
-                        method:
-                            "POST",
-
-                        headers: {
-
-                            "Authorization":
-                                `Bearer ${token}`,
-
-                            "Content-Type":
-                                "application/json",
-
-                            "Accept":
-                                "application/json"
-
-                        },
-
-                        body:
-                            JSON.stringify({
-
-                                subject_id:
-                                    subjectId,
-
-                                question:
-                                    question.question,
-
-                                image_url:
-                                    question.image_url,
-
-                                option_a:
-                                    question.option_a,
-
-                                option_b:
-                                    question.option_b,
-
-                                option_c:
-                                    question.option_c,
-
-                                option_d:
-                                    question.option_d,
-
-                                correct_answer:
-                                    question.correct_answer,
-
-                                explanation:
-                                    question.explanation,
-
-                                difficulty:
-                                    question.difficulty
-
-                            }),
-
-                        cache:
-                            "no-store"
-
-                    }
-
-                );
-
-
-            const result =
-                await parseApiResponse(
-                    response
-                );
-
-
-            if (
-                response.status ===
-                401
-            ) {
-
-                handleSessionExpired();
-
-                throw new Error(
-                    "SESSION_EXPIRED"
-                );
-
-            }
-
-
-            if (
-                response.status ===
-                409
-            ) {
-
-                failed++;
-
-                errors.push(
-
-                    `Question ${index + 1}: ${result?.message || "Duplicate question."}`
-
-                );
-
-                continue;
-
-            }
-
-
-            if (
-                !response.ok ||
-                result?.success === false
-            ) {
-
-                failed++;
-
-                errors.push(
-
-                    `Question ${index + 1}: ${
-                        result?.message ||
-                        "Question could not be published."
-                    }`
-
-                );
-
-                continue;
-
-            }
-
-
-            imported++;
-
-        }
-
-        catch (error) {
-
-            if (
-                error?.message ===
-                "SESSION_EXPIRED"
-            ) {
-
-                throw error;
-
-            }
-
-
-            failed++;
-
-            errors.push(
-
-                `Question ${index + 1}: ${
-                    error?.message ||
-                    "Network error."
-                }`
-
-            );
-
-        }
+        return false;
 
     }
 
 
-    return {
-
-        imported,
-
-        failed,
-
-        errors
-
-    };
-
-}
+    const file =
+        questionFile.files?.[0];
 
 
-/* ======================================================
-   QUESTION NORMALIZATION
-====================================================== */
+    if (!file) {
 
-function normalizeQuestion(
-    raw
-) {
-
-    const source =
-        raw && typeof raw === "object"
-            ? raw
-            : {};
-
-
-    const value = (
-        ...keys
-    ) => {
-
-        for (
-            const key of keys
-        ) {
-
-            if (
-                source[key] !== undefined &&
-                source[key] !== null
-            ) {
-
-                const value =
-                    String(
-                        source[key]
-                    ).trim();
-
-
-                if (value) {
-
-                    return value;
-
-                }
-
-            }
-
-        }
-
-        return "";
-
-    };
-
-
-    let correctAnswer =
-        value(
-
-            "correct_answer",
-            "correctAnswer",
-            "answer",
-            "correct",
-            "correct_option",
-            "correctOption"
-
-        ).toUpperCase();
-
-
-    /*
-        Accept:
-
-            A
-            B
-            C
-            D
-
-        and:
-
-            Option A
-            Answer: A
-            A.
-    */
-
-    const answerMatch =
-        correctAnswer.match(
-            /(?:OPTION\s*)?([ABCD])/
-        );
-
-
-    if (
-        answerMatch
-    ) {
-
-        correctAnswer =
-            answerMatch[1];
+        return false;
 
     }
 
 
-    let difficulty =
-        value(
-
-            "difficulty",
-            "level"
-
-        ).toLowerCase();
-
-
-    if (
-        ![
-            "easy",
-            "medium",
-            "hard"
-        ].includes(
-            difficulty
+    const fileName =
+        String(
+            file.name || ""
         )
-    ) {
-
-        difficulty =
-            "medium";
-
-    }
+        .trim()
+        .toLowerCase();
 
 
-    return {
+    const allowedExtensions = [
 
-        question:
-            value(
-                "question",
-                "Question",
-                "question_text",
-                "questionText",
-                "text"
-            ),
+        ".docx",
 
-        image_url:
-            value(
-                "image_url",
-                "imageUrl",
-                "image"
-            ),
+        ".xlsx",
 
-        option_a:
-            value(
-                "option_a",
-                "optionA",
-                "a",
-                "A",
-                "answer_a",
-                "answerA"
-            ),
-
-        option_b:
-            value(
-                "option_b",
-                "optionB",
-                "b",
-                "B",
-                "answer_b",
-                "answerB"
-            ),
-
-        option_c:
-            value(
-                "option_c",
-                "optionC",
-                "c",
-                "C",
-                "answer_c",
-                "answerC"
-            ),
-
-        option_d:
-            value(
-                "option_d",
-                "optionD",
-                "d",
-                "D",
-                "answer_d",
-                "answerD"
-            ),
-
-        correct_answer:
-            correctAnswer,
-
-        explanation:
-            value(
-                "explanation",
-                "Explanation",
-                "rationale"
-            ),
-
-        difficulty
-
-    };
-
-}
-
-
-/* ======================================================
-   QUESTION VALIDATION
-====================================================== */
-
-function validateQuestion(
-    question
-) {
-
-    if (
-        !question.question
-    ) {
-
-        return {
-
-            valid:
-                false,
-
-            message:
-                "Question text is missing."
-
-        };
-
-    }
-
-
-    if (
-        !question.option_a ||
-        !question.option_b ||
-        !question.option_c ||
-        !question.option_d
-    ) {
-
-        return {
-
-            valid:
-                false,
-
-            message:
-                "All four answer options are required."
-
-        };
-
-    }
-
-
-    if (
-        ![
-            "A",
-            "B",
-            "C",
-            "D"
-        ].includes(
-            question.correct_answer
-        )
-    ) {
-
-        return {
-
-            valid:
-                false,
-
-            message:
-                "Correct answer must be A, B, C or D."
-
-        };
-
-    }
-
-
-    return {
-
-        valid:
-            true
-
-    };
-
-}
-
-
-/* ======================================================
-   EXTRACT QUESTIONS FROM PARSER RESPONSE
-====================================================== */
-
-function extractQuestions(
-    result
-) {
-
-    const candidates = [
-
-        result?.questions,
-
-        result?.data?.questions,
-
-        result?.data?.results,
-
-        result?.data,
-
-        result?.results
+        ".xls"
 
     ];
 
 
-    for (
-        const candidate
-        of candidates
-    ) {
+    const validExtension =
+        allowedExtensions.some(
 
-        if (
-            Array.isArray(
-                candidate
-            )
-        ) {
+            extension =>
 
-            return candidate;
+                fileName.endsWith(
+                    extension
+                )
 
-        }
+        );
+
+
+    if (!validExtension) {
+
+        notifyUser(
+
+            "Only DOCX, XLSX and XLS files are supported.",
+
+            "error"
+
+        );
+
+
+        questionFile.value =
+            "";
+
+
+        return false;
 
     }
 
 
-    return [];
+    /*
+        Keep this aligned with the
+        parser worker limit.
+    */
+
+    const MAX_FILE_SIZE =
+        25 * 1024 * 1024;
+
+
+    if (
+        file.size >
+        MAX_FILE_SIZE
+    ) {
+
+        notifyUser(
+
+            "The selected file is too large. Maximum size is 25 MB.",
+
+            "error"
+
+        );
+
+
+        questionFile.value =
+            "";
+
+
+        return false;
+
+    }
+
+
+    return true;
 
 }
 
 
-/* ======================================================
-   API RESPONSE PARSER
-====================================================== */
+/*=========================================================
+    API RESPONSE
+=========================================================*/
 
-async function parseApiResponse(
+async function parseJSON(
     response
 ) {
 
-    let result = null;
+    const text =
+        await response.text();
+
+
+    if (!text) {
+
+        return {};
+
+    }
 
 
     try {
 
-        result =
-            await response.json();
+        return JSON.parse(
+            text
+        );
 
     }
 
     catch {
 
-        if (
-            response.status ===
-            401
-        ) {
-
-            return {
-
-                success:
-                    false,
-
-                message:
-                    "Your session has expired."
-
-            };
-
-        }
-
-
         throw new Error(
 
-            "The server returned an invalid response."
+            `The server returned an invalid response (${response.status}).`
 
         );
 
     }
 
-
-    return result;
-
 }
 
 
-/* ======================================================
-   SESSION EXPIRY
-====================================================== */
+/*=========================================================
+    BUTTON STATE
+=========================================================*/
 
-function handleSessionExpired() {
+function setButtonLoading(
 
-    localStorage.removeItem(
-        "studentToken"
-    );
-
-    localStorage.removeItem(
-        "student"
-    );
-
-
-    showImportMessage(
-
-        "Your session has expired. Please log in again.",
-
-        "error"
-
-    );
-
-
-    window.setTimeout(
-
-        () => {
-
-            window.location.replace(
-                "login.html"
-            );
-
-        },
-
-        700
-
-    );
-
-}
-
-
-/* ======================================================
-   BUTTON STATE
-====================================================== */
-
-function setImportButtonState(
     button,
-    loading
+
+    text
+
 ) {
 
     if (!button) {
@@ -1404,160 +784,145 @@ function setImportButtonState(
     }
 
 
-    if (loading) {
-
-        button.disabled =
-            true;
+    if (
+        !button.dataset.originalText
+    ) {
 
         button.dataset.originalText =
-            button.textContent;
-
-        button.textContent =
-            "Importing Questions...";
+            button.textContent.trim();
 
     }
 
-    else {
 
-        button.disabled =
-            false;
+    button.disabled =
+        true;
 
-        button.textContent =
 
-            button.dataset.originalText ||
-
-            "Import Questions";
-
-    }
+    button.textContent =
+        text;
 
 }
 
 
-/* ======================================================
-   MESSAGE
-====================================================== */
+function restoreButton(
 
-function showImportMessage(
-    message,
-    type = "info"
+    button,
+
+    fallbackText
+
 ) {
 
-    let element =
-        document.getElementById(
-            "questionImportMessage"
+    if (!button) {
+
+        return;
+
+    }
+
+
+    button.disabled =
+        false;
+
+
+    button.textContent =
+
+        button.dataset.originalText ||
+
+        fallbackText;
+
+
+    delete button.dataset.originalText;
+
+}
+
+
+/*=========================================================
+    NOTIFICATIONS
+=========================================================*/
+
+function notifyUser(
+
+    message,
+
+    type = "info"
+
+) {
+
+    /*
+        Use the existing project notification
+        system if available.
+    */
+
+    if (
+
+        typeof window.notifyUser ===
+        "function"
+
+    ) {
+
+        window.notifyUser(
+
+            message,
+
+            type
+
         );
+
+        return;
+
+    }
 
 
     /*
-        Your current HTML does not contain a dedicated
-        message element, so create one only when needed.
+        Fallback to project Utils.
     */
 
-    if (!element) {
-
-        element =
-            document.createElement(
-                "div"
-            );
-
-        element.id =
-            "questionImportMessage";
-
-        element.setAttribute(
-            "role",
-            "status"
-        );
-
-
-        importForm?.prepend(
-            element
-        );
-
-    }
-
-
-    element.textContent =
-        message;
-
-
-    element.style.marginBottom =
-        "15px";
-
-    element.style.padding =
-        "10px 14px";
-
-    element.style.borderRadius =
-        "8px";
-
-    element.style.fontSize =
-        "13px";
-
-
     if (
-        type === "success"
+
+        window.Utils &&
+
+        typeof window.Utils.showToast ===
+        "function"
+
     ) {
 
-        element.style.background =
-            "#eefaf1";
+        window.Utils.showToast(
 
-        element.style.color =
-            "#26733b";
+            message,
+
+            type
+
+        );
+
+        return;
 
     }
 
-    else if (
+
+    /*
+        Final fallback.
+    */
+
+    if (
         type === "error"
     ) {
 
-        element.style.background =
-            "#fff1f1";
-
-        element.style.color =
-            "#a52d2d";
-
-    }
-
-    else if (
-        type === "warning"
-    ) {
-
-        element.style.background =
-            "#fff8e6";
-
-        element.style.color =
-            "#8a6500";
+        console.error(
+            message
+        );
 
     }
 
     else {
 
-        element.style.background =
-            "#eef5fb";
-
-        element.style.color =
-            "#1769aa";
-
-    }
-
-}
-
-
-/* ======================================================
-   CLEAR MESSAGE
-====================================================== */
-
-function clearImportMessage() {
-
-    const element =
-        document.getElementById(
-            "questionImportMessage"
+        console.log(
+            message
         );
 
-
-    if (element) {
-
-        element.remove();
-
     }
+
+
+    alert(
+        message
+    );
 
 }

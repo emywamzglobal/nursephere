@@ -19,6 +19,7 @@ import referralHandler from "./workers/referral.js";
 import passwordResetHandler from "./workers/password-reset.js";
 import passwordChangeHandler from "./workers/password-change.js";
 import settingsHandler from "./workers/settings.js";
+import parserHandler from "./workers/parser.js";
 export default {
 
     async fetch(request, env, ctx) {

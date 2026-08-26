@@ -12,13 +12,16 @@
         ✔ Subject loading
         ✔ Manual question creation
         ✔ Question bank loading
-        ✔ DOCX import
-        ✔ XLSX import
-        ✔ Parser validation
-        ✔ Importing parsed questions
+        ✔ Question viewing
         ✔ Clear/reset handling
 
-    Existing API contracts preserved.
+    IMPORTING IS HANDLED BY:
+
+        js/questions-import.js
+
+    IMPORTANT:
+        Do NOT add another import submit handler here.
+
 =========================================================
 */
 
@@ -36,10 +39,7 @@ const QUESTION_API = {
         "/api/admin/subjects",
 
     questions:
-        "/api/admin/questions",
-
-    parser:
-        "/api/parser"
+        "/api/admin/questions"
 
 };
 
@@ -84,14 +84,8 @@ const explanation =
 const questionsTableBody =
     document.getElementById("questionsTableBody");
 
-const importForm =
-    document.getElementById("importForm");
-
 const importSubject =
     document.getElementById("importSubject");
-
-const questionFile =
-    document.getElementById("questionFile");
 
 
 /*=========================================================
@@ -109,7 +103,10 @@ document.addEventListener(
 
 async function initializeQuestionManagement() {
 
-    if (!examSelect || !subjectSelect) {
+    if (
+        !examSelect ||
+        !subjectSelect
+    ) {
 
         console.error(
             "Question management elements are missing."
@@ -119,9 +116,12 @@ async function initializeQuestionManagement() {
 
     }
 
+
     bindEvents();
 
+
     await loadExams();
+
 
     await loadQuestions();
 
@@ -160,15 +160,6 @@ function bindEvents() {
 
     );
 
-
-    importForm?.addEventListener(
-
-        "submit",
-
-        handleQuestionImport
-
-    );
-
 }
 
 
@@ -188,23 +179,39 @@ async function loadExams() {
 
         );
 
-        const response = await fetch(
 
-            QUESTION_API.exams,
+        const response =
+            await fetch(
 
-            {
-                method: "GET",
-                headers: {
-                    "Accept": "application/json"
+                QUESTION_API.exams,
+
+                {
+
+                    method:
+                        "GET",
+
+                    headers: {
+
+                        "Accept":
+                            "application/json"
+
+                    }
+
                 }
-            }
 
-        );
+            );
+
 
         const result =
-            await parseJSON(response);
+            await parseJSON(
+                response
+            );
 
-        if (!response.ok || !result.success) {
+
+        if (
+            !response.ok ||
+            !result.success
+        ) {
 
             throw new Error(
 
@@ -215,12 +222,23 @@ async function loadExams() {
 
         }
 
+
         const exams =
-            Array.isArray(result.data)
+
+            Array.isArray(
+                result.data
+            )
+
                 ? result.data
-                : Array.isArray(result.exams)
+
+                : Array.isArray(
+                    result.exams
+                )
+
                     ? result.exams
+
                     : [];
+
 
         examSelect.innerHTML = `
 
@@ -232,28 +250,45 @@ async function loadExams() {
 
         `;
 
+
         exams
 
-            .filter(exam =>
-                exam.status === undefined ||
-                exam.status === "active"
+            .filter(
+
+                exam =>
+
+                    exam.status === undefined ||
+
+                    exam.status === "active"
+
             )
 
-            .forEach(exam => {
+            .forEach(
 
-                addOption(
+                exam => {
 
-                    examSelect,
+                    addOption(
 
-                    exam.id,
+                        examSelect,
 
-                    exam.name
+                        exam.id,
 
-                );
+                        exam.name
 
-            });
+                    );
+
+                }
+
+            );
+
+
+        /*
+            No exam selected yet,
+            therefore no import subjects.
+        */
 
         populateImportSubjects([]);
+
 
     }
 
@@ -262,9 +297,11 @@ async function loadExams() {
         console.error(
 
             "Load Exams:",
+
             error
 
         );
+
 
         setSelectError(
 
@@ -273,6 +310,9 @@ async function loadExams() {
             "Failed to load exams"
 
         );
+
+
+        populateImportSubjects([]);
 
     }
 
@@ -286,9 +326,13 @@ async function loadExams() {
 async function handleExamChange() {
 
     const examId =
-        String(examSelect.value || "").trim();
+        String(
+            examSelect.value || ""
+        ).trim();
+
 
     resetSubjectSelect();
+
 
     if (!examId) {
 
@@ -298,7 +342,10 @@ async function handleExamChange() {
 
     }
 
-    await loadSubjects(examId);
+
+    await loadSubjects(
+        examId
+    );
 
 }
 
@@ -307,7 +354,9 @@ async function handleExamChange() {
     LOAD SUBJECTS
 =========================================================*/
 
-async function loadSubjects(examId) {
+async function loadSubjects(
+    examId
+) {
 
     try {
 
@@ -319,23 +368,39 @@ async function loadSubjects(examId) {
 
         );
 
-        const response = await fetch(
 
-            `${QUESTION_API.subjects}?exam_id=${encodeURIComponent(examId)}`,
+        const response =
+            await fetch(
 
-            {
-                method: "GET",
-                headers: {
-                    "Accept": "application/json"
+                `${QUESTION_API.subjects}?exam_id=${encodeURIComponent(examId)}`,
+
+                {
+
+                    method:
+                        "GET",
+
+                    headers: {
+
+                        "Accept":
+                            "application/json"
+
+                    }
+
                 }
-            }
 
-        );
+            );
+
 
         const result =
-            await parseJSON(response);
+            await parseJSON(
+                response
+            );
 
-        if (!response.ok || !result.success) {
+
+        if (
+            !response.ok ||
+            !result.success
+        ) {
 
             throw new Error(
 
@@ -346,26 +411,46 @@ async function loadSubjects(examId) {
 
         }
 
+
         let subjects =
-            Array.isArray(result.data)
+
+            Array.isArray(
+                result.data
+            )
+
                 ? result.data
-                : Array.isArray(result.subjects)
+
+                : Array.isArray(
+                    result.subjects
+                )
+
                     ? result.subjects
+
                     : [];
 
+
         /*
-            Some admin endpoints return ALL subjects.
-            Filter locally when exam_id is available.
+            Some admin endpoints may return
+            all subjects.
+
+            Keep only subjects belonging
+            to the selected exam.
         */
 
         subjects =
-            subjects.filter(subject =>
+            subjects.filter(
 
-                !subject.exam_id ||
-                String(subject.exam_id) ===
-                String(examId)
+                subject =>
+
+                    !subject.exam_id ||
+
+                    String(
+                        subject.exam_id
+                    ) ===
+                    String(examId)
 
             );
+
 
         subjectSelect.innerHTML = `
 
@@ -377,28 +462,47 @@ async function loadSubjects(examId) {
 
         `;
 
+
         subjects
 
-            .filter(subject =>
-                subject.status === undefined ||
-                subject.status === "active"
+            .filter(
+
+                subject =>
+
+                    subject.status === undefined ||
+
+                    subject.status === "active"
+
             )
 
-            .forEach(subject => {
+            .forEach(
 
-                addOption(
+                subject => {
 
-                    subjectSelect,
+                    addOption(
 
-                    subject.id,
+                        subjectSelect,
 
-                    subject.name
+                        subject.id,
 
-                );
+                        subject.name
 
-            });
+                    );
 
-        populateImportSubjects(subjects);
+                }
+
+            );
+
+
+        /*
+            The import form uses the same
+            Exam → Subject relationship.
+        */
+
+        populateImportSubjects(
+            subjects
+        );
+
 
     }
 
@@ -407,9 +511,11 @@ async function loadSubjects(examId) {
         console.error(
 
             "Load Subjects:",
+
             error
 
         );
+
 
         setSelectError(
 
@@ -418,6 +524,7 @@ async function loadSubjects(examId) {
             "Failed to load subjects"
 
         );
+
 
         populateImportSubjects([]);
 
@@ -430,13 +537,16 @@ async function loadSubjects(examId) {
     POPULATE IMPORT SUBJECTS
 =========================================================*/
 
-function populateImportSubjects(subjects) {
+function populateImportSubjects(
+    subjects
+) {
 
     if (!importSubject) {
 
         return;
 
     }
+
 
     importSubject.innerHTML = `
 
@@ -448,26 +558,36 @@ function populateImportSubjects(subjects) {
 
     `;
 
+
     subjects
 
-        .filter(subject =>
-            subject.status === undefined ||
-            subject.status === "active"
+        .filter(
+
+            subject =>
+
+                subject.status === undefined ||
+
+                subject.status === "active"
+
         )
 
-        .forEach(subject => {
+        .forEach(
 
-            addOption(
+            subject => {
 
-                importSubject,
+                addOption(
 
-                subject.id,
+                    importSubject,
 
-                subject.name
+                    subject.id,
 
-            );
+                    subject.name
 
-        });
+                );
+
+            }
+
+        );
 
 }
 
@@ -476,9 +596,12 @@ function populateImportSubjects(subjects) {
     MANUAL QUESTION SUBMIT
 =========================================================*/
 
-async function handleQuestionSubmit(event) {
+async function handleQuestionSubmit(
+    event
+) {
 
     event.preventDefault();
+
 
     if (!questionForm) {
 
@@ -486,18 +609,37 @@ async function handleQuestionSubmit(event) {
 
     }
 
+
+    const examId =
+        String(
+            examSelect.value || ""
+        ).trim();
+
+
     const subjectId =
-        String(subjectSelect.value || "").trim();
+        String(
+            subjectSelect.value || ""
+        ).trim();
+
 
     const question =
-        String(questionText.value || "").trim();
+        String(
+            questionText.value || ""
+        ).trim();
+
 
     const answer =
-        String(correctAnswer.value || "")
-            .trim()
-            .toUpperCase();
+        String(
+            correctAnswer.value || ""
+        )
+        .trim()
+        .toUpperCase();
+
 
     const data = {
+
+        exam_id:
+            examId,
 
         subject_id:
             subjectId,
@@ -508,29 +650,40 @@ async function handleQuestionSubmit(event) {
         /*
             image_url remains optional.
 
-            The existing admin API expects a URL,
-            not a File object.
+            The existing admin API expects
+            a URL, not a File object.
         */
+
         image_url:
             "",
 
         option_a:
-            String(optionA.value || "").trim(),
+            String(
+                optionA.value || ""
+            ).trim(),
 
         option_b:
-            String(optionB.value || "").trim(),
+            String(
+                optionB.value || ""
+            ).trim(),
 
         option_c:
-            String(optionC.value || "").trim(),
+            String(
+                optionC.value || ""
+            ).trim(),
 
         option_d:
-            String(optionD.value || "").trim(),
+            String(
+                optionD.value || ""
+            ).trim(),
 
         correct_answer:
             answer,
 
         explanation:
-            String(explanation.value || "").trim(),
+            String(
+                explanation.value || ""
+            ).trim(),
 
         difficulty:
             "medium"
@@ -538,11 +691,36 @@ async function handleQuestionSubmit(event) {
     };
 
 
+    /*=====================================================
+        VALIDATION
+    =====================================================*/
+
+
+    if (!data.exam_id) {
+
+        notifyUser(
+
+            "Please select an exam.",
+
+            "error"
+
+        );
+
+        examSelect.focus();
+
+        return;
+
+    }
+
+
     if (!data.subject_id) {
 
         notifyUser(
+
             "Please select a subject.",
+
             "error"
+
         );
 
         subjectSelect.focus();
@@ -555,8 +733,11 @@ async function handleQuestionSubmit(event) {
     if (!data.question) {
 
         notifyUser(
+
             "Question is required.",
+
             "error"
+
         );
 
         questionText.focus();
@@ -569,15 +750,21 @@ async function handleQuestionSubmit(event) {
     if (
 
         !data.option_a ||
+
         !data.option_b ||
+
         !data.option_c ||
+
         !data.option_d
 
     ) {
 
         notifyUser(
+
             "All answer options are required.",
+
             "error"
+
         );
 
         return;
@@ -596,8 +783,11 @@ async function handleQuestionSubmit(event) {
     ) {
 
         notifyUser(
+
             "Select a valid correct answer.",
+
             "error"
+
         );
 
         correctAnswer.focus();
@@ -607,47 +797,69 @@ async function handleQuestionSubmit(event) {
     }
 
 
+    /*=====================================================
+        CREATE QUESTION
+    =====================================================*/
+
     try {
+
+        const submitButton =
+            questionForm.querySelector(
+
+                'button[type="submit"]'
+
+            );
+
 
         setButtonLoading(
 
-            questionForm.querySelector(
-                'button[type="submit"]'
-            ),
+            submitButton,
 
             "Saving..."
 
         );
 
-        const response = await fetch(
 
-            QUESTION_API.questions,
+        const response =
+            await fetch(
 
-            {
+                QUESTION_API.questions,
 
-                method: "POST",
+                {
 
-                headers: {
+                    method:
+                        "POST",
 
-                    "Content-Type":
-                        "application/json",
+                    headers: {
 
-                    "Accept":
-                        "application/json"
+                        "Content-Type":
+                            "application/json",
 
-                },
+                        "Accept":
+                            "application/json"
 
-                body:
-                    JSON.stringify(data)
+                    },
 
-            }
+                    body:
+                        JSON.stringify(
+                            data
+                        )
 
-        );
+                }
+
+            );
+
 
         const result =
-            await parseJSON(response);
+            await parseJSON(
+                response
+            );
 
-        if (!response.ok || !result.success) {
+
+        if (
+            !response.ok ||
+            !result.success
+        ) {
 
             throw new Error(
 
@@ -658,18 +870,23 @@ async function handleQuestionSubmit(event) {
 
         }
 
+
         notifyUser(
 
             result.message ||
+
             "Question created successfully.",
 
             "success"
 
         );
 
+
         questionForm.reset();
 
+
         resetSubjectSelect();
+
 
         await loadQuestions();
 
@@ -680,13 +897,16 @@ async function handleQuestionSubmit(event) {
         console.error(
 
             "Create Question:",
+
             error
 
         );
 
+
         notifyUser(
 
             error.message ||
+
             "Failed to save question.",
 
             "error"
@@ -700,7 +920,9 @@ async function handleQuestionSubmit(event) {
         restoreButton(
 
             questionForm.querySelector(
+
                 'button[type="submit"]'
+
             ),
 
             "Save Question"
@@ -724,6 +946,7 @@ async function loadQuestions() {
 
     }
 
+
     questionsTableBody.innerHTML = `
 
         <tr>
@@ -738,31 +961,41 @@ async function loadQuestions() {
 
     `;
 
+
     try {
 
-        const response = await fetch(
+        const response =
+            await fetch(
 
-            QUESTION_API.questions,
+                QUESTION_API.questions,
 
-            {
+                {
 
-                method: "GET",
+                    method:
+                        "GET",
 
-                headers: {
+                    headers: {
 
-                    "Accept":
-                        "application/json"
+                        "Accept":
+                            "application/json"
+
+                    }
 
                 }
 
-            }
+            );
 
-        );
 
         const result =
-            await parseJSON(response);
+            await parseJSON(
+                response
+            );
 
-        if (!response.ok || !result.success) {
+
+        if (
+            !response.ok ||
+            !result.success
+        ) {
 
             throw new Error(
 
@@ -773,14 +1006,27 @@ async function loadQuestions() {
 
         }
 
+
         const questions =
-            Array.isArray(result.data)
+
+            Array.isArray(
+                result.data
+            )
+
                 ? result.data
-                : Array.isArray(result.questions)
+
+                : Array.isArray(
+                    result.questions
+                )
+
                     ? result.questions
+
                     : [];
 
-        renderQuestionBank(questions);
+
+        renderQuestionBank(
+            questions
+        );
 
     }
 
@@ -789,9 +1035,11 @@ async function loadQuestions() {
         console.error(
 
             "Load Questions:",
+
             error
 
         );
+
 
         questionsTableBody.innerHTML = `
 
@@ -816,7 +1064,9 @@ async function loadQuestions() {
     RENDER QUESTION BANK
 =========================================================*/
 
-function renderQuestionBank(questions) {
+function renderQuestionBank(
+    questions
+) {
 
     if (!questions.length) {
 
@@ -839,50 +1089,68 @@ function renderQuestionBank(questions) {
     }
 
 
-    questionsTableBody.innerHTML = "";
+    questionsTableBody.innerHTML =
+        "";
+
 
     questions.forEach(
 
         (question, index) => {
 
             const row =
-                document.createElement("tr");
+                document.createElement(
+                    "tr"
+                );
+
 
             row.innerHTML = `
 
                 <td>
+
                     ${index + 1}
+
                 </td>
 
                 <td>
+
                     ${escapeHTML(
                         question.question || ""
                     )}
+
                 </td>
 
                 <td>
+
                     ${escapeHTML(
                         question.exam_name || ""
                     )}
+
                 </td>
 
                 <td>
+
                     ${escapeHTML(
                         question.subject_name || ""
                     )}
+
                 </td>
 
                 <td>
+
                     ${escapeHTML(
                         question.correct_answer || ""
                     )}
+
                 </td>
 
                 <td>
 
                     <button
+
                         type="button"
+
                         class="btn btn-secondary question-view-btn"
+
                         data-id="${escapeHTML(
                             question.id
                         )}">
@@ -895,7 +1163,10 @@ function renderQuestionBank(questions) {
 
             `;
 
-            questionsTableBody.appendChild(row);
+
+            questionsTableBody.appendChild(
+                row
+            );
 
         }
 
@@ -903,22 +1174,32 @@ function renderQuestionBank(questions) {
 
 
     questionsTableBody
-        .querySelectorAll(".question-view-btn")
-        .forEach(button => {
 
-            button.addEventListener(
+        .querySelectorAll(
+            ".question-view-btn"
+        )
 
-                "click",
+        .forEach(
 
-                () => viewQuestion(
+            button => {
 
-                    button.dataset.id
+                button.addEventListener(
 
-                )
+                    "click",
 
-            );
+                    () =>
 
-        });
+                        viewQuestion(
+
+                            button.dataset.id
+
+                        )
+
+                );
+
+            }
+
+        );
 
 }
 
@@ -927,7 +1208,9 @@ function renderQuestionBank(questions) {
     VIEW QUESTION
 =========================================================*/
 
-async function viewQuestion(questionId) {
+async function viewQuestion(
+    questionId
+) {
 
     if (!questionId) {
 
@@ -935,31 +1218,41 @@ async function viewQuestion(questionId) {
 
     }
 
+
     try {
 
-        const response = await fetch(
+        const response =
+            await fetch(
 
-            `${QUESTION_API.questions}/${encodeURIComponent(questionId)}`,
+                `${QUESTION_API.questions}/${encodeURIComponent(questionId)}`,
 
-            {
+                {
 
-                method: "GET",
+                    method:
+                        "GET",
 
-                headers: {
+                    headers: {
 
-                    "Accept":
-                        "application/json"
+                        "Accept":
+                            "application/json"
+
+                    }
 
                 }
 
-            }
+            );
 
-        );
 
         const result =
-            await parseJSON(response);
+            await parseJSON(
+                response
+            );
 
-        if (!response.ok || !result.success) {
+
+        if (
+            !response.ok ||
+            !result.success
+        ) {
 
             throw new Error(
 
@@ -970,16 +1263,22 @@ async function viewQuestion(questionId) {
 
         }
 
+
         const question =
-            result.data || result.question;
+            result.data ||
+            result.question;
+
 
         if (!question) {
 
             throw new Error(
+
                 "Question data was not returned."
+
             );
 
         }
+
 
         const details = [
 
@@ -997,7 +1296,10 @@ async function viewQuestion(questionId) {
 
             `Explanation:\n${question.explanation || ""}`
 
-        ].join("\n\n");
+        ].join(
+            "\n\n"
+        );
+
 
         alert(details);
 
@@ -1008,13 +1310,16 @@ async function viewQuestion(questionId) {
         console.error(
 
             "View Question:",
+
             error
 
         );
 
+
         notifyUser(
 
             error.message ||
+
             "Unable to load question.",
 
             "error"
@@ -1022,630 +1327,6 @@ async function viewQuestion(questionId) {
         );
 
     }
-
-}
-
-
-/*=========================================================
-    IMPORT QUESTIONS
-=========================================================*/
-
-async function handleQuestionImport(event) {
-
-    event.preventDefault();
-
-    if (!importForm || !questionFile || !importSubject) {
-
-        return;
-
-    }
-
-    const subjectId =
-        String(importSubject.value || "").trim();
-
-    const file =
-        questionFile.files?.[0];
-
-
-    if (!subjectId) {
-
-        notifyUser(
-            "Please select a subject.",
-            "error"
-        );
-
-        importSubject.focus();
-
-        return;
-
-    }
-
-
-    if (!file) {
-
-        notifyUser(
-            "Please select a question file.",
-            "error"
-        );
-
-        questionFile.focus();
-
-        return;
-
-    }
-
-
-    const extension =
-        file.name
-            .split(".")
-            .pop()
-            ?.toLowerCase();
-
-
-    if (
-
-        !["docx", "xlsx"].includes(extension)
-
-    ) {
-
-        notifyUser(
-
-            "Only DOCX and XLSX files are supported.",
-
-            "error"
-
-        );
-
-        return;
-
-    }
-
-
-    try {
-
-        const submitButton =
-            importForm.querySelector(
-                'button[type="submit"]'
-            );
-
-        setButtonLoading(
-
-            submitButton,
-
-            "Parsing..."
-
-        );
-
-
-        /*
-        =============================================
-            STEP 1
-            Send file to parser worker
-        =============================================
-        */
-
-        const formData =
-            new FormData();
-
-        formData.append(
-
-            "file",
-
-            file
-
-        );
-
-
-        const parserResponse =
-            await fetch(
-
-                QUESTION_API.parser,
-
-                {
-
-                    method: "POST",
-
-                    body: formData
-
-                }
-
-            );
-
-
-        const parserResult =
-            await parseJSON(parserResponse);
-
-
-        if (
-
-            !parserResponse.ok ||
-            !parserResult.success
-
-        ) {
-
-            throw new Error(
-
-                parserResult.message ||
-                "Question file could not be parsed."
-
-            );
-
-        }
-
-
-        const parsedQuestions =
-            Array.isArray(
-                parserResult.questions
-            )
-                ? parserResult.questions
-                : [];
-
-
-        if (!parsedQuestions.length) {
-
-            throw new Error(
-
-                "No questions were found in the uploaded file."
-
-            );
-
-        }
-
-
-        /*
-        =============================================
-            STEP 2
-            Validate parsed questions
-        =============================================
-        */
-
-        const validation =
-            validateImportedQuestions(
-                parsedQuestions
-            );
-
-
-        if (!validation.valid) {
-
-            throw new Error(
-
-                validation.message
-
-            );
-
-        }
-
-
-        /*
-        =============================================
-            STEP 3
-            Publish questions through the
-            existing admin question API.
-
-            This preserves the existing worker
-            question-creation logic.
-        =============================================
-        */
-
-        setButtonLoading(
-
-            submitButton,
-
-            "Importing..."
-
-        );
-
-
-        const results = await Promise.all(
-
-            parsedQuestions.map(
-
-                question =>
-
-                    createImportedQuestion(
-
-                        question,
-
-                        subjectId
-
-                    )
-
-            )
-
-        );
-
-
-        const failed =
-            results.filter(
-                result => !result.success
-            );
-
-        const imported =
-            results.filter(
-                result => result.success
-            );
-
-
-        if (failed.length) {
-
-            const firstError =
-                failed[0].message ||
-                "Some questions failed to import.";
-
-            notifyUser(
-
-                `${imported.length} imported, ` +
-                `${failed.length} failed. ${firstError}`,
-
-                "error"
-
-            );
-
-        }
-
-        else {
-
-            notifyUser(
-
-                `${imported.length} question(s) imported successfully.`,
-
-                "success"
-
-            );
-
-        }
-
-
-        importForm.reset();
-
-        await loadQuestions();
-
-    }
-
-    catch (error) {
-
-        console.error(
-
-            "Import Questions:",
-            error
-
-        );
-
-        notifyUser(
-
-            error.message ||
-            "Failed to import questions.",
-
-            "error"
-
-        );
-
-    }
-
-    finally {
-
-        restoreButton(
-
-            importForm.querySelector(
-                'button[type="submit"]'
-            ),
-
-            "Import Questions"
-
-        );
-
-    }
-
-}
-
-
-/*=========================================================
-    CREATE IMPORTED QUESTION
-=========================================================*/
-
-async function createImportedQuestion(
-
-    question,
-
-    subjectId
-
-) {
-
-    const data = {
-
-        subject_id:
-            subjectId,
-
-        question:
-            String(
-                question.question || ""
-            ).trim(),
-
-        image_url:
-            String(
-                question.image_url || ""
-            ).trim(),
-
-        option_a:
-            String(
-                question.options?.A || ""
-            ).trim(),
-
-        option_b:
-            String(
-                question.options?.B || ""
-            ).trim(),
-
-        option_c:
-            String(
-                question.options?.C || ""
-            ).trim(),
-
-        option_d:
-            String(
-                question.options?.D || ""
-            ).trim(),
-
-        correct_answer:
-            String(
-                question.answer || ""
-            )
-            .trim()
-            .toUpperCase(),
-
-        explanation:
-            String(
-                question.explanation || ""
-            ).trim(),
-
-        difficulty:
-            "medium"
-
-    };
-
-
-    try {
-
-        const response = await fetch(
-
-            QUESTION_API.questions,
-
-            {
-
-                method: "POST",
-
-                headers: {
-
-                    "Content-Type":
-                        "application/json",
-
-                    "Accept":
-                        "application/json"
-
-                },
-
-                body:
-                    JSON.stringify(data)
-
-            }
-
-        );
-
-
-        const result =
-            await parseJSON(response);
-
-
-        if (!response.ok || !result.success) {
-
-            return {
-
-                success: false,
-
-                message:
-                    result.message ||
-                    "Question failed to import."
-
-            };
-
-        }
-
-
-        return {
-
-            success: true,
-
-            id:
-                result.data?.id || null
-
-        };
-
-    }
-
-    catch (error) {
-
-        console.error(
-
-            "Imported question error:",
-            error
-
-        );
-
-        return {
-
-            success: false,
-
-            message:
-                error.message ||
-                "Network error."
-
-        };
-
-    }
-
-}
-
-
-/*=========================================================
-    IMPORT VALIDATION
-=========================================================*/
-
-function validateImportedQuestions(questions) {
-
-    const validAnswers =
-        ["A", "B", "C", "D"];
-
-    for (
-
-        let index = 0;
-
-        index < questions.length;
-
-        index++
-
-    ) {
-
-        const question =
-            questions[index];
-
-        const number =
-            index + 1;
-
-
-        if (
-
-            !question.question ||
-            !String(question.question).trim()
-
-        ) {
-
-            return {
-
-                valid: false,
-
-                message:
-                    `Question ${number}: question text is missing.`
-
-            };
-
-        }
-
-
-        if (
-
-            !question.options?.A ||
-            !String(
-                question.options.A
-            ).trim()
-
-        ) {
-
-            return {
-
-                valid: false,
-
-                message:
-                    `Question ${number}: Option A is missing.`
-
-            };
-
-        }
-
-
-        if (
-
-            !question.options?.B ||
-            !String(
-                question.options.B
-            ).trim()
-
-        ) {
-
-            return {
-
-                valid: false,
-
-                message:
-                    `Question ${number}: Option B is missing.`
-
-            };
-
-        }
-
-
-        if (
-
-            !question.options?.C ||
-            !String(
-                question.options.C
-            ).trim()
-
-        ) {
-
-            return {
-
-                valid: false,
-
-                message:
-                    `Question ${number}: Option C is missing.`
-
-            };
-
-        }
-
-
-        if (
-
-            !question.options?.D ||
-            !String(
-                question.options.D
-            ).trim()
-
-        ) {
-
-            return {
-
-                valid: false,
-
-                message:
-                    `Question ${number}: Option D is missing.`
-
-            };
-
-        }
-
-
-        const answer =
-            String(
-                question.answer || ""
-            )
-            .trim()
-            .toUpperCase();
-
-
-        if (!validAnswers.includes(answer)) {
-
-            return {
-
-                valid: false,
-
-                message:
-                    `Question ${number}: correct answer must be A, B, C or D.`
-
-            };
-
-        }
-
-    }
-
-
-    return {
-
-        valid: true,
-
-        message: ""
-
-    };
 
 }
 
@@ -1679,6 +1360,7 @@ function resetSubjectSelect() {
 
     }
 
+
     subjectSelect.innerHTML = `
 
         <option value="">
@@ -1696,10 +1378,13 @@ function resetSubjectSelect() {
     HELPERS
 =========================================================*/
 
-async function parseJSON(response) {
+async function parseJSON(
+    response
+) {
 
     const text =
         await response.text();
+
 
     try {
 
@@ -1736,11 +1421,14 @@ function setSelectLoading(
 
     }
 
+
     select.innerHTML = `
 
         <option value="">
 
-            ${escapeHTML(message)}
+            ${escapeHTML(
+                message
+            )}
 
         </option>
 
@@ -1763,11 +1451,14 @@ function setSelectError(
 
     }
 
+
     select.innerHTML = `
 
         <option value="">
 
-            ${escapeHTML(message)}
+            ${escapeHTML(
+                message
+            )}
 
         </option>
 
@@ -1787,15 +1478,26 @@ function addOption(
 ) {
 
     const option =
-        document.createElement("option");
+        document.createElement(
+            "option"
+        );
+
 
     option.value =
-        String(value ?? "");
+        String(
+            value ?? ""
+        );
+
 
     option.textContent =
-        String(label ?? "");
+        String(
+            label ?? ""
+        );
 
-    select.appendChild(option);
+
+    select.appendChild(
+        option
+    );
 
 }
 
@@ -1814,16 +1516,23 @@ function setButtonLoading(
 
     }
 
-    if (!button.dataset.originalText) {
+
+    if (
+        !button.dataset.originalText
+    ) {
 
         button.dataset.originalText =
             button.textContent.trim();
 
     }
 
-    button.disabled = true;
 
-    button.textContent = text;
+    button.disabled =
+        true;
+
+
+    button.textContent =
+        text;
 
 }
 
@@ -1842,24 +1551,38 @@ function restoreButton(
 
     }
 
-    button.disabled = false;
+
+    button.disabled =
+        false;
+
 
     button.textContent =
+
         button.dataset.originalText ||
+
         fallbackText;
+
 
     delete button.dataset.originalText;
 
 }
 
 
-function escapeHTML(value) {
+function escapeHTML(
+    value
+) {
 
     const div =
-        document.createElement("div");
+        document.createElement(
+            "div"
+        );
+
 
     div.textContent =
-        String(value ?? "");
+        String(
+            value ?? ""
+        );
+
 
     return div.innerHTML;
 
@@ -1875,13 +1598,14 @@ function notifyUser(
 ) {
 
     /*
-        Use existing project notification utility
-        when available.
+        Use existing project notification
+        utility when available.
     */
 
     if (
 
         window.Utils &&
+
         typeof window.Utils.showToast ===
         "function"
 
@@ -1900,18 +1624,27 @@ function notifyUser(
     }
 
 
-    if (type === "error") {
+    if (
+        type === "error"
+    ) {
 
-        console.error(message);
+        console.error(
+            message
+        );
 
     }
 
     else {
 
-        console.log(message);
+        console.log(
+            message
+        );
 
     }
 
-    alert(message);
+
+    alert(
+        message
+    );
 
 }
