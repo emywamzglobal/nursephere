@@ -1,55 +1,47 @@
 "use strict";
 
 /* =========================================================
-   STUDY BOOK MANAGEMENT
-   FINAL PRODUCTION FRONTEND
+   NURSEPHERE ADMIN
+   STUDY RESOURCE MANAGEMENT
+   FINAL FRONTEND
+   =========================================================
+
+   Supports:
+   - Active exams
+   - Subjects filtered by selected exam
+   - Study books:
+       PDF
+       DOCX
+       XLSX
+       CSV
+   - Book covers:
+       JPG
+       PNG
+       WEBP
+   - Large multipart R2 uploads
+   - NO APPLICATION FILE-SIZE LIMIT
+   - Create
+   - Edit
+   - Replace book file
+   - Replace cover
+   - Activate / deactivate
+   - Safe rendering
+   - Upload failure cleanup
+
+   API endpoints:
+   GET    /api/admin/exams
+   GET    /api/admin/subjects?exam_id=...
+   GET    /api/admin/resources
+   POST   /api/admin/resources
+   PUT    /api/admin/resources/:id
+   PATCH  /api/admin/resources/:id/status
+
+   Multipart:
+   POST   /api/admin/resources/upload/init
+   PUT    /api/admin/resources/upload/part
+   POST   /api/admin/resources/upload/complete
+   POST   /api/admin/resources/upload/abort
    ========================================================= */
-
-document.addEventListener(
-    "DOMContentLoaded",
-    initializePage
-);
-
-
-/* =========================================================
-   STATE
-   ========================================================= */
-
-let editingResourceId = null;
-let resourcesCache = [];
-let currentUpload = null;
-
-
-/* =========================================================
-   DOM ELEMENTS
-   ========================================================= */
-
-const examSelect =
-    document.getElementById("examSelect");
-
-const subjectSelect =
-    document.getElementById("subjectSelect");
-
-const bookTitle =
-    document.getElementById("bookTitle");
-
-const author =
-    document.getElementById("author");
-
-const description =
-    document.getElementById("description");
-
-const coverImage =
-    document.getElementById("coverImage");
-
-const bookFile =
-    document.getElementById("bookFile");
-
-const resourcesTableBody =
-    document.getElementById("resourcesTableBody");
-
-const addResourceBtn =
-    document.getElementById("addResourceBtn");
 
 
 /* =========================================================
@@ -57,6 +49,12 @@ const addResourceBtn =
    ========================================================= */
 
 const API = {
+
+    exams:
+        "/api/admin/exams",
+
+    subjects:
+        "/api/admin/subjects",
 
     resources:
         "/api/admin/resources",
@@ -77,10 +75,14 @@ const API = {
 
 
 /* =========================================================
-   R2 MULTIPART PART SIZE
+   UPLOAD CONFIGURATION
    =========================================================
-   No application file-size limit.
-   R2 multipart upload handles large files.
+
+   10 MiB is the size of EACH multipart part.
+
+   This is NOT a file-size limit.
+
+   A 10 MiB part can be repeated thousands of times.
    ========================================================= */
 
 const UPLOAD_PART_SIZE =
@@ -88,10 +90,10 @@ const UPLOAD_PART_SIZE =
 
 
 /* =========================================================
-   SUPPORTED STUDY BOOK TYPES
+   ALLOWED BOOK TYPES
    ========================================================= */
 
-const STUDY_BOOK_TYPES = {
+const BOOK_TYPES = {
 
     "application/pdf":
         "pdf",
@@ -109,10 +111,10 @@ const STUDY_BOOK_TYPES = {
 
 
 /* =========================================================
-   SUPPORTED STUDY BOOK EXTENSIONS
+   EXTENSION FALLBACKS
    ========================================================= */
 
-const STUDY_BOOK_EXTENSIONS = {
+const BOOK_EXTENSIONS = {
 
     ".pdf":
         "pdf",
@@ -130,12 +132,74 @@ const STUDY_BOOK_EXTENSIONS = {
 
 
 /* =========================================================
-   INITIALIZE
+   COVER TYPES
    ========================================================= */
+
+const COVER_TYPES = {
+
+    "image/jpeg":
+        true,
+
+    "image/png":
+        true,
+
+    "image/webp":
+        true
+
+};
+
+
+/* =========================================================
+   STATE
+   ========================================================= */
+
+let editingResourceId =
+    null;
+
+let resourcesCache =
+    [];
+
+let currentUpload =
+    null;
+
+let isSaving =
+    false;
+
+
+/* =========================================================
+   DOM ELEMENTS
+   ========================================================= */
+
+let examSelect;
+let subjectSelect;
+let bookTitle;
+let author;
+let description;
+let coverImage;
+let bookFile;
+let resourcesTableBody;
+let addResourceBtn;
+let saveButton;
+let clearButton;
+
+
+/* =========================================================
+   INITIALIZATION
+   ========================================================= */
+
+document.addEventListener(
+    "DOMContentLoaded",
+    initializePage
+);
+
 
 async function initializePage() {
 
     try {
+
+        cacheDomElements();
+
+        verifyRequiredElements();
 
         bindEvents();
 
@@ -146,14 +210,135 @@ async function initializePage() {
     } catch (error) {
 
         console.error(
-            "Study book page initialization failed:",
+            "Study Resources initialization failed:",
             error
         );
 
         showMessage(
             error.message ||
-            "Failed to initialize study books.",
+            "Failed to initialize Study Resources.",
             "error"
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   CACHE DOM
+   ========================================================= */
+
+function cacheDomElements() {
+
+    examSelect =
+        document.getElementById(
+            "examSelect"
+        );
+
+    subjectSelect =
+        document.getElementById(
+            "subjectSelect"
+        );
+
+    bookTitle =
+        document.getElementById(
+            "bookTitle"
+        );
+
+    author =
+        document.getElementById(
+            "author"
+        );
+
+    description =
+        document.getElementById(
+            "description"
+        );
+
+    coverImage =
+        document.getElementById(
+            "coverImage"
+        );
+
+    bookFile =
+        document.getElementById(
+            "bookFile"
+        );
+
+    resourcesTableBody =
+        document.getElementById(
+            "resourcesTableBody"
+        );
+
+    addResourceBtn =
+        document.getElementById(
+            "addResourceBtn"
+        );
+
+    saveButton =
+        document.querySelector(
+            ".form-actions .btn-success"
+        );
+
+    clearButton =
+        document.querySelector(
+            ".form-actions .btn-secondary"
+        );
+
+}
+
+
+/* =========================================================
+   VERIFY HTML
+   ========================================================= */
+
+function verifyRequiredElements() {
+
+    const required = [
+
+        ["examSelect", examSelect],
+
+        ["subjectSelect", subjectSelect],
+
+        ["bookTitle", bookTitle],
+
+        ["author", author],
+
+        ["description", description],
+
+        ["coverImage", coverImage],
+
+        ["bookFile", bookFile],
+
+        ["resourcesTableBody", resourcesTableBody],
+
+        ["addResourceBtn", addResourceBtn],
+
+        ["saveButton", saveButton],
+
+        ["clearButton", clearButton]
+
+    ];
+
+
+    const missing =
+        required
+            .filter(
+                ([, element]) =>
+                    !element
+            )
+            .map(
+                ([name]) =>
+                    name
+            );
+
+
+    if (missing.length) {
+
+        throw new Error(
+            "Study Resources page is missing required HTML elements: " +
+            missing.join(", ")
         );
 
     }
@@ -167,96 +352,89 @@ async function initializePage() {
 
 function bindEvents() {
 
-    if (examSelect) {
-
-        examSelect.addEventListener(
-            "change",
-            handleExamChange
-        );
-
-    }
+    examSelect.addEventListener(
+        "change",
+        handleExamChange
+    );
 
 
-    if (subjectSelect) {
-
-        subjectSelect.addEventListener(
-            "change",
-            clearValidation
-        );
-
-    }
+    subjectSelect.addEventListener(
+        "change",
+        clearValidation
+    );
 
 
-    if (bookTitle) {
-
-        bookTitle.addEventListener(
-            "input",
-            clearValidation
-        );
-
-    }
+    bookTitle.addEventListener(
+        "input",
+        clearValidation
+    );
 
 
-    if (bookFile) {
-
-        bookFile.addEventListener(
-            "change",
-            handleBookFileChange
-        );
-
-    }
+    author.addEventListener(
+        "input",
+        clearValidation
+    );
 
 
-    if (coverImage) {
-
-        coverImage.addEventListener(
-            "change",
-            handleCoverChange
-        );
-
-    }
+    description.addEventListener(
+        "input",
+        clearValidation
+    );
 
 
-    if (addResourceBtn) {
-
-        addResourceBtn.addEventListener(
-            "click",
-            focusResourceForm
-        );
-
-    }
+    bookFile.addEventListener(
+        "change",
+        handleBookFileChange
+    );
 
 
-    const saveButton =
-        document.querySelector(
-            ".form-actions .btn-success"
-        );
+    coverImage.addEventListener(
+        "change",
+        handleCoverChange
+    );
 
 
-    if (saveButton) {
-
-        saveButton.addEventListener(
-            "click",
-            handleSaveResource
-        );
-
-    }
+    addResourceBtn.addEventListener(
+        "click",
+        handleAddNewBook
+    );
 
 
-    const clearButton =
-        document.querySelector(
-            ".form-actions .btn-secondary"
-        );
+    saveButton.addEventListener(
+        "click",
+        handleSaveResource
+    );
 
 
-    if (clearButton) {
+    clearButton.addEventListener(
+        "click",
+        handleClear
+    );
 
-        clearButton.addEventListener(
-            "click",
-            handleClear
-        );
+
+    resourcesTableBody.addEventListener(
+        "click",
+        handleTableAction
+    );
+
+}
+
+
+/* =========================================================
+   ADD NEW BOOK
+   ========================================================= */
+
+function handleAddNewBook(event) {
+
+    if (event) {
+
+        event.preventDefault();
 
     }
+
+    clearForm();
+
+    examSelect.focus();
 
 }
 
@@ -277,7 +455,7 @@ async function loadExams() {
 
         const response =
             await fetch(
-                "/api/admin/exams",
+                API.exams,
                 {
                     method: "GET",
                     cache: "no-store"
@@ -292,7 +470,9 @@ async function loadExams() {
 
 
         const exams =
-            Array.isArray(result.data)
+            Array.isArray(
+                result.data
+            )
                 ? result.data
                 : [];
 
@@ -307,18 +487,33 @@ async function loadExams() {
         exams
             .filter(
                 exam =>
-                    exam.status === "active"
+                    String(
+                        exam.status
+                    ).toLowerCase() ===
+                    "active"
             )
             .forEach(
                 exam => {
 
-                    examSelect.insertAdjacentHTML(
-                        "beforeend",
-                        `
-                        <option value="${escapeAttribute(exam.id)}">
-                            ${escapeHtml(exam.name)}
-                        </option>
-                        `
+                    const option =
+                        document.createElement(
+                            "option"
+                        );
+
+
+                    option.value =
+                        String(
+                            exam.id
+                        );
+
+
+                    option.textContent =
+                        exam.name ||
+                        "Unnamed Exam";
+
+
+                    examSelect.appendChild(
+                        option
                     );
 
                 }
@@ -328,14 +523,16 @@ async function loadExams() {
     } catch (error) {
 
         console.error(
-            "Load exams:",
+            "Load exams failed:",
             error
         );
+
 
         setSelectError(
             examSelect,
             "Failed to load exams"
         );
+
 
         throw error;
 
@@ -350,11 +547,16 @@ async function loadExams() {
 
 async function handleExamChange() {
 
-    const examId =
-        examSelect.value;
-
+    clearValidation();
 
     resetSubjectSelect();
+
+
+    const examId =
+        String(
+            examSelect.value ||
+            ""
+        ).trim();
 
 
     if (!examId) {
@@ -372,7 +574,7 @@ async function handleExamChange() {
 
 
 /* =========================================================
-   LOAD SUBJECTS
+   LOAD SUBJECTS FOR EXAM
    ========================================================= */
 
 async function loadSubjects(
@@ -389,7 +591,7 @@ async function loadSubjects(
 
         const response =
             await fetch(
-                `/api/admin/subjects?exam_id=${encodeURIComponent(examId)}`,
+                `${API.subjects}?exam_id=${encodeURIComponent(examId)}`,
                 {
                     method: "GET",
                     cache: "no-store"
@@ -404,18 +606,35 @@ async function loadSubjects(
 
 
         let subjects =
-            Array.isArray(result.data)
+            Array.isArray(
+                result.data
+            )
                 ? result.data
                 : [];
 
 
+        /*
+         * Double-check the relationship client-side.
+         *
+         * The selected subject MUST belong to the
+         * selected exam.
+         */
+
         subjects =
             subjects.filter(
                 subject =>
-                    String(subject.exam_id) ===
-                    String(examId) &&
 
-                    subject.status === "active"
+                    String(
+                        subject.exam_id
+                    ) ===
+                    String(
+                        examId
+                    ) &&
+
+                    String(
+                        subject.status
+                    ).toLowerCase() ===
+                    "active"
             );
 
 
@@ -429,13 +648,25 @@ async function loadSubjects(
         subjects.forEach(
             subject => {
 
-                subjectSelect.insertAdjacentHTML(
-                    "beforeend",
-                    `
-                    <option value="${escapeAttribute(subject.id)}">
-                        ${escapeHtml(subject.name)}
-                    </option>
-                    `
+                const option =
+                    document.createElement(
+                        "option"
+                    );
+
+
+                option.value =
+                    String(
+                        subject.id
+                    );
+
+
+                option.textContent =
+                    subject.name ||
+                    "Unnamed Subject";
+
+
+                subjectSelect.appendChild(
+                    option
                 );
 
             }
@@ -456,9 +687,10 @@ async function loadSubjects(
     } catch (error) {
 
         console.error(
-            "Load subjects:",
+            "Load subjects failed:",
             error
         );
+
 
         setSelectError(
             subjectSelect,
@@ -471,7 +703,7 @@ async function loadSubjects(
 
 
 /* =========================================================
-   LOAD STUDY BOOK LIBRARY
+   LOAD RESOURCE LIBRARY
    ========================================================= */
 
 async function loadResources() {
@@ -498,7 +730,9 @@ async function loadResources() {
 
 
         resourcesCache =
-            Array.isArray(result.data)
+            Array.isArray(
+                result.data
+            )
                 ? result.data
                 : [];
 
@@ -509,7 +743,7 @@ async function loadResources() {
     } catch (error) {
 
         console.error(
-            "Load study books:",
+            "Load resources failed:",
             error
         );
 
@@ -517,7 +751,7 @@ async function loadResources() {
         resourcesTableBody.innerHTML = `
             <tr>
                 <td colspan="6">
-                    Failed to load study books.
+                    Failed to load study resources.
                 </td>
             </tr>
         `;
@@ -525,7 +759,7 @@ async function loadResources() {
 
         showMessage(
             error.message ||
-            "Failed to load study books.",
+            "Failed to load study resources.",
             "error"
         );
 
@@ -535,7 +769,7 @@ async function loadResources() {
 
 
 /* =========================================================
-   RENDER RESOURCE TABLE
+   RENDER RESOURCES
    ========================================================= */
 
 function renderResources() {
@@ -545,7 +779,7 @@ function renderResources() {
         resourcesTableBody.innerHTML = `
             <tr>
                 <td colspan="6">
-                    No study books found.
+                    No study resources found.
                 </td>
             </tr>
         `;
@@ -558,7 +792,10 @@ function renderResources() {
     resourcesTableBody.innerHTML =
         resourcesCache
             .map(
-                (resource, index) =>
+                (
+                    resource,
+                    index
+                ) =>
                     createResourceRow(
                         resource,
                         index
@@ -570,7 +807,7 @@ function renderResources() {
 
 
 /* =========================================================
-   RESOURCE TABLE ROW
+   RESOURCE ROW
    ========================================================= */
 
 function createResourceRow(
@@ -585,31 +822,39 @@ function createResourceRow(
                     src="${escapeAttribute(resource.cover_image)}"
                     alt="${escapeAttribute(
                         resource.title ||
-                        "Study book cover"
+                        "Book cover"
                     )}"
                     class="resource-cover"
                     loading="lazy"
                 >
-              `
+            `
             : `
                 <div class="resource-cover-placeholder">
                     <i class="fas fa-book"></i>
                 </div>
-              `;
+            `;
 
 
     const status =
         resource.status === "active"
-            ? `<span class="status-active">Active</span>`
-            : `<span class="status-inactive">Inactive</span>`;
+
+            ? `
+                <span class="status-active">
+                    Active
+                </span>
+            `
+
+            : `
+                <span class="status-inactive">
+                    Inactive
+                </span>
+            `;
 
 
     const fileType =
-        String(
-            resource.file_type || ""
-        )
-        .trim()
-        .toUpperCase();
+        normalizeFileType(
+            resource.file_type
+        );
 
 
     return `
@@ -632,6 +877,18 @@ function createResourceRow(
 
                 ${status}
 
+                ${
+                    fileType
+                        ? `
+                            <small>
+                                ${escapeHtml(
+                                    fileType.toUpperCase()
+                                )}
+                            </small>
+                          `
+                        : ""
+                }
+
             </td>
 
             <td>
@@ -653,16 +910,6 @@ function createResourceRow(
                     resource.author ||
                     "—"
                 )}
-                ${
-                    fileType
-                        ? `
-                            <br>
-                            <small>
-                                ${escapeHtml(fileType)}
-                            </small>
-                          `
-                        : ""
-                }
             </td>
 
             <td>
@@ -673,7 +920,9 @@ function createResourceRow(
                         resource.file_url
                             ? `
                                 <a
-                                    href="${escapeAttribute(resource.file_url)}"
+                                    href="${escapeAttribute(
+                                        resource.file_url
+                                    )}"
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     class="btn btn-sm btn-primary"
@@ -689,7 +938,9 @@ function createResourceRow(
                         type="button"
                         class="btn btn-sm btn-secondary"
                         data-action="edit"
-                        data-id="${escapeAttribute(resource.id)}"
+                        data-id="${escapeAttribute(
+                            resource.id
+                        )}"
                     >
                         <i class="fas fa-pen"></i>
                         Edit
@@ -703,7 +954,9 @@ function createResourceRow(
                                 : "btn-success"
                         }"
                         data-action="toggle"
-                        data-id="${escapeAttribute(resource.id)}"
+                        data-id="${escapeAttribute(
+                            resource.id
+                        )}"
                     >
 
                         <i class="fas ${
@@ -734,91 +987,145 @@ function createResourceRow(
    TABLE ACTIONS
    ========================================================= */
 
-document.addEventListener(
-    "click",
-    async event => {
+async function handleTableAction(
+    event
+) {
 
-        const button =
-            event.target.closest(
-                "[data-action]"
-            );
-
-
-        if (!button) {
-
-            return;
-
-        }
+    const button =
+        event.target.closest(
+            "[data-action]"
+        );
 
 
-        const action =
-            button.dataset.action;
+    if (!button) {
 
-
-        const id =
-            button.dataset.id;
-
-
-        if (!id) {
-
-            return;
-
-        }
-
-
-        if (action === "edit") {
-
-            await editResource(id);
-
-        }
-
-
-        if (action === "toggle") {
-
-            await toggleResource(id);
-
-        }
+        return;
 
     }
-);
+
+
+    const action =
+        button.dataset.action;
+
+
+    const id =
+        button.dataset.id;
+
+
+    if (!id) {
+
+        return;
+
+    }
+
+
+    if (
+        action ===
+        "edit"
+    ) {
+
+        await editResource(
+            id
+        );
+
+        return;
+
+    }
+
+
+    if (
+        action ===
+        "toggle"
+    ) {
+
+        await toggleResource(
+            id
+        );
+
+    }
+
+}
 
 
 /* =========================================================
-   SAVE STUDY BOOK
+   SAVE RESOURCE
    ========================================================= */
 
-async function handleSaveResource() {
+async function handleSaveResource(
+    event
+) {
+
+    if (event) {
+
+        event.preventDefault();
+
+    }
+
+
+    if (isSaving) {
+
+        return;
+
+    }
+
 
     clearValidation();
 
 
-    const title =
-        bookTitle.value.trim();
+    const examId =
+        String(
+            examSelect.value ||
+            ""
+        ).trim();
 
 
     const subjectId =
-        subjectSelect.value;
+        String(
+            subjectSelect.value ||
+            ""
+        ).trim();
+
+
+    const title =
+        String(
+            bookTitle.value ||
+            ""
+        ).trim();
+
+
+    const authorValue =
+        String(
+            author.value ||
+            ""
+        ).trim();
+
+
+    const descriptionValue =
+        String(
+            description.value ||
+            ""
+        ).trim();
 
 
     const selectedFile =
-        bookFile &&
-        bookFile.files
+        bookFile.files &&
+        bookFile.files.length
             ? bookFile.files[0]
             : null;
 
 
     const selectedCover =
-        coverImage &&
-        coverImage.files
+        coverImage.files &&
+        coverImage.files.length
             ? coverImage.files[0]
             : null;
 
 
     /* -----------------------------------------
-       BASIC VALIDATION
+       EXAM
        ----------------------------------------- */
 
-    if (!examSelect.value) {
+    if (!examId) {
 
         showMessage(
             "Please select an exam.",
@@ -831,6 +1138,10 @@ async function handleSaveResource() {
 
     }
 
+
+    /* -----------------------------------------
+       SUBJECT
+       ----------------------------------------- */
 
     if (!subjectId) {
 
@@ -846,10 +1157,14 @@ async function handleSaveResource() {
     }
 
 
+    /* -----------------------------------------
+       TITLE
+       ----------------------------------------- */
+
     if (!title) {
 
         showMessage(
-            "Study book title is required.",
+            "Book title is required.",
             "error"
         );
 
@@ -860,7 +1175,11 @@ async function handleSaveResource() {
     }
 
 
-    if (!author.value.trim()) {
+    /* -----------------------------------------
+       AUTHOR
+       ----------------------------------------- */
+
+    if (!authorValue) {
 
         showMessage(
             "Book author is required.",
@@ -874,12 +1193,9 @@ async function handleSaveResource() {
     }
 
 
-    /*
-     * A new study book requires a file.
-     *
-     * During editing, an existing file may remain
-     * unchanged when no replacement is selected.
-     */
+    /* -----------------------------------------
+       NEW RESOURCE MUST HAVE FILE
+       ----------------------------------------- */
 
     if (
         !editingResourceId &&
@@ -887,7 +1203,7 @@ async function handleSaveResource() {
     ) {
 
         showMessage(
-            "Please select the study book file.",
+            "Please select the study book.",
             "error"
         );
 
@@ -898,9 +1214,15 @@ async function handleSaveResource() {
     }
 
 
+    /* -----------------------------------------
+       VALIDATE BOOK FILE
+       ----------------------------------------- */
+
     if (
         selectedFile &&
-        !isAllowedStudyBook(selectedFile)
+        !getBookFileType(
+            selectedFile
+        )
     ) {
 
         showMessage(
@@ -908,18 +1230,57 @@ async function handleSaveResource() {
             "error"
         );
 
+        bookFile.focus();
+
         return;
 
     }
 
 
+    /* -----------------------------------------
+       VALIDATE COVER
+       ----------------------------------------- */
+
     if (
         selectedCover &&
-        !isAllowedCover(selectedCover)
+        !isAllowedCover(
+            selectedCover
+        )
     ) {
 
         showMessage(
             "Only JPG, PNG and WebP cover images are supported.",
+            "error"
+        );
+
+        coverImage.focus();
+
+        return;
+
+    }
+
+
+    const existing =
+        editingResourceId
+            ? resourcesCache.find(
+                resource =>
+                    String(
+                        resource.id
+                    ) ===
+                    String(
+                        editingResourceId
+                    )
+              )
+            : null;
+
+
+    if (
+        editingResourceId &&
+        !existing
+    ) {
+
+        showMessage(
+            "Study resource could not be found.",
             "error"
         );
 
@@ -928,10 +1289,8 @@ async function handleSaveResource() {
     }
 
 
-    const saveButton =
-        document.querySelector(
-            ".form-actions .btn-success"
-        );
+    isSaving =
+        true;
 
 
     setButtonLoading(
@@ -945,33 +1304,9 @@ async function handleSaveResource() {
 
     try {
 
-        let existing = null;
-
-
-        if (editingResourceId) {
-
-            existing =
-                resourcesCache.find(
-                    resource =>
-                        String(resource.id) ===
-                        String(editingResourceId)
-                );
-
-
-            if (!existing) {
-
-                throw new Error(
-                    "Study book could not be found."
-                );
-
-            }
-
-        }
-
-
-        /* ---------------------------------------
-           DOCUMENT / BOOK FILE
-           --------------------------------------- */
+        /* -----------------------------------------
+           EXISTING FILE
+           ----------------------------------------- */
 
         let fileUrl =
             existing
@@ -983,9 +1318,13 @@ async function handleSaveResource() {
             existing
                 ? normalizeFileType(
                     existing.file_type
-                )
+                  )
                 : "";
 
+
+        /* -----------------------------------------
+           UPLOAD BOOK
+           ----------------------------------------- */
 
         if (selectedFile) {
 
@@ -995,7 +1334,7 @@ async function handleSaveResource() {
             );
 
 
-            const uploadedDocument =
+            const uploaded =
                 await uploadLargeFile(
                     selectedFile,
                     "document"
@@ -1003,20 +1342,20 @@ async function handleSaveResource() {
 
 
             fileUrl =
-                uploadedDocument.object_key;
+                uploaded.object_key;
 
 
             fileType =
-                getStudyBookFileType(
+                getBookFileType(
                     selectedFile
                 );
 
         }
 
 
-        /* ---------------------------------------
-           COVER IMAGE
-           --------------------------------------- */
+        /* -----------------------------------------
+           UPLOAD COVER
+           ----------------------------------------- */
 
         let coverUrl =
             existing
@@ -1045,18 +1384,31 @@ async function handleSaveResource() {
         }
 
 
-        /* ---------------------------------------
-           FINAL PAYLOAD
-           --------------------------------------- */
+        /* -----------------------------------------
+           SAFETY CHECK
+           ----------------------------------------- */
 
-        if (!fileType) {
+        if (!fileUrl) {
 
             throw new Error(
-                "Study book file type could not be determined."
+                "The study book has not been uploaded."
             );
 
         }
 
+
+        if (!fileType) {
+
+            throw new Error(
+                "The study book file type could not be determined."
+            );
+
+        }
+
+
+        /* -----------------------------------------
+           D1 PAYLOAD
+           ----------------------------------------- */
 
         const payload = {
 
@@ -1067,10 +1419,10 @@ async function handleSaveResource() {
                 title,
 
             author:
-                author.value.trim(),
+                authorValue,
 
             description:
-                description.value.trim(),
+                descriptionValue,
 
             file_url:
                 fileUrl,
@@ -1092,6 +1444,10 @@ async function handleSaveResource() {
         };
 
 
+        /* -----------------------------------------
+           SAVE D1
+           ----------------------------------------- */
+
         await submitResource(
             payload,
             editingResourceId
@@ -1101,19 +1457,23 @@ async function handleSaveResource() {
     } catch (error) {
 
         console.error(
-            "Save study book:",
+            "Save study resource failed:",
             error
         );
 
 
         showMessage(
             error.message ||
-            "Failed to save study book.",
+            "Failed to save study resource.",
             "error"
         );
 
 
     } finally {
+
+        isSaving =
+            false;
+
 
         setButtonLoading(
             saveButton,
@@ -1129,10 +1489,7 @@ async function handleSaveResource() {
 
 
 /* =========================================================
-   LARGE FILE UPLOAD
-   =========================================================
-   IMPORTANT:
-   THERE IS NO FRONTEND FILE-SIZE LIMIT.
+   LARGE FILE MULTIPART UPLOAD
    ========================================================= */
 
 async function uploadLargeFile(
@@ -1151,35 +1508,27 @@ async function uploadLargeFile(
 
     const contentType =
         file.type ||
-        (
-            uploadType === "document"
-                ? getMimeTypeFromExtension(
-                    file.name
-                )
-                : "image/jpeg"
+        getFallbackMimeType(
+            file.name,
+            uploadType
         );
 
 
-    if (
-        uploadType === "document" &&
-        !contentType
-    ) {
-
-        throw new Error(
-            "Unable to determine the study book file type."
-        );
-
-    }
-
-
-    let initialized = null;
+    let uploadInfo =
+        null;
 
 
     try {
 
-        /* ---------------------------------------
+        /* -----------------------------------------
            INITIALIZE
-           --------------------------------------- */
+           ----------------------------------------- */
+
+        showMessage(
+            "Initializing file upload...",
+            "success"
+        );
+
 
         const initResponse =
             await fetch(
@@ -1210,17 +1559,17 @@ async function uploadLargeFile(
             );
 
 
-        initialized =
+        const initResult =
             await parseResponse(
                 initResponse
             );
 
 
-        const uploadData =
-            initialized.data;
+        uploadInfo =
+            initResult.data;
 
 
-        if (!uploadData) {
+        if (!uploadInfo) {
 
             throw new Error(
                 "Upload initialization returned no upload information."
@@ -1230,11 +1579,11 @@ async function uploadLargeFile(
 
 
         const objectKey =
-            uploadData.object_key;
+            uploadInfo.object_key;
 
 
         const r2UploadId =
-            uploadData.r2_upload_id;
+            uploadInfo.r2_upload_id;
 
 
         if (
@@ -1251,35 +1600,45 @@ async function uploadLargeFile(
 
         currentUpload = {
 
-            uploadType,
+            uploadType:
+                uploadType,
 
-            objectKey,
+            objectKey:
+                objectKey,
 
-            r2UploadId
+            r2UploadId:
+                r2UploadId
 
         };
 
 
-        /* ---------------------------------------
-           CALCULATE PARTS
-           --------------------------------------- */
+        /* -----------------------------------------
+           PART COUNT
+           ----------------------------------------- */
 
         const totalParts =
-            Math.max(
-                1,
-                Math.ceil(
-                    file.size /
-                    UPLOAD_PART_SIZE
-                )
+            Math.ceil(
+                file.size /
+                UPLOAD_PART_SIZE
             );
 
 
-        const completedParts = [];
+        if (totalParts < 1) {
+
+            throw new Error(
+                "Selected file is empty."
+            );
+
+        }
 
 
-        /* ---------------------------------------
+        const completedParts =
+            [];
+
+
+        /* -----------------------------------------
            UPLOAD PARTS
-           --------------------------------------- */
+           ----------------------------------------- */
 
         for (
             let partNumber = 1;
@@ -1313,7 +1672,7 @@ async function uploadLargeFile(
                 `Uploading ${
                     uploadType === "document"
                         ? "study book"
-                        : "cover"
+                        : "book cover"
                 }: part ${partNumber} of ${totalParts}...`,
                 "success"
             );
@@ -1337,7 +1696,9 @@ async function uploadLargeFile(
                                 r2UploadId,
 
                             "X-Part-Number":
-                                String(partNumber)
+                                String(
+                                    partNumber
+                                )
 
                         },
 
@@ -1383,9 +1744,9 @@ async function uploadLargeFile(
         }
 
 
-        /* ---------------------------------------
+        /* -----------------------------------------
            COMPLETE
-           --------------------------------------- */
+           ----------------------------------------- */
 
         showMessage(
             "Finalizing file upload...",
@@ -1425,28 +1786,29 @@ async function uploadLargeFile(
             );
 
 
-        const completed =
+        const completeResult =
             await parseResponse(
                 completeResponse
             );
 
 
-        currentUpload = null;
+        const completedData =
+            completeResult.data || {};
+
+
+        currentUpload =
+            null;
 
 
         return {
 
             object_key:
-                completed.data &&
-                completed.data.object_key
-                    ? completed.data.object_key
-                    : objectKey,
+                completedData.object_key ||
+                objectKey,
 
             etag:
-                completed.data &&
-                completed.data.etag
-                    ? completed.data.etag
-                    : null
+                completedData.etag ||
+                null
 
         };
 
@@ -1462,7 +1824,8 @@ async function uploadLargeFile(
         }
 
 
-        currentUpload = null;
+        currentUpload =
+            null;
 
 
         throw error;
@@ -1473,7 +1836,7 @@ async function uploadLargeFile(
 
 
 /* =========================================================
-   ABORT FAILED UPLOAD
+   ABORT MULTIPART UPLOAD
    ========================================================= */
 
 async function abortUpload(
@@ -1512,7 +1875,7 @@ async function abortUpload(
     } catch (error) {
 
         console.error(
-            "Failed to abort multipart upload:",
+            "Multipart upload abort failed:",
             error
         );
 
@@ -1522,7 +1885,7 @@ async function abortUpload(
 
 
 /* =========================================================
-   SUBMIT RESOURCE
+   SUBMIT RESOURCE TO D1
    ========================================================= */
 
 async function submitResource(
@@ -1530,7 +1893,7 @@ async function submitResource(
     resourceId = null
 ) {
 
-    const requestMethod =
+    const method =
         resourceId
             ? "PUT"
             : "POST";
@@ -1538,7 +1901,11 @@ async function submitResource(
 
     const url =
         resourceId
-            ? `${API.resources}/${encodeURIComponent(resourceId)}`
+
+            ? `${API.resources}/${encodeURIComponent(
+                resourceId
+              )}`
+
             : API.resources;
 
 
@@ -1548,8 +1915,7 @@ async function submitResource(
             await fetch(
                 url,
                 {
-                    method:
-                        requestMethod,
+                    method,
 
                     headers: {
                         "Content-Type":
@@ -1575,7 +1941,7 @@ async function submitResource(
             result.message ||
             (
                 resourceId
-                    ? "Study book updated successfully."
+                    ? "Study resource updated successfully."
                     : "Study book published successfully."
             ),
             "success"
@@ -1584,14 +1950,13 @@ async function submitResource(
 
         clearForm();
 
-
         await loadResources();
 
 
     } catch (error) {
 
         console.error(
-            "Submit study book:",
+            "Submit resource failed:",
             error
         );
 
@@ -1613,15 +1978,19 @@ async function editResource(
     const resource =
         resourcesCache.find(
             item =>
-                String(item.id) ===
-                String(id)
+                String(
+                    item.id
+                ) ===
+                String(
+                    id
+                )
         );
 
 
     if (!resource) {
 
         showMessage(
-            "Study book not found.",
+            "Study resource not found.",
             "error"
         );
 
@@ -1634,14 +2003,31 @@ async function editResource(
         resource.id;
 
 
+    /*
+     * Restore the exam first.
+     */
+
     examSelect.value =
         resource.exam_id || "";
 
 
-    await loadSubjects(
-        resource.exam_id
-    );
+    /*
+     * Then load subjects belonging
+     * to that exam.
+     */
 
+    if (resource.exam_id) {
+
+        await loadSubjects(
+            resource.exam_id
+        );
+
+    }
+
+
+    /*
+     * Then restore the subject.
+     */
 
     subjectSelect.value =
         resource.subject_id || "";
@@ -1660,49 +2046,49 @@ async function editResource(
 
 
     /*
-     * Existing files are intentionally not placed
-     * inside file inputs.
+     * Browser security prevents us from
+     * placing an existing R2 object into
+     * a file input.
      *
-     * If the administrator does not select a new
-     * file, the existing file remains unchanged.
+     * Empty means:
+     * keep existing file unless replacement
+     * is selected.
      */
 
-    bookFile.value = "";
-
-    coverImage.value = "";
-
-
-    const saveButton =
-        document.querySelector(
-            ".form-actions .btn-success"
-        );
+    bookFile.value =
+        "";
 
 
-    if (saveButton) {
-
-        saveButton.innerHTML = `
-            <i class="fas fa-save"></i>
-            Update Book
-        `;
-
-    }
+    coverImage.value =
+        "";
 
 
-    if (addResourceBtn) {
-
-        addResourceBtn.innerHTML = `
-            <i class="fas fa-plus"></i>
-            Add New Book
-        `;
-
-    }
+    saveButton.innerHTML = `
+        <i class="fas fa-save"></i>
+        Update Book
+    `;
 
 
-    focusResourceForm(false);
+    addResourceBtn.innerHTML = `
+        <i class="fas fa-plus"></i>
+        Add New Book
+    `;
+
+
+    /*
+     * DO NOT call clearForm() here.
+     *
+     * clearForm() intentionally destroys
+     * editingResourceId.
+     */
+
+    focusResourceForm(
+        false
+    );
 
 
     showMessage(
-        "Editing selected study book.",
+        "Editing selected study resource.",
         "success"
     );
 
@@ -1710,7 +2096,31 @@ async function editResource(
 
 
 /* =========================================================
-   TOGGLE RESOURCE STATUS
+   FOCUS FORM
+   ========================================================= */
+
+function focusResourceForm(
+    clear = true
+) {
+
+    if (clear) {
+
+        clearForm();
+
+    }
+
+
+    if (examSelect) {
+
+        examSelect.focus();
+
+    }
+
+}
+
+
+/* =========================================================
+   TOGGLE STATUS
    ========================================================= */
 
 async function toggleResource(
@@ -1720,12 +2130,21 @@ async function toggleResource(
     const resource =
         resourcesCache.find(
             item =>
-                String(item.id) ===
-                String(id)
+                String(
+                    item.id
+                ) ===
+                String(
+                    id
+                )
         );
 
 
     if (!resource) {
+
+        showMessage(
+            "Study resource not found.",
+            "error"
+        );
 
         return;
 
@@ -1741,8 +2160,8 @@ async function toggleResource(
     const confirmed =
         window.confirm(
             newStatus === "inactive"
-                ? "Deactivate this study book?"
-                : "Activate this study book?"
+                ? "Deactivate this study resource?"
+                : "Activate this study resource?"
         );
 
 
@@ -1757,7 +2176,9 @@ async function toggleResource(
 
         const response =
             await fetch(
-                `${API.resources}/${encodeURIComponent(id)}/status`,
+                `${API.resources}/${encodeURIComponent(
+                    id
+                )}/status`,
                 {
                     method: "PATCH",
 
@@ -1784,7 +2205,7 @@ async function toggleResource(
 
         showMessage(
             result.message ||
-            "Study book status updated.",
+            "Resource status updated.",
             "success"
         );
 
@@ -1795,14 +2216,14 @@ async function toggleResource(
     } catch (error) {
 
         console.error(
-            "Toggle study book:",
+            "Toggle resource failed:",
             error
         );
 
 
         showMessage(
             error.message ||
-            "Failed to update study book status.",
+            "Failed to update resource status.",
             "error"
         );
 
@@ -1812,7 +2233,7 @@ async function toggleResource(
 
 
 /* =========================================================
-   CLEAR FORM
+   CLEAR
    ========================================================= */
 
 function handleClear(
@@ -1843,7 +2264,8 @@ function clearForm() {
 
     if (examSelect) {
 
-        examSelect.value = "";
+        examSelect.value =
+            "";
 
     }
 
@@ -1853,46 +2275,49 @@ function clearForm() {
 
     if (bookTitle) {
 
-        bookTitle.value = "";
+        bookTitle.value =
+            "";
 
     }
 
 
     if (author) {
 
-        author.value = "";
+        author.value =
+            "";
 
     }
 
 
     if (description) {
 
-        description.value = "";
+        description.value =
+            "";
 
     }
 
 
     if (coverImage) {
 
-        coverImage.value = "";
+        coverImage.value =
+            "";
 
     }
 
 
     if (bookFile) {
 
-        bookFile.value = "";
+        bookFile.value =
+            "";
 
     }
 
 
-    const saveButton =
-        document.querySelector(
-            ".form-actions .btn-success"
-        );
-
-
     if (saveButton) {
+
+        saveButton.disabled =
+            false;
+
 
         saveButton.innerHTML = `
             <i class="fas fa-save"></i>
@@ -1918,38 +2343,14 @@ function clearForm() {
 
 
 /* =========================================================
-   ADD NEW STUDY BOOK
-   ========================================================= */
-
-function focusResourceForm(
-    clear = true
-) {
-
-    if (clear) {
-
-        clearForm();
-
-    }
-
-
-    if (examSelect) {
-
-        examSelect.focus();
-
-    }
-
-}
-
-
-/* =========================================================
-   STUDY BOOK FILE SELECTION
+   BOOK FILE CHANGE
    ========================================================= */
 
 function handleBookFileChange() {
 
     const file =
-        bookFile &&
-        bookFile.files
+        bookFile.files &&
+        bookFile.files.length
             ? bookFile.files[0]
             : null;
 
@@ -1961,9 +2362,16 @@ function handleBookFileChange() {
     }
 
 
-    if (!isAllowedStudyBook(file)) {
+    const fileType =
+        getBookFileType(
+            file
+        );
 
-        bookFile.value = "";
+
+    if (!fileType) {
+
+        bookFile.value =
+            "";
 
 
         showMessage(
@@ -1971,33 +2379,28 @@ function handleBookFileChange() {
             "error"
         );
 
-
         return;
 
     }
 
 
-    /*
-     * IMPORTANT:
-     *
-     * There is NO file-size validation here.
-     *
-     * Large files are uploaded through R2
-     * multipart upload.
-     */
+    showMessage(
+        `Selected ${fileType.toUpperCase()} study book: ${file.name}`,
+        "success"
+    );
 
 }
 
 
 /* =========================================================
-   COVER SELECTION
+   COVER CHANGE
    ========================================================= */
 
 function handleCoverChange() {
 
     const file =
-        coverImage &&
-        coverImage.files
+        coverImage.files &&
+        coverImage.files.length
             ? coverImage.files[0]
             : null;
 
@@ -2009,9 +2412,14 @@ function handleCoverChange() {
     }
 
 
-    if (!isAllowedCover(file)) {
+    if (
+        !isAllowedCover(
+            file
+        )
+    ) {
 
-        coverImage.value = "";
+        coverImage.value =
+            "";
 
 
         showMessage(
@@ -2019,167 +2427,152 @@ function handleCoverChange() {
             "error"
         );
 
-
         return;
 
     }
 
 
-    /*
-     * No arbitrary cover-size restriction.
-     */
+    showMessage(
+        `Selected cover: ${file.name}`,
+        "success"
+    );
 
 }
 
 
 /* =========================================================
-   STUDY BOOK FILE VALIDATION
+   DETERMINE BOOK TYPE
    ========================================================= */
 
-function isAllowedStudyBook(
+function getBookFileType(
     file
 ) {
 
     if (!file) {
 
-        return false;
+        return null;
 
     }
 
 
-    const extensionType =
-        getStudyBookFileType(
-            file
-        );
-
-
-    if (!extensionType) {
-
-        return false;
-
-    }
-
-
-    /*
-     * Some browsers may report an empty or unusual
-     * MIME type. Extension validation therefore remains
-     * authoritative for supported file formats.
-     */
-
-    return true;
-
-}
-
-
-/* =========================================================
-   GET STUDY BOOK FILE TYPE
-   ========================================================= */
-
-function getStudyBookFileType(
-    file
-) {
-
-    if (!file) {
-
-        return "";
-
-    }
-
-
-    const mimeType =
+    const mime =
         String(
-            file.type || ""
+            file.type ||
+            ""
         )
         .trim()
         .toLowerCase();
 
 
     if (
-        STUDY_BOOK_TYPES[mimeType]
+        BOOK_TYPES[mime]
     ) {
 
-        return STUDY_BOOK_TYPES[mimeType];
+        return BOOK_TYPES[mime];
 
     }
 
 
     const name =
         String(
-            file.name || ""
+            file.name ||
+            ""
         )
         .trim()
         .toLowerCase();
 
 
-    const extension =
-        Object.keys(
-            STUDY_BOOK_EXTENSIONS
+    for (
+        const extension
+        of Object.keys(
+            BOOK_EXTENSIONS
         )
-        .find(
-            item =>
-                name.endsWith(item)
-        );
+    ) {
 
+        if (
+            name.endsWith(
+                extension
+            )
+        ) {
 
-    return extension
-        ? STUDY_BOOK_EXTENSIONS[extension]
-        : "";
+            return BOOK_EXTENSIONS[
+                extension
+            ];
 
-}
-
-
-/* =========================================================
-   MIME TYPE FROM EXTENSION
-   ========================================================= */
-
-function getMimeTypeFromExtension(
-    fileName
-) {
-
-    const fileType =
-        getStudyBookFileType({
-            name:
-                fileName,
-            type:
-                ""
-        });
-
-
-    switch (fileType) {
-
-        case "pdf":
-            return "application/pdf";
-
-        case "docx":
-            return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-
-        case "xlsx":
-            return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-
-        case "csv":
-            return "text/csv";
-
-        default:
-            return "";
+        }
 
     }
 
+
+    return null;
+
 }
 
 
 /* =========================================================
-   NORMALIZE FILE TYPE
+   FALLBACK MIME TYPE
    ========================================================= */
 
-function normalizeFileType(
-    value
+function getFallbackMimeType(
+    fileName,
+    uploadType
 ) {
 
-    return String(
-        value ?? ""
-    )
-    .trim()
-    .toLowerCase();
+    if (
+        uploadType ===
+        "cover"
+    ) {
+
+        return "image/jpeg";
+
+    }
+
+
+    const name =
+        String(
+            fileName ||
+            ""
+        )
+        .toLowerCase();
+
+
+    if (
+        name.endsWith(".pdf")
+    ) {
+
+        return "application/pdf";
+
+    }
+
+
+    if (
+        name.endsWith(".docx")
+    ) {
+
+        return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+
+    }
+
+
+    if (
+        name.endsWith(".xlsx")
+    ) {
+
+        return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+    }
+
+
+    if (
+        name.endsWith(".csv")
+    ) {
+
+        return "text/csv";
+
+    }
+
+
+    return "application/octet-stream";
 
 }
 
@@ -2199,53 +2592,39 @@ function isAllowedCover(
     }
 
 
-    const allowed = [
-
-        "image/jpeg",
-        "image/png",
-        "image/webp"
-
-    ];
-
-
-    const mimeType =
+    const mime =
         String(
-            file.type || ""
+            file.type ||
+            ""
         )
         .trim()
         .toLowerCase();
 
 
-    const name =
-        String(
-            file.name || ""
-        )
-        .trim()
-        .toLowerCase();
+    return Boolean(
+        COVER_TYPES[mime]
+    );
+
+}
 
 
-    return (
+/* =========================================================
+   NORMALIZE FILE TYPE
+   ========================================================= */
 
-        allowed.includes(
-            mimeType
-        )
+function normalizeFileType(
+    value
+) {
 
-        ||
-
-        name.endsWith(".jpg")
-
-        ||
-
-        name.endsWith(".jpeg")
-
-        ||
-
-        name.endsWith(".png")
-
-        ||
-
-        name.endsWith(".webp")
-
+    return String(
+        value ??
+        ""
+    )
+    .trim()
+    .toLowerCase()
+    .replace(
+        /^\./,
+        ""
     );
 
 }
@@ -2333,7 +2712,7 @@ function setTableLoading() {
         <tr>
             <td colspan="6">
                 <i class="fas fa-spinner fa-spin"></i>
-                Loading study books...
+                Loading study resources...
             </td>
         </tr>
     `;
@@ -2359,7 +2738,9 @@ function setSelectLoading(
 
     select.innerHTML = `
         <option value="">
-            ${escapeHtml(message)}
+            ${escapeHtml(
+                message
+            )}
         </option>
     `;
 
@@ -2384,7 +2765,9 @@ function setSelectError(
 
     select.innerHTML = `
         <option value="">
-            ${escapeHtml(message)}
+            ${escapeHtml(
+                message
+            )}
         </option>
     `;
 
@@ -2412,21 +2795,22 @@ function setButtonLoading(
         loading;
 
 
-    if (loading) {
+    button.innerHTML =
+        loading
 
-        button.innerHTML = `
-            <i class="fas fa-spinner fa-spin"></i>
-            ${escapeHtml(text)}
-        `;
+            ? `
+                <i class="fas fa-spinner fa-spin"></i>
+                ${escapeHtml(
+                    text
+                )}
+              `
 
-    } else {
-
-        button.innerHTML = `
-            <i class="fas fa-save"></i>
-            ${escapeHtml(text)}
-        `;
-
-    }
+            : `
+                <i class="fas fa-save"></i>
+                ${escapeHtml(
+                    text
+                )}
+              `;
 
 }
 
@@ -2494,6 +2878,12 @@ function showMessage(
                 container
             );
 
+        } else {
+
+            document.body.prepend(
+                container
+            );
+
         }
 
     }
@@ -2504,7 +2894,10 @@ function showMessage(
 
 
     container.textContent =
-        message;
+        String(
+            message ||
+            ""
+        );
 
 
     clearTimeout(
@@ -2541,7 +2934,8 @@ function escapeHtml(
 ) {
 
     return String(
-        value ?? ""
+        value ??
+        ""
     )
     .replaceAll(
         "&",
