@@ -16,21 +16,48 @@ document.addEventListener("DOMContentLoaded", async () => {
         LOAD COMPONENT
 =========================================*/
 
-async function loadComponent(containerId, file){
+async function loadComponent(containerId, file) {
 
-    try{
+    try {
 
-        const response = await fetch(file);
+        const container =
+            document.getElementById(containerId);
 
-        const html = await response.text();
+        if (!container) {
 
-        document.getElementById(containerId).innerHTML = html;
+            console.warn(
+                `Container #${containerId} not found on this page.`
+            );
+
+            return;
+
+        }
+
+        const response =
+            await fetch(file);
+
+        if (!response.ok) {
+
+            throw new Error(
+                `Failed to load ${file}: ${response.status}`
+            );
+
+        }
+
+        const html =
+            await response.text();
+
+        container.innerHTML =
+            html;
 
     }
 
-    catch(error){
+    catch (error) {
 
-        console.error(error);
+        console.error(
+            `Failed to load component ${file}:`,
+            error
+        );
 
     }
 
