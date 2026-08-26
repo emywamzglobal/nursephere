@@ -2693,9 +2693,37 @@ if (
 
 }
 
-// =====================================================
-// PRACTICE QUESTION MANAGEMENT
-// =====================================================
+/*
+=========================================================
+    PRACTICE QUESTION MANAGEMENT
+=========================================================
+
+    RELATIONSHIP:
+
+        EXAM
+          ↓
+        SUBJECT
+          ↓
+        PRACTICE QUESTION
+
+    practice_questions stores subject_id.
+    exam_id is derived through subjects.exam_id.
+
+    Endpoints:
+
+        GET    /api/admin/questions
+        GET    /api/admin/questions/:id
+        POST   /api/admin/questions
+        PUT    /api/admin/questions/:id
+        DELETE /api/admin/questions/:id
+
+=========================================================
+*/
+
+
+/*=========================================================
+    CONSTANTS
+=========================================================*/
 
 const QUESTION_STATUSES = [
     "active",
@@ -2721,9 +2749,9 @@ const MAX_EXPLANATION_LENGTH = 10000;
 const MAX_IMAGE_URL_LENGTH = 1000;
 
 
-// =====================================================
-// HELPERS
-// =====================================================
+/*=========================================================
+    HELPERS
+=========================================================*/
 
 function cleanQuestionText(value) {
 
@@ -2733,9 +2761,15 @@ function cleanQuestionText(value) {
 
 }
 
+
 function validateQuestionImageUrl(value) {
 
-    if (!value) return true;
+    if (!value) {
+
+        return true;
+
+    }
+
 
     if (
         value.length >
@@ -2746,13 +2780,19 @@ function validateQuestionImageUrl(value) {
 
     }
 
+
     try {
 
-        const url = new URL(value);
+        const url =
+            new URL(value);
+
 
         return (
+
             url.protocol === "http:" ||
+
             url.protocol === "https:"
+
         );
 
     }
@@ -2766,10 +2806,418 @@ function validateQuestionImageUrl(value) {
 }
 
 
-// =====================================================
-// GET ALL QUESTIONS
-// GET /api/admin/questions
-// =====================================================
+/*=========================================================
+    JSON ERROR HELPER
+=========================================================*/
+
+function questionError(
+
+    message,
+
+    status = 400
+
+) {
+
+    return Response.json({
+
+        success: false,
+
+        message
+
+    }, {
+
+        status
+
+    });
+
+}
+
+
+/*=========================================================
+    VERIFY EXAM + SUBJECT RELATIONSHIP
+=========================================================
+
+    This is the central relationship check.
+
+    It guarantees:
+
+        submitted exam_id
+                ↓
+        submitted subject_id
+                ↓
+        subject.exam_id
+
+    all match.
+
+=========================================================*/
+
+async function verifyQuestionPlacement(
+
+    env,
+
+    examId,
+
+    subjectId
+
+) {
+
+    if (!examId) {
+
+        return {
+
+            ok: false,
+
+            response:
+                questionError(
+                    "Please select an exam.",
+                    400
+                )
+
+        };
+
+    }
+
+
+    if (!subjectId) {
+
+        return {
+
+            ok: false,
+
+            response:
+                questionError(
+                    "Please select a subject.",
+                    400
+                )
+
+        };
+
+    }
+
+
+    const subject =
+        await env.DB.prepare(
+
+            `SELECT
+
+                s.id,
+                s.exam_id,
+                s.status AS subject_status,
+
+                e.id AS exam_id,
+                e.status AS exam_status
+
+             FROM subjects s
+
+             INNER JOIN exams e
+
+                ON s.exam_id = e.id
+
+             WHERE s.id = ?
+
+             LIMIT 1`
+
+        )
+
+        .bind(subjectId)
+
+        .first();
+
+
+    if (!subject) {
+
+        return {
+
+            ok: false,
+
+            response:
+                questionError(
+                    "Selected subject does not exist.",
+                    404
+                )
+
+        };
+
+    }
+
+
+    /*
+    -----------------------------------------------------
+        CRITICAL RELATIONSHIP CHECK
+    -----------------------------------------------------
+    */
+
+    if (
+
+        String(subject.exam_id) !==
+        String(examId)
+
+    ) {
+
+        return {
+
+            ok: false,
+
+            response:
+                questionError(
+
+                    "Selected subject does not belong to the selected exam.",
+
+                    409
+
+                )
+
+        };
+
+    }
+
+
+    if (
+        subject.subject_status !== "active"
+    ) {
+
+        return {
+
+            ok: false,
+
+            response:
+                questionError(
+
+                    "Practice questions can only be added to an active subject.",
+
+                    409
+
+                )
+
+        };
+
+    }
+
+
+    if (
+        subject.exam_status !== "active"
+    ) {
+
+        return {
+
+            ok: false,
+
+            response:
+                questionError(
+
+                    "The selected subject belongs to an inactive exam.",
+
+                    409
+
+                )
+
+        };
+
+    }
+
+
+    return {
+
+        ok: true,
+
+        subject
+
+    };
+
+}
+
+
+/*=========================================================
+    VALIDATE QUESTION DATA
+=========================================================*/
+
+function validateQuestionData(
+
+    data,
+
+    isCreate = true
+
+) {
+
+    const errors = [];
+
+
+    if (
+        isCreate &&
+        !data.exam_id
+    ) {
+
+        errors.push(
+            "Please select an exam."
+        );
+
+    }
+
+
+    if (!data.subject_id) {
+
+        errors.push(
+            "Please select a subject."
+        );
+
+    }
+
+
+    if (!data.question) {
+
+        errors.push(
+            "Question is required."
+        );
+
+    }
+
+    else if (
+        data.question.length >
+        MAX_QUESTION_LENGTH
+    ) {
+
+        errors.push(
+
+            `Question cannot exceed ${MAX_QUESTION_LENGTH} characters.`
+
+        );
+
+    }
+
+
+    if (
+        !data.option_a ||
+        !data.option_b ||
+        !data.option_c ||
+        !data.option_d
+    ) {
+
+        errors.push(
+            "All answer options are required."
+        );
+
+    }
+
+
+    if (
+
+        data.option_a.length >
+        MAX_OPTION_LENGTH ||
+
+        data.option_b.length >
+        MAX_OPTION_LENGTH ||
+
+        data.option_c.length >
+        MAX_OPTION_LENGTH ||
+
+        data.option_d.length >
+        MAX_OPTION_LENGTH
+
+    ) {
+
+        errors.push(
+
+            `Answer options cannot exceed ${MAX_OPTION_LENGTH} characters.`
+
+        );
+
+    }
+
+
+    if (
+        !VALID_QUESTION_ANSWERS.includes(
+            data.correct_answer
+        )
+    ) {
+
+        errors.push(
+            "Correct answer must be A, B, C or D."
+        );
+
+    }
+
+
+    if (
+        !QUESTION_DIFFICULTIES.includes(
+            data.difficulty
+        )
+    ) {
+
+        errors.push(
+            "Difficulty must be easy, medium or hard."
+        );
+
+    }
+
+
+    if (
+        data.explanation.length >
+        MAX_EXPLANATION_LENGTH
+    ) {
+
+        errors.push(
+
+            `Explanation cannot exceed ${MAX_EXPLANATION_LENGTH} characters.`
+
+        );
+
+    }
+
+
+    if (
+        !validateQuestionImageUrl(
+            data.image_url
+        )
+    ) {
+
+        errors.push(
+            "Image URL must be a valid HTTP or HTTPS URL."
+        );
+
+    }
+
+
+    if (
+        errors.length
+    ) {
+
+        return {
+
+            ok: false,
+
+            response:
+                Response.json({
+
+                    success: false,
+
+                    message:
+                        errors[0],
+
+                    errors
+
+                }, {
+
+                    status: 400
+
+                })
+
+        };
+
+    }
+
+
+    return {
+
+        ok: true
+
+    };
+
+}
+
+
+/*=========================================================
+    GET ALL QUESTIONS
+=========================================================*/
 
 if (
 
@@ -2779,163 +3227,227 @@ if (
 
 ) {
 
-    const { results } = await env.DB.prepare(
+    try {
 
-        `SELECT
-            q.id,
-            q.subject_id,
+        const { results } =
 
-            s.name AS subject_name,
+            await env.DB.prepare(
 
-            s.exam_id,
+                `SELECT
 
-            e.name AS exam_name,
-            e.code AS exam_code,
+                    q.id,
 
-            q.question,
-            q.image_url,
+                    q.subject_id,
 
-            q.option_a,
-            q.option_b,
-            q.option_c,
-            q.option_d,
+                    s.name AS subject_name,
 
-            q.correct_answer,
-            q.explanation,
-            q.difficulty,
-            q.status,
+                    s.exam_id,
 
-            q.created_at,
-            q.updated_at
+                    e.name AS exam_name,
+                    e.code AS exam_code,
 
-         FROM practice_questions q
+                    q.question,
+                    q.image_url,
 
-         INNER JOIN subjects s
-            ON q.subject_id = s.id
+                    q.option_a,
+                    q.option_b,
+                    q.option_c,
+                    q.option_d,
 
-         INNER JOIN exams e
-            ON s.exam_id = e.id
+                    q.correct_answer,
+                    q.explanation,
+                    q.difficulty,
+                    q.status,
 
-         ORDER BY
-            e.display_order ASC,
-            e.name COLLATE NOCASE ASC,
-            s.display_order ASC,
-            s.name COLLATE NOCASE ASC,
-            q.created_at DESC`
+                    q.created_at,
+                    q.updated_at
 
-    ).all();
+                 FROM practice_questions q
 
-    return Response.json({
+                 INNER JOIN subjects s
 
-        success: true,
+                    ON q.subject_id = s.id
 
-        message:
-            "Practice questions retrieved successfully.",
+                 INNER JOIN exams e
 
-        data: results
+                    ON s.exam_id = e.id
 
-    });
+                 ORDER BY
+
+                    e.display_order ASC,
+
+                    e.name COLLATE NOCASE ASC,
+
+                    s.display_order ASC,
+
+                    s.name COLLATE NOCASE ASC,
+
+                    q.created_at DESC`
+
+            )
+
+            .all();
+
+
+        return Response.json({
+
+            success: true,
+
+            message:
+                "Practice questions retrieved successfully.",
+
+            data:
+                results || []
+
+        });
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "GET QUESTIONS:",
+            error
+        );
+
+
+        return questionError(
+
+            "Failed to retrieve practice questions.",
+
+            500
+
+        );
+
+    }
 
 }
 
 
-// =====================================================
-// GET SINGLE QUESTION
-// GET /api/admin/questions/:id
-// =====================================================
+/*=========================================================
+    GET SINGLE QUESTION
+=========================================================*/
 
 if (
 
     method === "GET" &&
 
-    /^\/api\/admin\/questions\/[^/]+$/.test(pathname)
+    /^\/api\/admin\/questions\/[^/]+$/.test(
+        pathname
+    )
 
 ) {
 
     const questionId =
         pathname.split("/").pop();
 
-    const question =
-        await env.DB.prepare(
 
-            `SELECT
-                q.id,
-                q.subject_id,
+    try {
 
-                s.name AS subject_name,
+        const question =
+            await env.DB.prepare(
 
-                s.exam_id,
+                `SELECT
 
-                e.name AS exam_name,
-                e.code AS exam_code,
+                    q.id,
 
-                q.question,
-                q.image_url,
+                    q.subject_id,
 
-                q.option_a,
-                q.option_b,
-                q.option_c,
-                q.option_d,
+                    s.name AS subject_name,
 
-                q.correct_answer,
-                q.explanation,
-                q.difficulty,
-                q.status,
+                    s.exam_id,
 
-                q.created_at,
-                q.updated_at
+                    e.name AS exam_name,
+                    e.code AS exam_code,
 
-             FROM practice_questions q
+                    q.question,
+                    q.image_url,
 
-             INNER JOIN subjects s
-                ON q.subject_id = s.id
+                    q.option_a,
+                    q.option_b,
+                    q.option_c,
+                    q.option_d,
 
-             INNER JOIN exams e
-                ON s.exam_id = e.id
+                    q.correct_answer,
+                    q.explanation,
+                    q.difficulty,
+                    q.status,
 
-             WHERE q.id = ?`
+                    q.created_at,
+                    q.updated_at
 
-        )
+                 FROM practice_questions q
 
-        .bind(questionId)
+                 INNER JOIN subjects s
 
-        .first();
+                    ON q.subject_id = s.id
 
-    if (!question) {
+                 INNER JOIN exams e
+
+                    ON s.exam_id = e.id
+
+                 WHERE q.id = ?
+
+                 LIMIT 1`
+
+            )
+
+            .bind(questionId)
+
+            .first();
+
+
+        if (!question) {
+
+            return questionError(
+
+                "Practice question not found.",
+
+                404
+
+            );
+
+        }
+
 
         return Response.json({
 
-            success: false,
+            success: true,
 
             message:
-                "Practice question not found."
+                "Practice question retrieved successfully.",
 
-        }, {
-
-            status: 404
+            data:
+                question
 
         });
 
     }
 
-    return Response.json({
+    catch (error) {
 
-        success: true,
+        console.error(
+            "GET QUESTION:",
+            error
+        );
 
-        message:
-            "Practice question retrieved successfully.",
 
-        data: question
+        return questionError(
 
-    });
+            "Failed to retrieve practice question.",
+
+            500
+
+        );
+
+    }
 
 }
 
 
-// =====================================================
-// CREATE QUESTION
-// POST /api/admin/questions
-// =====================================================
+/*=========================================================
+    CREATE QUESTION
+=========================================================*/
 
 if (
 
@@ -2947,1089 +3459,857 @@ if (
 
     let body;
 
+
     try {
 
-        body = await request.json();
+        body =
+            await request.json();
 
     }
 
     catch {
 
-        return Response.json({
+        return questionError(
 
-            success: false,
+            "Invalid JSON request body.",
 
-            message:
-                "Invalid JSON request body."
+            400
 
-        }, {
-
-            status: 400
-
-        });
+        );
 
     }
 
 
-    const exam_id =
-        cleanQuestionText(body.exam_id);
-
-    const subject_id =
-        cleanQuestionText(body.subject_id);
-
-    const question =
-        cleanQuestionText(body.question);
-
-    const image_url =
-        cleanQuestionText(body.image_url);
-
-    const option_a =
-        cleanQuestionText(body.option_a);
-
-    const option_b =
-        cleanQuestionText(body.option_b);
-
-    const option_c =
-        cleanQuestionText(body.option_c);
-
-    const option_d =
-        cleanQuestionText(body.option_d);
-
-    const correct_answer =
-        cleanQuestionText(body.correct_answer)
-            .toUpperCase();
-
-    const explanation =
-        cleanQuestionText(body.explanation);
-
-    const difficulty =
-        cleanQuestionText(
-            body.difficulty || "medium"
-        ).toLowerCase();
+    body =
+        body || {};
 
 
-    // -----------------------------------------
-    // VALIDATION
-    // -----------------------------------------
+    const data = {
 
-    if (!exam_id) {
+        exam_id:
+            cleanQuestionText(
+                body.exam_id
+            ),
 
-    return Response.json({
+        subject_id:
+            cleanQuestionText(
+                body.subject_id
+            ),
 
-        success: false,
+        question:
+            cleanQuestionText(
+                body.question
+            ),
 
-        message:
-            "Please select an exam."
+        image_url:
+            cleanQuestionText(
+                body.image_url
+            ),
 
-    }, {
-        status: 400
-    });
+        option_a:
+            cleanQuestionText(
+                body.option_a
+            ),
 
-}
+        option_b:
+            cleanQuestionText(
+                body.option_b
+            ),
 
-    if (!subject_id) {
+        option_c:
+            cleanQuestionText(
+                body.option_c
+            ),
 
-        return Response.json({
+        option_d:
+            cleanQuestionText(
+                body.option_d
+            ),
 
-            success: false,
+        correct_answer:
+            cleanQuestionText(
+                body.correct_answer
+            ).toUpperCase(),
 
-            message:
-                "Please select a subject."
+        explanation:
+            cleanQuestionText(
+                body.explanation
+            ),
 
-        }, {
+        difficulty:
+            cleanQuestionText(
+                body.difficulty ||
+                "medium"
+            ).toLowerCase()
 
-            status: 400
+    };
 
-        });
 
-    }
+    /*
+    -----------------------------------------------------
+        VALIDATE DATA
+    -----------------------------------------------------
+    */
 
-    if (!question) {
+    const validation =
+        validateQuestionData(
+            data,
+            true
+        );
 
-        return Response.json({
 
-            success: false,
+    if (!validation.ok) {
 
-            message:
-                "Question is required."
-
-        }, {
-
-            status: 400
-
-        });
+        return validation.response;
 
     }
 
-    if (
-        question.length >
-        MAX_QUESTION_LENGTH
-    ) {
 
-        return Response.json({
+    try {
 
-            success: false,
+        /*
+        -------------------------------------------------
+            VERIFY:
 
-            message:
-                `Question cannot exceed ${MAX_QUESTION_LENGTH} characters.`
+                EXAM
+                  ↓
+                SUBJECT
+        -------------------------------------------------
+        */
 
-        }, {
+        const placement =
+            await verifyQuestionPlacement(
 
-            status: 400
+                env,
 
-        });
+                data.exam_id,
 
-    }
+                data.subject_id
 
-    if (
-        !option_a ||
-        !option_b ||
-        !option_c ||
-        !option_d
-    ) {
+            );
 
-        return Response.json({
 
-            success: false,
+        if (!placement.ok) {
 
-            message:
-                "All answer options are required."
-
-        }, {
-
-            status: 400
-
-        });
-
-    }
-
-    if (
-        option_a.length > MAX_OPTION_LENGTH ||
-        option_b.length > MAX_OPTION_LENGTH ||
-        option_c.length > MAX_OPTION_LENGTH ||
-        option_d.length > MAX_OPTION_LENGTH
-    ) {
-
-        return Response.json({
-
-            success: false,
-
-            message:
-                `Answer options cannot exceed ${MAX_OPTION_LENGTH} characters.`
-
-        }, {
-
-            status: 400
-
-        });
-
-    }
-
-    if (
-        !VALID_QUESTION_ANSWERS.includes(
-            correct_answer
-        )
-    ) {
-
-        return Response.json({
-
-            success: false,
-
-            message:
-                "Correct answer must be A, B, C or D."
-
-        }, {
-
-            status: 400
-
-        });
-
-    }
-
-    if (
-        !QUESTION_DIFFICULTIES.includes(
-            difficulty
-        )
-    ) {
-
-        return Response.json({
-
-            success: false,
-
-            message:
-                "Difficulty must be easy, medium or hard."
-
-        }, {
-
-            status: 400
-
-        });
-
-    }
-
-    if (
-        explanation.length >
-        MAX_EXPLANATION_LENGTH
-    ) {
-
-        return Response.json({
-
-            success: false,
-
-            message:
-                `Explanation cannot exceed ${MAX_EXPLANATION_LENGTH} characters.`
-
-        }, {
-
-            status: 400
-
-        });
-
-    }
-
-    if (
-        !validateQuestionImageUrl(image_url)
-    ) {
-
-        return Response.json({
-
-            success: false,
-
-            message:
-                "Image URL must be a valid HTTP or HTTPS URL."
-
-        }, {
-
-            status: 400
-
-        });
-
-    }
-
-
-    // -----------------------------------------
-    // VERIFY SUBJECT
-    // -----------------------------------------
-
-    const subject =
-        await env.DB.prepare(
-
-            `SELECT
-                s.id,
-                s.status AS subject_status,
-                e.id AS exam_id,
-                e.status AS exam_status
-
-             FROM subjects s
-
-             INNER JOIN exams e
-                ON s.exam_id = e.id
-
-             WHERE s.id = ?
-
-             LIMIT 1`
-
-        )
-
-        .bind(subject_id)
-
-        .first();
-
-    if (!subject) {
-
-        return Response.json({
-
-            success: false,
-
-            message:
-                "Selected subject does not exist."
-
-        }, {
-
-            status: 404
-
-        });
-
-    }
-
-    if (
-        subject.subject_status !== "active"
-    ) {
-
-        return Response.json({
-
-            success: false,
-
-            message:
-                "Practice questions can only be added to an active subject."
-
-        }, {
-
-            status: 409
-
-        });
-
-    }
-
-    if (
-        subject.exam_status !== "active"
-    ) {
-
-        return Response.json({
-
-            success: false,
-
-            message:
-                "The selected subject belongs to an inactive exam."
-
-        }, {
-
-            status: 409
-
-        });
-
-    }
-
-
-    // -----------------------------------------
-    // DUPLICATE QUESTION
-    // -----------------------------------------
-
-    const duplicate =
-        await env.DB.prepare(
-
-            `SELECT id
-
-             FROM practice_questions
-
-             WHERE subject_id = ?
-
-             AND LOWER(TRIM(question))
-                 = LOWER(TRIM(?))
-
-             LIMIT 1`
-
-        )
-
-        .bind(
-            subject_id,
-            question
-        )
-
-        .first();
-
-    if (duplicate) {
-
-        return Response.json({
-
-            success: false,
-
-            message:
-                "This question already exists for the selected subject."
-
-        }, {
-
-            status: 409
-
-        });
-
-    }
-
-
-    // -----------------------------------------
-    // CREATE
-    // -----------------------------------------
-
-    const questionId =
-        crypto.randomUUID();
-
-    const now =
-        new Date().toISOString();
-
-    await env.DB.prepare(
-
-        `INSERT INTO practice_questions (
-
-            id,
-            subject_id,
-
-            question,
-            image_url,
-
-            option_a,
-            option_b,
-            option_c,
-            option_d,
-
-            correct_answer,
-            explanation,
-            difficulty,
-            status,
-
-            created_at,
-            updated_at
-
-        )
-
-        VALUES (
-            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-        )`
-
-    )
-
-    .bind(
-
-        questionId,
-        subject_id,
-
-        question,
-        image_url,
-
-        option_a,
-        option_b,
-        option_c,
-        option_d,
-
-        correct_answer,
-        explanation,
-        difficulty,
-        "active",
-
-        now,
-        now
-
-    )
-
-    .run();
-
-
-    return Response.json({
-
-        success: true,
-
-        message:
-            "Practice question created successfully.",
-
-        data: {
-
-            id: questionId
+            return placement.response;
 
         }
 
-    }, {
 
-        status: 201
+        /*
+        -------------------------------------------------
+            DUPLICATE CHECK
+        -------------------------------------------------
+        */
 
-    });
+        const duplicate =
+            await env.DB.prepare(
 
-}
+                `SELECT id
 
+                 FROM practice_questions
 
-// =====================================================
-// UPDATE QUESTION
-// PUT /api/admin/questions/:id
-// =====================================================
+                 WHERE subject_id = ?
 
-if (
+                 AND LOWER(TRIM(question))
+                     = LOWER(TRIM(?))
 
-    method === "PUT" &&
+                 LIMIT 1`
 
-    /^\/api\/admin\/questions\/[^/]+$/.test(pathname)
+            )
 
-) {
+            .bind(
 
-    const questionId =
-        pathname.split("/").pop();
+                data.subject_id,
 
-    let body;
+                data.question
 
-    try {
+            )
 
-        body = await request.json();
+            .first();
 
-    }
 
-    catch {
+        if (duplicate) {
 
-        return Response.json({
+            return questionError(
 
-            success: false,
+                "This question already exists for the selected subject.",
 
-            message:
-                "Invalid JSON request body."
+                409
 
-        }, {
+            );
 
-            status: 400
+        }
 
-        });
 
-    }
+        /*
+        -------------------------------------------------
+            CREATE
+        -------------------------------------------------
+        */
 
+        const questionId =
+            crypto.randomUUID();
 
-    const subject_id =
-        cleanQuestionText(body.subject_id);
+        const now =
+            new Date().toISOString();
 
-    const question =
-        cleanQuestionText(body.question);
 
-    const image_url =
-        cleanQuestionText(body.image_url);
-
-    const option_a =
-        cleanQuestionText(body.option_a);
-
-    const option_b =
-        cleanQuestionText(body.option_b);
-
-    const option_c =
-        cleanQuestionText(body.option_c);
-
-    const option_d =
-        cleanQuestionText(body.option_d);
-
-    const correct_answer =
-        cleanQuestionText(body.correct_answer)
-            .toUpperCase();
-
-    const explanation =
-        cleanQuestionText(body.explanation);
-
-    const difficulty =
-        cleanQuestionText(body.difficulty)
-            .toLowerCase();
-
-    const status =
-        cleanQuestionText(body.status)
-            .toLowerCase();
-
-
-    // -----------------------------------------
-    // VALIDATION
-    // -----------------------------------------
-
-    if (!subject_id) {
-
-        return Response.json({
-
-            success: false,
-
-            message:
-                "Please select a subject."
-
-        }, {
-
-            status: 400
-
-        });
-
-    }
-
-    if (!question) {
-
-        return Response.json({
-
-            success: false,
-
-            message:
-                "Question is required."
-
-        }, {
-
-            status: 400
-
-        });
-
-    }
-
-    if (
-        question.length >
-        MAX_QUESTION_LENGTH
-    ) {
-
-        return Response.json({
-
-            success: false,
-
-            message:
-                `Question cannot exceed ${MAX_QUESTION_LENGTH} characters.`
-
-        }, {
-
-            status: 400
-
-        });
-
-    }
-
-    if (
-        !option_a ||
-        !option_b ||
-        !option_c ||
-        !option_d
-    ) {
-
-        return Response.json({
-
-            success: false,
-
-            message:
-                "All answer options are required."
-
-        }, {
-
-            status: 400
-
-        });
-
-    }
-
-    if (
-        !VALID_QUESTION_ANSWERS.includes(
-            correct_answer
-        )
-    ) {
-
-        return Response.json({
-
-            success: false,
-
-            message:
-                "Correct answer must be A, B, C or D."
-
-        }, {
-
-            status: 400
-
-        });
-
-    }
-
-    if (
-        !QUESTION_DIFFICULTIES.includes(
-            difficulty
-        )
-    ) {
-
-        return Response.json({
-
-            success: false,
-
-            message:
-                "Difficulty must be easy, medium or hard."
-
-        }, {
-
-            status: 400
-
-        });
-
-    }
-
-    if (
-        !QUESTION_STATUSES.includes(status)
-    ) {
-
-        return Response.json({
-
-            success: false,
-
-            message:
-                "Status must be active or inactive."
-
-        }, {
-
-            status: 400
-
-        });
-
-    }
-
-    if (
-        explanation.length >
-        MAX_EXPLANATION_LENGTH
-    ) {
-
-        return Response.json({
-
-            success: false,
-
-            message:
-                `Explanation cannot exceed ${MAX_EXPLANATION_LENGTH} characters.`
-
-        }, {
-
-            status: 400
-
-        });
-
-    }
-
-    if (
-        !validateQuestionImageUrl(image_url)
-    ) {
-
-        return Response.json({
-
-            success: false,
-
-            message:
-                "Image URL must be a valid HTTP or HTTPS URL."
-
-        }, {
-
-            status: 400
-
-        });
-
-    }
-
-
-    // -----------------------------------------
-    // VERIFY QUESTION
-    // -----------------------------------------
-
-    const existingQuestion =
         await env.DB.prepare(
 
-            `SELECT id
+            `INSERT INTO practice_questions (
 
-             FROM practice_questions
+                id,
+                subject_id,
 
-             WHERE id = ?
+                question,
+                image_url,
 
-             LIMIT 1`
+                option_a,
+                option_b,
+                option_c,
+                option_d,
 
-        )
+                correct_answer,
+                explanation,
+                difficulty,
+                status,
 
-        .bind(questionId)
+                created_at,
+                updated_at
 
-        .first();
+            )
 
-    if (!existingQuestion) {
-
-        return Response.json({
-
-            success: false,
-
-            message:
-                "Practice question not found."
-
-        }, {
-
-            status: 404
-
-        });
-
-    }
-
-
-    // -----------------------------------------
-    // VERIFY SUBJECT + EXAM
-    // -----------------------------------------
-
-    const subject =
-        await env.DB.prepare(
-
-            `SELECT
-                s.id,
-                s.status AS subject_status,
-                e.id AS exam_id,
-                e.status AS exam_status
-
-             FROM subjects s
-
-             INNER JOIN exams e
-                ON s.exam_id = e.id
-
-             WHERE s.id = ?
-
-             LIMIT 1`
-
-        )
-
-        .bind(subject_id)
-
-        .first();
-
-    if (!subject) {
-
-        return Response.json({
-
-            success: false,
-
-            message:
-                "Selected subject does not exist."
-
-        }, {
-
-            status: 404
-
-        });
-
-    }
-
-    if (
-        subject.subject_status !== "active"
-    ) {
-
-        return Response.json({
-
-            success: false,
-
-            message:
-                "Practice questions can only belong to an active subject."
-
-        }, {
-
-            status: 409
-
-        });
-
-    }
-
-    if (
-        subject.exam_status !== "active"
-    ) {
-
-        return Response.json({
-
-            success: false,
-
-            message:
-                "The selected subject belongs to an inactive exam."
-
-        }, {
-
-            status: 409
-
-        });
-
-    }
-
-
-    // -----------------------------------------
-    // DUPLICATE QUESTION
-    // -----------------------------------------
-
-    const duplicate =
-        await env.DB.prepare(
-
-            `SELECT id
-
-             FROM practice_questions
-
-             WHERE subject_id = ?
-
-             AND LOWER(TRIM(question))
-                 = LOWER(TRIM(?))
-
-             AND id <> ?
-
-             LIMIT 1`
+            VALUES (
+                ?, ?, ?, ?, ?, ?, ?, ?,
+                ?, ?, ?, ?, ?, ?
+            )`
 
         )
 
         .bind(
 
-            subject_id,
-            question,
-            questionId
+            questionId,
+
+            data.subject_id,
+
+            data.question,
+
+            data.image_url,
+
+            data.option_a,
+            data.option_b,
+            data.option_c,
+            data.option_d,
+
+            data.correct_answer,
+
+            data.explanation,
+
+            data.difficulty,
+
+            "active",
+
+            now,
+            now
 
         )
 
-        .first();
+        .run();
 
-    if (duplicate) {
-
-        return Response.json({
-
-            success: false,
-
-            message:
-                "Another identical question already exists for this subject."
-
-        }, {
-
-            status: 409
-
-        });
-
-    }
-
-
-    // -----------------------------------------
-    // UPDATE
-    // -----------------------------------------
-
-    const now =
-        new Date().toISOString();
-
-    await env.DB.prepare(
-
-        `UPDATE practice_questions
-
-         SET
-            subject_id = ?,
-            question = ?,
-            image_url = ?,
-
-            option_a = ?,
-            option_b = ?,
-            option_c = ?,
-            option_d = ?,
-
-            correct_answer = ?,
-            explanation = ?,
-            difficulty = ?,
-            status = ?,
-
-            updated_at = ?
-
-         WHERE id = ?`
-
-    )
-
-    .bind(
-
-        subject_id,
-        question,
-        image_url,
-
-        option_a,
-        option_b,
-        option_c,
-        option_d,
-
-        correct_answer,
-        explanation,
-        difficulty,
-        status,
-
-        now,
-
-        questionId
-
-    )
-
-    .run();
-
-
-    return Response.json({
-
-        success: true,
-
-        message:
-            "Practice question updated successfully."
-
-    });
-
-}
-
-
-// =====================================================
-// SOFT DELETE QUESTION
-// DELETE /api/admin/questions/:id
-// =====================================================
-
-if (
-
-    method === "DELETE" &&
-
-    /^\/api\/admin\/questions\/[^/]+$/.test(pathname)
-
-) {
-
-    const questionId =
-        pathname.split("/").pop();
-
-
-    const question =
-        await env.DB.prepare(
-
-            `SELECT
-                id,
-                status
-
-             FROM practice_questions
-
-             WHERE id = ?
-
-             LIMIT 1`
-
-        )
-
-        .bind(questionId)
-
-        .first();
-
-    if (!question) {
-
-        return Response.json({
-
-            success: false,
-
-            message:
-                "Practice question not found."
-
-        }, {
-
-            status: 404
-
-        });
-
-    }
-
-
-    if (
-        question.status === "inactive"
-    ) {
 
         return Response.json({
 
             success: true,
 
             message:
-                "Practice question is already inactive."
+                "Practice question created successfully.",
+
+            data: {
+
+                id:
+                    questionId,
+
+                exam_id:
+                    data.exam_id,
+
+                subject_id:
+                    data.subject_id
+
+            }
+
+        }, {
+
+            status: 201
 
         });
 
     }
 
+    catch (error) {
 
-    const now =
-        new Date().toISOString();
+        console.error(
+            "CREATE QUESTION:",
+            error
+        );
 
-    await env.DB.prepare(
 
-        `UPDATE practice_questions
+        return questionError(
 
-         SET
-            status = 'inactive',
-            updated_at = ?
+            "Failed to create practice question.",
 
-         WHERE id = ?`
+            500
 
+        );
+
+    }
+
+}
+
+
+/*=========================================================
+    UPDATE QUESTION
+=========================================================*/
+
+if (
+
+    method === "PUT" &&
+
+    /^\/api\/admin\/questions\/[^/]+$/.test(
+        pathname
     )
 
-    .bind(
+) {
 
-        now,
-        questionId
+    const questionId =
+        pathname.split("/").pop();
 
+
+    let body;
+
+
+    try {
+
+        body =
+            await request.json();
+
+    }
+
+    catch {
+
+        return questionError(
+
+            "Invalid JSON request body.",
+
+            400
+
+        );
+
+    }
+
+
+    body =
+        body || {};
+
+
+    const data = {
+
+        /*
+            UPDATE now accepts exam_id too.
+
+            This makes the relationship explicit
+            from the admin UI.
+        */
+
+        exam_id:
+            cleanQuestionText(
+                body.exam_id
+            ),
+
+        subject_id:
+            cleanQuestionText(
+                body.subject_id
+            ),
+
+        question:
+            cleanQuestionText(
+                body.question
+            ),
+
+        image_url:
+            cleanQuestionText(
+                body.image_url
+            ),
+
+        option_a:
+            cleanQuestionText(
+                body.option_a
+            ),
+
+        option_b:
+            cleanQuestionText(
+                body.option_b
+            ),
+
+        option_c:
+            cleanQuestionText(
+                body.option_c
+            ),
+
+        option_d:
+            cleanQuestionText(
+                body.option_d
+            ),
+
+        correct_answer:
+            cleanQuestionText(
+                body.correct_answer
+            ).toUpperCase(),
+
+        explanation:
+            cleanQuestionText(
+                body.explanation
+            ),
+
+        difficulty:
+            cleanQuestionText(
+                body.difficulty ||
+                "medium"
+            ).toLowerCase(),
+
+        status:
+            cleanQuestionText(
+                body.status ||
+                "active"
+            ).toLowerCase()
+
+    };
+
+
+    /*
+    -----------------------------------------------------
+        QUESTION MUST EXIST
+    -----------------------------------------------------
+    */
+
+    let existingQuestion;
+
+
+    try {
+
+        existingQuestion =
+            await env.DB.prepare(
+
+                `SELECT
+                    id,
+                    subject_id
+
+                 FROM practice_questions
+
+                 WHERE id = ?
+
+                 LIMIT 1`
+
+            )
+
+            .bind(questionId)
+
+            .first();
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "FIND QUESTION FOR UPDATE:",
+            error
+        );
+
+
+        return questionError(
+
+            "Failed to find practice question.",
+
+            500
+
+        );
+
+    }
+
+
+    if (!existingQuestion) {
+
+        return questionError(
+
+            "Practice question not found.",
+
+            404
+
+        );
+
+    }
+
+
+    /*
+    -----------------------------------------------------
+        UPDATE VALIDATION
+
+        exam_id is required so the admin cannot
+        accidentally move a question to a subject
+        without specifying the exam relationship.
+    -----------------------------------------------------
+    */
+
+    const validation =
+        validateQuestionData(
+            data,
+            true
+        );
+
+
+    if (!validation.ok) {
+
+        return validation.response;
+
+    }
+
+
+    if (
+        !QUESTION_STATUSES.includes(
+            data.status
+        )
+    ) {
+
+        return questionError(
+
+            "Status must be active or inactive.",
+
+            400
+
+        );
+
+    }
+
+
+    try {
+
+        /*
+        -------------------------------------------------
+            VERIFY NEW EXAM + SUBJECT RELATIONSHIP
+        -------------------------------------------------
+        */
+
+        const placement =
+            await verifyQuestionPlacement(
+
+                env,
+
+                data.exam_id,
+
+                data.subject_id
+
+            );
+
+
+        if (!placement.ok) {
+
+            return placement.response;
+
+        }
+
+
+        /*
+        -------------------------------------------------
+            DUPLICATE CHECK
+
+            Exclude current question.
+        -------------------------------------------------
+        */
+
+        const duplicate =
+            await env.DB.prepare(
+
+                `SELECT id
+
+                 FROM practice_questions
+
+                 WHERE subject_id = ?
+
+                 AND LOWER(TRIM(question))
+                     = LOWER(TRIM(?))
+
+                 AND id <> ?
+
+                 LIMIT 1`
+
+            )
+
+            .bind(
+
+                data.subject_id,
+
+                data.question,
+
+                questionId
+
+            )
+
+            .first();
+
+
+        if (duplicate) {
+
+            return questionError(
+
+                "Another identical question already exists for this subject.",
+
+                409
+
+            );
+
+        }
+
+
+        /*
+        -------------------------------------------------
+            UPDATE
+        -------------------------------------------------
+        */
+
+        const now =
+            new Date().toISOString();
+
+
+        await env.DB.prepare(
+
+            `UPDATE practice_questions
+
+             SET
+
+                subject_id = ?,
+
+                question = ?,
+                image_url = ?,
+
+                option_a = ?,
+                option_b = ?,
+                option_c = ?,
+                option_d = ?,
+
+                correct_answer = ?,
+                explanation = ?,
+
+                difficulty = ?,
+                status = ?,
+
+                updated_at = ?
+
+             WHERE id = ?`
+
+        )
+
+        .bind(
+
+            data.subject_id,
+
+            data.question,
+
+            data.image_url,
+
+            data.option_a,
+            data.option_b,
+            data.option_c,
+            data.option_d,
+
+            data.correct_answer,
+
+            data.explanation,
+
+            data.difficulty,
+
+            data.status,
+
+            now,
+
+            questionId
+
+        )
+
+        .run();
+
+
+        return Response.json({
+
+            success: true,
+
+            message:
+                "Practice question updated successfully.",
+
+            data: {
+
+                id:
+                    questionId,
+
+                exam_id:
+                    data.exam_id,
+
+                subject_id:
+                    data.subject_id
+
+            }
+
+        });
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "UPDATE QUESTION:",
+            error
+        );
+
+
+        return questionError(
+
+            "Failed to update practice question.",
+
+            500
+
+        );
+
+    }
+
+}
+
+
+/*=========================================================
+    SOFT DELETE QUESTION
+=========================================================*/
+
+if (
+
+    method === "DELETE" &&
+
+    /^\/api\/admin\/questions\/[^/]+$/.test(
+        pathname
     )
 
-    .run();
+) {
+
+    const questionId =
+        pathname.split("/").pop();
 
 
-    return Response.json({
+    try {
 
-        success: true,
+        const question =
+            await env.DB.prepare(
 
-        message:
-            "Practice question deactivated successfully."
+                `SELECT
 
-    });
+                    id,
+                    status
+
+                 FROM practice_questions
+
+                 WHERE id = ?
+
+                 LIMIT 1`
+
+            )
+
+            .bind(questionId)
+
+            .first();
+
+
+        if (!question) {
+
+            return questionError(
+
+                "Practice question not found.",
+
+                404
+
+            );
+
+        }
+
+
+        if (
+            question.status === "inactive"
+        ) {
+
+            return Response.json({
+
+                success: true,
+
+                message:
+                    "Practice question is already inactive."
+
+            });
+
+        }
+
+
+        const now =
+            new Date().toISOString();
+
+
+        await env.DB.prepare(
+
+            `UPDATE practice_questions
+
+             SET
+
+                status = 'inactive',
+
+                updated_at = ?
+
+             WHERE id = ?`
+
+        )
+
+        .bind(
+
+            now,
+
+            questionId
+
+        )
+
+        .run();
+
+
+        return Response.json({
+
+            success: true,
+
+            message:
+                "Practice question deactivated successfully."
+
+        });
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "DELETE QUESTION:",
+            error
+        );
+
+
+        return questionError(
+
+            "Failed to deactivate practice question.",
+
+            500
+
+        );
+
+    }
 
 }
 

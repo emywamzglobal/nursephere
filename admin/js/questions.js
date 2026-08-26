@@ -8,46 +8,25 @@
 
     Handles:
 
-        ✔ Authentication
         ✔ Exam loading
-        ✔ Subject loading by selected exam
+        ✔ Exam → Subject relationship
         ✔ Manual question creation
         ✔ Question bank loading
         ✔ Question viewing
-        ✔ Clear/reset handling
+        ✔ Form reset
 
     IMPORTING IS HANDLED BY:
 
         js/questions-import.js
 
-    RELATIONSHIP:
-
-        EXAM
-          ↓
-        SUBJECT
-          ↓
-        QUESTION
-
+    IMPORTANT:
+        Do NOT add importForm handling here.
 =========================================================
 */
 
 
 /*=========================================================
-    AUTHENTICATION
-=========================================================*/
-
-if (
-    window.Auth &&
-    typeof Auth.requireAdmin === "function"
-) {
-
-    Auth.requireAdmin();
-
-}
-
-
-/*=========================================================
-    CONFIGURATION
+    API
 =========================================================*/
 
 const QUESTION_API = {
@@ -65,73 +44,47 @@ const QUESTION_API = {
 
 
 /*=========================================================
-    DOM ELEMENTS
+    DOM
 =========================================================*/
 
 const examSelect =
-    document.getElementById(
-        "examSelect"
-    );
+    document.getElementById("examSelect");
 
 const subjectSelect =
-    document.getElementById(
-        "subjectSelect"
-    );
+    document.getElementById("subjectSelect");
 
 const questionForm =
-    document.getElementById(
-        "questionForm"
-    );
+    document.getElementById("questionForm");
 
 const questionText =
-    document.getElementById(
-        "questionText"
-    );
+    document.getElementById("questionText");
 
 const questionImage =
-    document.getElementById(
-        "questionImage"
-    );
+    document.getElementById("questionImage");
 
 const optionA =
-    document.getElementById(
-        "optionA"
-    );
+    document.getElementById("optionA");
 
 const optionB =
-    document.getElementById(
-        "optionB"
-    );
+    document.getElementById("optionB");
 
 const optionC =
-    document.getElementById(
-        "optionC"
-    );
+    document.getElementById("optionC");
 
 const optionD =
-    document.getElementById(
-        "optionD"
-    );
+    document.getElementById("optionD");
 
 const correctAnswer =
-    document.getElementById(
-        "correctAnswer"
-    );
+    document.getElementById("correctAnswer");
 
 const explanation =
-    document.getElementById(
-        "explanation"
-    );
+    document.getElementById("explanation");
 
 const questionsTableBody =
-    document.getElementById(
-        "questionsTableBody"
-    );
+    document.getElementById("questionsTableBody");
 
 const importSubject =
-    document.getElementById(
-        "importSubject"
-    );
+    document.getElementById("importSubject");
 
 
 /*=========================================================
@@ -151,11 +104,12 @@ async function initializeQuestionManagement() {
 
     if (
         !examSelect ||
-        !subjectSelect
+        !subjectSelect ||
+        !questionForm
     ) {
 
         console.error(
-            "Question management elements are missing."
+            "Required question management elements are missing."
         );
 
         return;
@@ -164,6 +118,9 @@ async function initializeQuestionManagement() {
 
 
     bindEvents();
+
+
+    resetSubjectSelect();
 
 
     await loadExams();
@@ -175,7 +132,7 @@ async function initializeQuestionManagement() {
 
 
 /*=========================================================
-    EVENT BINDINGS
+    EVENTS
 =========================================================*/
 
 function bindEvents() {
@@ -189,7 +146,7 @@ function bindEvents() {
     );
 
 
-    questionForm?.addEventListener(
+    questionForm.addEventListener(
 
         "submit",
 
@@ -198,7 +155,7 @@ function bindEvents() {
     );
 
 
-    questionForm?.addEventListener(
+    questionForm.addEventListener(
 
         "reset",
 
@@ -226,43 +183,59 @@ async function loadExams() {
 
     try {
 
-        /*
-        -------------------------------------------------
-            IMPORTANT
+        const response =
+            await fetch(
 
-            Use shared authenticated API helper.
+                QUESTION_API.exams,
 
-            Do NOT use raw fetch here.
-        -------------------------------------------------
-        */
+                {
+
+                    method:
+                        "GET",
+
+                    headers: {
+
+                        "Accept":
+                            "application/json"
+
+                    }
+
+                }
+
+            );
+
+
+        const result =
+            await parseQuestionJSON(
+                response
+            );
+
 
         if (
-            !window.API ||
-            typeof API.get !== "function"
+            !response.ok ||
+            !result.success
         ) {
 
             throw new Error(
-                "Authenticated API service is unavailable."
+
+                result.message ||
+                "Failed to load exams."
+
             );
 
         }
 
 
-        const response =
-            await API.get(
-                QUESTION_API.exams
-            );
-
-
         const exams =
+            Array.isArray(result.data)
 
-            Array.isArray(
-                response?.data
-            )
+                ? result.data
 
-                ? response.data
+                : Array.isArray(result.exams)
 
-                : [];
+                    ? result.exams
+
+                    : [];
 
 
         examSelect.innerHTML = `
@@ -282,11 +255,9 @@ async function loadExams() {
 
                 exam =>
 
-                    exam &&
-                    (
-                        exam.status === undefined ||
-                        exam.status === "active"
-                    )
+                    exam.status === undefined ||
+
+                    exam.status === "active"
 
             )
 
@@ -294,13 +265,15 @@ async function loadExams() {
 
                 exam => {
 
-                    addOption(
+                    addSelectOption(
 
                         examSelect,
 
                         exam.id,
 
-                        exam.name
+                        exam.name ||
+                        exam.code ||
+                        "Unnamed Exam"
 
                     );
 
@@ -310,39 +283,12 @@ async function loadExams() {
 
 
         /*
-        -------------------------------------------------
-            Reset dependent selections.
-
-            Subjects cannot be selected until an exam
-            has been selected.
-        -------------------------------------------------
+            Import subject selector must remain empty
+            until an exam is selected.
         */
-
-        resetSubjectSelect();
-
 
         populateImportSubjects([]);
 
-
-        /*
-        -------------------------------------------------
-            No active exams
-        -------------------------------------------------
-        */
-
-        if (
-            examSelect.options.length <= 1
-        ) {
-
-            setSelectError(
-
-                examSelect,
-
-                "No active exams available"
-
-            );
-
-        }
 
     }
 
@@ -361,13 +307,9 @@ async function loadExams() {
 
             examSelect,
 
-            error.message ||
             "Failed to load exams"
 
         );
-
-
-        resetSubjectSelect();
 
 
         populateImportSubjects([]);
@@ -388,16 +330,6 @@ async function handleExamChange() {
             examSelect.value || ""
         ).trim();
 
-
-    /*
-    -------------------------------------------------
-        Always clear subject first.
-
-        This prevents a subject belonging to the
-        previous exam from being submitted under
-        the newly selected exam.
-    -------------------------------------------------
-    */
 
     resetSubjectSelect();
 
@@ -420,7 +352,7 @@ async function handleExamChange() {
 
 
 /*=========================================================
-    LOAD SUBJECTS FOR SELECTED EXAM
+    LOAD SUBJECTS
 =========================================================*/
 
 async function loadSubjects(
@@ -428,10 +360,6 @@ async function loadSubjects(
 ) {
 
     if (!examId) {
-
-        resetSubjectSelect();
-
-        populateImportSubjects([]);
 
         return;
 
@@ -449,68 +377,111 @@ async function loadSubjects(
 
     try {
 
+        const url =
+
+            `${QUESTION_API.subjects}?exam_id=${encodeURIComponent(
+                examId
+            )}`;
+
+
+        const response =
+            await fetch(
+
+                url,
+
+                {
+
+                    method:
+                        "GET",
+
+                    headers: {
+
+                        "Accept":
+                            "application/json"
+
+                    }
+
+                }
+
+            );
+
+
+        const result =
+            await parseQuestionJSON(
+                response
+            );
+
+
         if (
-            !window.API ||
-            typeof API.get !== "function"
+            !response.ok ||
+            !result.success
         ) {
 
             throw new Error(
-                "Authenticated API service is unavailable."
+
+                result.message ||
+                "Failed to load subjects."
+
             );
 
         }
 
 
-        /*
-        -------------------------------------------------
-            Backend endpoint:
+        let subjects =
 
-            GET
-            /api/admin/subjects?exam_id=...
-        -------------------------------------------------
-        */
+            Array.isArray(result.data)
 
-        const response =
-            await API.get(
+                ? result.data
 
-                `${QUESTION_API.subjects}?exam_id=${encodeURIComponent(examId)}`
+                : Array.isArray(result.subjects)
 
-            );
+                    ? result.subjects
 
-
-        const subjects =
-
-            Array.isArray(
-                response?.data
-            )
-
-                ? response.data
-
-                : [];
+                    : [];
 
 
         /*
-        -------------------------------------------------
-            Only subjects belonging to the selected
-            exam are allowed.
+        -----------------------------------------------------
+            IMPORTANT
 
-            The worker already filters by exam_id,
-            but we enforce the relationship client-side
-            as an additional safety check.
-        -------------------------------------------------
+            Only allow subjects belonging to the selected
+            exam.
+
+            This protects the UI even if the API returns
+            all subjects.
+        -----------------------------------------------------
         */
 
-        const examSubjects =
+        subjects =
             subjects.filter(
 
                 subject =>
 
-                    subject &&
-
                     String(
-                        subject.exam_id
+                        subject.exam_id ?? ""
                     ) ===
                     String(examId)
+
+            );
+
+
+        /*
+            If the endpoint does not return exam_id,
+            do NOT blindly display unrelated subjects.
+
+            The worker should return exam_id for subjects
+            requested through ?exam_id=.
+        */
+
+
+        const activeSubjects =
+            subjects.filter(
+
+                subject =>
+
+                    subject.status === undefined ||
+
+                    subject.status === "active"
 
             );
 
@@ -526,62 +497,55 @@ async function loadSubjects(
         `;
 
 
-        examSubjects
+        activeSubjects.forEach(
 
-            .filter(
+            subject => {
 
-                subject =>
+                addSelectOption(
 
-                    subject.status === undefined ||
+                    subjectSelect,
 
-                    subject.status === "active"
+                    subject.id,
 
-            )
+                    subject.name ||
+                    subject.title ||
+                    "Unnamed Subject"
 
-            .forEach(
+                );
 
-                subject => {
+            }
 
-                    addOption(
-
-                        subjectSelect,
-
-                        subject.id,
-
-                        subject.name
-
-                    );
-
-                }
-
-            );
-
-
-        /*
-        -------------------------------------------------
-            Import subject selector receives ONLY subjects
-            belonging to the selected exam.
-        -------------------------------------------------
-        */
-
-        populateImportSubjects(
-            examSubjects
         );
 
 
         if (
-            subjectSelect.options.length <= 1
+            !activeSubjects.length
         ) {
 
-            setSelectError(
+            subjectSelect.innerHTML = `
 
-                subjectSelect,
+                <option value="">
 
-                "No active subjects for this exam"
+                    No active subjects found
 
-            );
+                </option>
+
+            `;
 
         }
+
+
+        /*
+        -----------------------------------------------------
+            IMPORT FORM
+
+            Same Exam → Subject relationship.
+        -----------------------------------------------------
+        */
+
+        populateImportSubjects(
+            activeSubjects
+        );
 
     }
 
@@ -600,7 +564,6 @@ async function loadSubjects(
 
             subjectSelect,
 
-            error.message ||
             "Failed to load subjects"
 
         );
@@ -614,7 +577,7 @@ async function loadSubjects(
 
 
 /*=========================================================
-    POPULATE IMPORT SUBJECTS
+    IMPORT SUBJECTS
 =========================================================*/
 
 function populateImportSubjects(
@@ -654,13 +617,9 @@ function populateImportSubjects(
 
             subject =>
 
-                subject &&
+                subject.status === undefined ||
 
-                (
-                    subject.status === undefined ||
-
-                    subject.status === "active"
-                )
+                subject.status === "active"
 
         )
 
@@ -668,13 +627,15 @@ function populateImportSubjects(
 
             subject => {
 
-                addOption(
+                addSelectOption(
 
                     importSubject,
 
                     subject.id,
 
-                    subject.name
+                    subject.name ||
+                    subject.title ||
+                    "Unnamed Subject"
 
                 );
 
@@ -696,34 +657,15 @@ async function handleQuestionSubmit(
     event.preventDefault();
 
 
-    if (!questionForm) {
-
-        return;
-
-    }
-
-
-    /*
-    -------------------------------------------------
-        READ CURRENT EXAM
-    -------------------------------------------------
-    */
-
     const examId =
         String(
-            examSelect?.value || ""
+            examSelect.value || ""
         ).trim();
 
 
-    /*
-    -------------------------------------------------
-        READ CURRENT SUBJECT
-    -------------------------------------------------
-    */
-
     const subjectId =
         String(
-            subjectSelect?.value || ""
+            subjectSelect.value || ""
         ).trim();
 
 
@@ -742,9 +684,9 @@ async function handleQuestionSubmit(
 
 
     /*
-    -------------------------------------------------
-        VALIDATE EXAM FIRST
-    -------------------------------------------------
+    -----------------------------------------------------
+        EXAM
+    -----------------------------------------------------
     */
 
     if (!examId) {
@@ -757,7 +699,7 @@ async function handleQuestionSubmit(
 
         );
 
-        examSelect?.focus();
+        examSelect.focus();
 
         return;
 
@@ -765,9 +707,9 @@ async function handleQuestionSubmit(
 
 
     /*
-    -------------------------------------------------
-        VALIDATE SUBJECT SECOND
-    -------------------------------------------------
+    -----------------------------------------------------
+        SUBJECT
+    -----------------------------------------------------
     */
 
     if (!subjectId) {
@@ -780,7 +722,30 @@ async function handleQuestionSubmit(
 
         );
 
-        subjectSelect?.focus();
+        subjectSelect.focus();
+
+        return;
+
+    }
+
+
+    /*
+    -----------------------------------------------------
+        QUESTION
+    -----------------------------------------------------
+    */
+
+    if (!question) {
+
+        notifyUser(
+
+            "Question is required.",
+
+            "error"
+
+        );
+
+        questionText?.focus();
 
         return;
 
@@ -788,6 +753,13 @@ async function handleQuestionSubmit(
 
 
     const data = {
+
+        /*
+            Worker requires BOTH.
+
+            exam_id is validated against the subject's
+            actual exam_id.
+        */
 
         exam_id:
             examId,
@@ -799,7 +771,10 @@ async function handleQuestionSubmit(
             question,
 
         /*
-            Image URL remains optional.
+            The current worker expects image_url,
+            not a File object.
+
+            Therefore do not send questionImage.files[0].
         */
 
         image_url:
@@ -839,36 +814,17 @@ async function handleQuestionSubmit(
     };
 
 
-    /*=====================================================
-        QUESTION VALIDATION
-    =====================================================*/
-
-
-    if (!data.question) {
-
-        notifyUser(
-
-            "Question is required.",
-
-            "error"
-
-        );
-
-        questionText?.focus();
-
-        return;
-
-    }
-
+    /*
+    -----------------------------------------------------
+        CLIENT VALIDATION
+    -----------------------------------------------------
+    */
 
     if (
 
         !data.option_a ||
-
         !data.option_b ||
-
         !data.option_c ||
-
         !data.option_d
 
     ) {
@@ -889,16 +845,14 @@ async function handleQuestionSubmit(
     if (
 
         !["A", "B", "C", "D"].includes(
-
             data.correct_answer
-
         )
 
     ) {
 
         notifyUser(
 
-            "Select a valid correct answer.",
+            "Please select a valid correct answer.",
 
             "error"
 
@@ -911,15 +865,9 @@ async function handleQuestionSubmit(
     }
 
 
-    /*=====================================================
-        CREATE QUESTION
-    =====================================================*/
-
     const submitButton =
         questionForm.querySelector(
-
             'button[type="submit"]'
-
         );
 
 
@@ -934,44 +882,49 @@ async function handleQuestionSubmit(
         );
 
 
-        if (
-            !window.API ||
-            typeof API.post !== "function"
-        ) {
-
-            throw new Error(
-                "Authenticated API service is unavailable."
-            );
-
-        }
-
-
-        /*
-        -------------------------------------------------
-            API helper handles authentication.
-        -------------------------------------------------
-        */
-
-        const result =
-            await API.post(
+        const response =
+            await fetch(
 
                 QUESTION_API.questions,
 
-                data
+                {
+
+                    method:
+                        "POST",
+
+                    headers: {
+
+                        "Content-Type":
+                            "application/json",
+
+                        "Accept":
+                            "application/json"
+
+                    },
+
+                    body:
+                        JSON.stringify(data)
+
+                }
 
             );
 
 
+        const result =
+            await parseQuestionJSON(
+                response
+            );
+
+
         if (
-            !result ||
-            result.success === false
+            !response.ok ||
+            !result.success
         ) {
 
             throw new Error(
 
-                result?.message ||
-
-                "Failed to save question."
+                result.message ||
+                "Failed to create question."
 
             );
 
@@ -981,7 +934,6 @@ async function handleQuestionSubmit(
         notifyUser(
 
             result.message ||
-
             "Question created successfully.",
 
             "success"
@@ -992,17 +944,30 @@ async function handleQuestionSubmit(
         questionForm.reset();
 
 
+        /*
+            Reset subject after form reset.
+
+            Exam is intentionally preserved because
+            the administrator may want to add another
+            question to the same exam.
+        */
+
         resetSubjectSelect();
 
 
         /*
-        -------------------------------------------------
-            Re-load exams so the normal workflow starts
-            cleanly again.
-        -------------------------------------------------
+            Re-load subjects for the currently selected
+            exam so the administrator can immediately
+            create another question.
         */
 
-        await loadExams();
+        if (examSelect.value) {
+
+            await loadSubjects(
+                examSelect.value
+            );
+
+        }
 
 
         await loadQuestions();
@@ -1023,8 +988,7 @@ async function handleQuestionSubmit(
         notifyUser(
 
             error.message ||
-
-            "Failed to save question.",
+            "Failed to create question.",
 
             "error"
 
@@ -1077,35 +1041,60 @@ async function loadQuestions() {
 
     try {
 
+        const response =
+            await fetch(
+
+                QUESTION_API.questions,
+
+                {
+
+                    method:
+                        "GET",
+
+                    headers: {
+
+                        "Accept":
+                            "application/json"
+
+                    }
+
+                }
+
+            );
+
+
+        const result =
+            await parseQuestionJSON(
+                response
+            );
+
+
         if (
-            !window.API ||
-            typeof API.get !== "function"
+            !response.ok ||
+            !result.success
         ) {
 
             throw new Error(
-                "Authenticated API service is unavailable."
+
+                result.message ||
+                "Failed to load questions."
+
             );
 
         }
 
 
-        const response =
-            await API.get(
-
-                QUESTION_API.questions
-
-            );
-
-
         const questions =
 
-            Array.isArray(
-                response?.data
-            )
+            Array.isArray(result.data)
 
-                ? response.data
+                ? result.data
 
-                : [];
+                : Array.isArray(result.questions)
+
+                    ? result.questions
+
+                    : [];
 
 
         renderQuestionBank(
@@ -1131,13 +1120,7 @@ async function loadQuestions() {
 
                 <td colspan="6">
 
-                    ${escapeHTML(
-
-                        error.message ||
-
-                        "Failed to load questions."
-
-                    )}
+                    Failed to load questions.
 
                 </td>
 
@@ -1158,10 +1141,7 @@ function renderQuestionBank(
     questions
 ) {
 
-    if (
-        !Array.isArray(questions) ||
-        !questions.length
-    ) {
+    if (!questions.length) {
 
         questionsTableBody.innerHTML = `
 
@@ -1206,7 +1186,7 @@ function renderQuestionBank(
 
                 <td>
 
-                    ${escapeHTML(
+                    ${escapeQuestionHTML(
                         question.question || ""
                     )}
 
@@ -1214,7 +1194,7 @@ function renderQuestionBank(
 
                 <td>
 
-                    ${escapeHTML(
+                    ${escapeQuestionHTML(
                         question.exam_name || ""
                     )}
 
@@ -1222,7 +1202,7 @@ function renderQuestionBank(
 
                 <td>
 
-                    ${escapeHTML(
+                    ${escapeQuestionHTML(
                         question.subject_name || ""
                     )}
 
@@ -1230,7 +1210,7 @@ function renderQuestionBank(
 
                 <td>
 
-                    ${escapeHTML(
+                    ${escapeQuestionHTML(
                         question.correct_answer || ""
                     )}
 
@@ -1244,7 +1224,7 @@ function renderQuestionBank(
 
                         class="btn btn-secondary question-view-btn"
 
-                        data-id="${escapeHTML(
+                        data-id="${escapeQuestionAttribute(
                             question.id
                         )}">
 
@@ -1283,9 +1263,7 @@ function renderQuestionBank(
                     () => {
 
                         viewQuestion(
-
                             button.dataset.id
-
                         );
 
                     }
@@ -1316,63 +1294,109 @@ async function viewQuestion(
 
     try {
 
-        if (
-            !window.API ||
-            typeof API.get !== "function"
-        ) {
+        const response =
+            await fetch(
 
-            throw new Error(
-                "Authenticated API service is unavailable."
+                `${QUESTION_API.questions}/${encodeURIComponent(
+                    questionId
+                )}`,
+
+                {
+
+                    method:
+                        "GET",
+
+                    headers: {
+
+                        "Accept":
+                            "application/json"
+
+                    }
+
+                }
+
             );
-
-        }
 
 
         const result =
-            await API.get(
-
-                `${QUESTION_API.questions}/${encodeURIComponent(questionId)}`
-
+            await parseQuestionJSON(
+                response
             );
 
 
-        const question =
-            result?.data ||
-            result?.question;
-
-
-        if (!question) {
+        if (
+            !response.ok ||
+            !result.success
+        ) {
 
             throw new Error(
-                "Question data was not returned."
+
+                result.message ||
+                "Failed to load question."
+
             );
 
         }
 
 
-        const details = [
-
-            `Question:\n${question.question || ""}`,
-
-            `Option A:\n${question.option_a || ""}`,
-
-            `Option B:\n${question.option_b || ""}`,
-
-            `Option C:\n${question.option_c || ""}`,
-
-            `Option D:\n${question.option_d || ""}`,
-
-            `Correct Answer:\n${question.correct_answer || ""}`,
-
-            `Explanation:\n${question.explanation || ""}`
-
-        ].join(
-            "\n\n"
-        );
+        const question =
+            result.data;
 
 
-        alert(
-            details
+        /*
+        -----------------------------------------------------
+            Keep viewing lightweight and safe.
+
+            No assumption is made about a modal existing.
+        -----------------------------------------------------
+        */
+
+        const message =
+
+            `Exam: ${
+                question.exam_name || "—"
+            }\n\n` +
+
+            `Subject: ${
+                question.subject_name || "—"
+            }\n\n` +
+
+            `Question:\n${
+                question.question || ""
+            }\n\n` +
+
+            `A: ${
+                question.option_a || ""
+            }\n` +
+
+            `B: ${
+                question.option_b || ""
+            }\n` +
+
+            `C: ${
+                question.option_c || ""
+            }\n` +
+
+            `D: ${
+                question.option_d || ""
+            }\n\n` +
+
+            `Correct Answer: ${
+                question.correct_answer || ""
+            }\n\n` +
+
+            `Explanation:\n${
+                question.explanation || ""
+            }`;
+
+
+        /*
+            Existing application can replace this later
+            with a proper modal without changing the API.
+        */
+
+        window.alert(
+            message
         );
 
     }
@@ -1391,8 +1415,7 @@ async function viewQuestion(
         notifyUser(
 
             error.message ||
-
-            "Unable to load question.",
+            "Failed to load question.",
 
             "error"
 
@@ -1409,13 +1432,15 @@ async function viewQuestion(
 
 function handleQuestionReset() {
 
+    /*
+        Allow browser to complete native reset first.
+    */
+
     window.setTimeout(
 
         () => {
 
             resetSubjectSelect();
-
-            populateImportSubjects([]);
 
         },
 
@@ -1425,6 +1450,10 @@ function handleQuestionReset() {
 
 }
 
+
+/*=========================================================
+    RESET SUBJECT
+=========================================================*/
 
 function resetSubjectSelect() {
 
@@ -1449,15 +1478,52 @@ function resetSubjectSelect() {
 
 
 /*=========================================================
-    HELPERS
+    JSON PARSER
+=========================================================*/
+
+async function parseQuestionJSON(
+    response
+) {
+
+    const text =
+        await response.text();
+
+
+    if (!text) {
+
+        return {};
+
+    }
+
+
+    try {
+
+        return JSON.parse(
+            text
+        );
+
+    }
+
+    catch {
+
+        throw new Error(
+
+            `Server returned an invalid response (${response.status}).`
+
+        );
+
+    }
+
+}
+
+
+/*=========================================================
+    SELECT HELPERS
 =========================================================*/
 
 function setSelectLoading(
-
     select,
-
     message
-
 ) {
 
     if (!select) {
@@ -1467,31 +1533,33 @@ function setSelectLoading(
     }
 
 
-    select.disabled =
-        true;
+    select.innerHTML = "";
 
 
-    select.innerHTML = `
+    const option =
+        document.createElement(
+            "option"
+        );
 
-        <option value="">
 
-            ${escapeHTML(
-                message
-            )}
+    option.value =
+        "";
 
-        </option>
 
-    `;
+    option.textContent =
+        message;
+
+
+    select.appendChild(
+        option
+    );
 
 }
 
 
 function setSelectError(
-
     select,
-
     message
-
 ) {
 
     if (!select) {
@@ -1501,33 +1569,34 @@ function setSelectError(
     }
 
 
-    select.disabled =
-        true;
+    select.innerHTML = "";
 
 
-    select.innerHTML = `
+    const option =
+        document.createElement(
+            "option"
+        );
 
-        <option value="">
 
-            ${escapeHTML(
-                message
-            )}
+    option.value =
+        "";
 
-        </option>
 
-    `;
+    option.textContent =
+        message;
+
+
+    select.appendChild(
+        option
+    );
 
 }
 
 
-function addOption(
-
+function addSelectOption(
     select,
-
     value,
-
     label
-
 ) {
 
     if (!select) {
@@ -1544,191 +1613,64 @@ function addOption(
 
 
     option.value =
-        String(
-            value ?? ""
-        );
+        String(value ?? "");
 
 
     option.textContent =
-        String(
-            label ?? ""
-        );
+        String(label ?? "");
 
 
     select.appendChild(
         option
     );
 
-
-    /*
-        Once real options are available,
-        allow selection.
-    */
-
-    select.disabled =
-        false;
-
-}
-
-
-function setButtonLoading(
-
-    button,
-
-    text
-
-) {
-
-    if (!button) {
-
-        return;
-
-    }
-
-
-    if (
-        !button.dataset.originalText
-    ) {
-
-        button.dataset.originalText =
-            button.textContent.trim();
-
-    }
-
-
-    button.disabled =
-        true;
-
-
-    button.textContent =
-        text;
-
-}
-
-
-function restoreButton(
-
-    button,
-
-    fallbackText
-
-) {
-
-    if (!button) {
-
-        return;
-
-    }
-
-
-    button.disabled =
-        false;
-
-
-    button.textContent =
-
-        button.dataset.originalText ||
-
-        fallbackText;
-
-
-    delete button.dataset.originalText;
-
-}
-
-
-function escapeHTML(
-    value
-) {
-
-    const div =
-        document.createElement(
-            "div"
-        );
-
-
-    div.textContent =
-        String(
-            value ?? ""
-        );
-
-
-    return div.innerHTML;
-
-}
-
-
-function notifyUser(
-
-    message,
-
-    type = "info"
-
-) {
-
-    /*
-    -------------------------------------------------
-        Prefer existing project notification system.
-    -------------------------------------------------
-    */
-
-    if (
-
-        window.Utils &&
-
-        typeof window.Utils.showToast ===
-        "function"
-
-    ) {
-
-        window.Utils.showToast(
-
-            message,
-
-            type
-
-        );
-
-        return;
-
-    }
-
-
-    if (
-        type === "error"
-    ) {
-
-        console.error(
-            message
-        );
-
-    }
-
-    else {
-
-        console.log(
-            message
-        );
-
-    }
-
-
-    alert(
-        message
-    );
-
 }
 
 
 /*=========================================================
-    OPTIONAL GLOBAL ACCESS
+    HTML SAFETY
 =========================================================*/
 
-/*
-    questions-import.js can refresh the question bank
-    after a successful import without requiring another
-    duplicate import implementation.
-*/
+function escapeQuestionHTML(
+    value
+) {
 
-window.loadQuestions =
-    loadQuestions;
+    return String(value ?? "")
+
+        .replace(
+            /&/g,
+            "&amp;"
+        )
+
+        .replace(
+            /</g,
+            "&lt;"
+        )
+
+        .replace(
+            />/g,
+            "&gt;"
+        )
+
+        .replace(
+            /"/g,
+            "&quot;"
+        )
+
+        .replace(
+            /'/g,
+            "&#039;"
+        );
+
+}
+
+
+function escapeQuestionAttribute(
+    value
+) {
+
+    return escapeQuestionHTML(
+        value
+    );
+
+}
