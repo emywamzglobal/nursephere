@@ -4314,8 +4314,21 @@ if (
 }
 
 // =====================================================
-// STUDY RESOURCE MANAGEMENT
-// Production-ready CRUD layer
+// ADMIN — STUDY BOOK MANAGEMENT
+// =====================================================
+// Production-ready management endpoints only.
+//
+// Handles:
+//   • Create study book
+//   • Read study books
+//   • Update study book metadata
+//   • Activate / deactivate
+//   • Soft delete
+//   • R2 document upload
+//   • R2 cover upload
+//   • Large-file multipart uploads
+//
+// STUDENT PLAN ACCESS IS NOT HANDLED HERE.
 // =====================================================
 
 
@@ -4323,16 +4336,48 @@ if (
 // CONSTANTS
 // =====================================================
 
-const STUDY_RESOURCE_FILE_TYPES = [
+const STUDY_BOOK_FILE_TYPES = [
     "pdf",
     "docx",
     "xlsx",
     "csv"
 ];
 
-const STUDY_RESOURCE_STATUSES = [
+const STUDY_BOOK_STATUSES = [
     "active",
     "inactive"
+];
+
+const STUDY_BOOK_UPLOAD_TYPES = {
+    document: {
+        bucket: "DOCUMENTS",
+        folder: "study-resources/documents"
+    },
+
+    cover: {
+        bucket: "IMAGES",
+        folder: "study-resources/covers"
+    }
+};
+
+const STUDY_BOOK_DOCUMENT_MIME_TYPES = {
+    pdf:
+        "application/pdf",
+
+    docx:
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+
+    xlsx:
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+
+    csv:
+        "text/csv"
+};
+
+const STUDY_BOOK_COVER_MIME_TYPES = [
+    "image/jpeg",
+    "image/png",
+    "image/webp"
 ];
 
 
@@ -4340,33 +4385,28 @@ const STUDY_RESOURCE_STATUSES = [
 // HELPERS
 // =====================================================
 
-function normalizeText(value) {
+function studyBookText(value) {
 
-    return String(value ?? "")
-        .trim();
-
-}
-
-
-function normalizeFileType(value) {
-
-    return String(value ?? "")
-        .trim()
-        .toLowerCase();
+    return String(value ?? "").trim();
 
 }
 
 
-function normalizeStatus(value) {
+function studyBookFileType(value) {
 
-    return String(value ?? "")
-        .trim()
-        .toLowerCase();
+    return studyBookText(value).toLowerCase();
 
 }
 
 
-function resourceJson(
+function studyBookStatus(value) {
+
+    return studyBookText(value).toLowerCase();
+
+}
+
+
+function studyBookResponse(
     success,
     message,
     data = null,
@@ -4397,7 +4437,7 @@ function resourceJson(
 }
 
 
-async function readJsonBody(request) {
+async function studyBookJson(request) {
 
     try {
 
@@ -4412,8 +4452,37 @@ async function readJsonBody(request) {
 }
 
 
+function studyBookId(pathname) {
+
+    return pathname
+        .split("/")
+        .filter(Boolean)
+        .pop();
+
+}
+
+
+function studyBookBucket(env, uploadType) {
+
+    if (uploadType === "document") {
+
+        return env.DOCUMENTS;
+
+    }
+
+    if (uploadType === "cover") {
+
+        return env.IMAGES;
+
+    }
+
+    return null;
+
+}
+
+
 // =====================================================
-// GET ALL STUDY RESOURCES
+// GET ALL STUDY BOOKS
 // GET /api/admin/resources
 // =====================================================
 
@@ -4460,15 +4529,15 @@ if (
 
                     r.updated_at
 
-                FROM study_resources r
+                 FROM study_resources r
 
-                INNER JOIN subjects s
-                    ON r.subject_id = s.id
+                 INNER JOIN subjects s
+                    ON s.id = r.subject_id
 
-                INNER JOIN exams e
-                    ON s.exam_id = e.id
+                 INNER JOIN exams e
+                    ON e.id = s.exam_id
 
-                ORDER BY
+                 ORDER BY
 
                     e.display_order ASC,
 
@@ -4480,11 +4549,11 @@ if (
             .all();
 
 
-        return resourceJson(
+        return studyBookResponse(
 
             true,
 
-            "Study resources retrieved successfully.",
+            "Study books retrieved successfully.",
 
             results || [],
 
@@ -4495,15 +4564,15 @@ if (
     } catch (error) {
 
         console.error(
-            "GET study resources failed:",
+            "GET /api/admin/resources failed:",
             error
         );
 
-        return resourceJson(
+        return studyBookResponse(
 
             false,
 
-            "Failed to retrieve study resources.",
+            "Failed to retrieve study books.",
 
             null,
 
@@ -4517,7 +4586,7 @@ if (
 
 
 // =====================================================
-// GET SINGLE STUDY RESOURCE
+// GET SINGLE STUDY BOOK
 // GET /api/admin/resources/:id
 // =====================================================
 
@@ -4525,28 +4594,25 @@ if (
 
     method === "GET" &&
 
-    pathname.startsWith(
-        "/api/admin/resources/"
-    ) &&
+    pathname.startsWith("/api/admin/resources/") &&
 
-    !pathname.endsWith("/status")
+    !pathname.endsWith("/status") &&
+
+    !pathname.includes("/upload/")
 
 ) {
 
     const resourceId =
-        pathname
-            .split("/")
-            .filter(Boolean)
-            .pop();
+        studyBookId(pathname);
 
 
     if (!resourceId) {
 
-        return resourceJson(
+        return studyBookResponse(
 
             false,
 
-            "Study resource ID is required.",
+            "Study book ID is required.",
 
             null,
 
@@ -4592,17 +4658,17 @@ if (
 
                     r.updated_at
 
-                FROM study_resources r
+                 FROM study_resources r
 
-                INNER JOIN subjects s
-                    ON r.subject_id = s.id
+                 INNER JOIN subjects s
+                    ON s.id = r.subject_id
 
-                INNER JOIN exams e
-                    ON s.exam_id = e.id
+                 INNER JOIN exams e
+                    ON e.id = s.exam_id
 
-                WHERE r.id = ?
+                 WHERE r.id = ?
 
-                LIMIT 1`
+                 LIMIT 1`
 
             )
             .bind(resourceId)
@@ -4611,11 +4677,11 @@ if (
 
         if (!resource) {
 
-            return resourceJson(
+            return studyBookResponse(
 
                 false,
 
-                "Study resource not found.",
+                "Study book not found.",
 
                 null,
 
@@ -4626,11 +4692,11 @@ if (
         }
 
 
-        return resourceJson(
+        return studyBookResponse(
 
             true,
 
-            "Study resource retrieved successfully.",
+            "Study book retrieved successfully.",
 
             resource,
 
@@ -4641,15 +4707,15 @@ if (
     } catch (error) {
 
         console.error(
-            "GET single study resource failed:",
+            "GET single study book failed:",
             error
         );
 
-        return resourceJson(
+        return studyBookResponse(
 
             false,
 
-            "Failed to retrieve the study resource.",
+            "Failed to retrieve the study book.",
 
             null,
 
@@ -4663,15 +4729,8 @@ if (
 
 
 // =====================================================
-// ADD STUDY RESOURCE
+// CREATE STUDY BOOK
 // POST /api/admin/resources
-//
-// IMPORTANT:
-// This endpoint creates the D1 record.
-// The actual R2 upload will be handled by the
-// dedicated upload pipeline we connect next.
-//
-// file_url must therefore be a valid stored URL.
 // =====================================================
 
 if (
@@ -4683,12 +4742,12 @@ if (
 ) {
 
     const body =
-        await readJsonBody(request);
+        await studyBookJson(request);
 
 
     if (!body) {
 
-        return resourceJson(
+        return studyBookResponse(
 
             false,
 
@@ -4704,34 +4763,30 @@ if (
 
 
     const subjectId =
-        normalizeText(body.subject_id);
+        studyBookText(body.subject_id);
 
     const title =
-        normalizeText(body.title);
+        studyBookText(body.title);
 
     const author =
-        normalizeText(body.author);
+        studyBookText(body.author);
 
     const description =
-        normalizeText(body.description);
+        studyBookText(body.description);
 
     const fileUrl =
-        normalizeText(body.file_url);
+        studyBookText(body.file_url);
 
     const coverImage =
-        normalizeText(body.cover_image);
+        studyBookText(body.cover_image);
 
     const fileType =
-        normalizeFileType(body.file_type);
+        studyBookFileType(body.file_type);
 
-
-    // -----------------------------------------
-    // REQUIRED FIELDS
-    // -----------------------------------------
 
     if (!subjectId) {
 
-        return resourceJson(
+        return studyBookResponse(
 
             false,
 
@@ -4748,11 +4803,11 @@ if (
 
     if (!title) {
 
-        return resourceJson(
+        return studyBookResponse(
 
             false,
 
-            "Resource title is required.",
+            "Study book title is required.",
 
             null,
 
@@ -4765,7 +4820,7 @@ if (
 
     if (!author) {
 
-        return resourceJson(
+        return studyBookResponse(
 
             false,
 
@@ -4780,17 +4835,13 @@ if (
     }
 
 
-    // -----------------------------------------
-    // FILE URL
-    // -----------------------------------------
-
     if (!fileUrl) {
 
-        return resourceJson(
+        return studyBookResponse(
 
             false,
 
-            "Study resource file URL is required.",
+            "Study book file is required.",
 
             null,
 
@@ -4801,25 +4852,19 @@ if (
     }
 
 
-    // -----------------------------------------
-    // FILE TYPE
-    // -----------------------------------------
-
     if (
 
-        !fileType ||
-
-        !STUDY_RESOURCE_FILE_TYPES.includes(
+        !STUDY_BOOK_FILE_TYPES.includes(
             fileType
         )
 
     ) {
 
-        return resourceJson(
+        return studyBookResponse(
 
             false,
 
-            "Invalid study resource file type.",
+            "Invalid study book file type.",
 
             null,
 
@@ -4830,16 +4875,11 @@ if (
     }
 
 
-    // -----------------------------------------
-    // VERIFY SUBJECT
-    //
-    // The exam is deliberately NOT accepted
-    // from the browser.
-    //
-    // The exam is derived from the database.
-    // -----------------------------------------
-
     try {
+
+        // -----------------------------------------
+        // VERIFY SUBJECT + EXAM
+        // -----------------------------------------
 
         const subject =
             await env.DB.prepare(
@@ -4854,14 +4894,14 @@ if (
 
                     e.status AS exam_status
 
-                FROM subjects s
+                 FROM subjects s
 
-                INNER JOIN exams e
-                    ON s.exam_id = e.id
+                 INNER JOIN exams e
+                    ON e.id = s.exam_id
 
-                WHERE s.id = ?
+                 WHERE s.id = ?
 
-                LIMIT 1`
+                 LIMIT 1`
 
             )
             .bind(subjectId)
@@ -4870,7 +4910,7 @@ if (
 
         if (!subject) {
 
-            return resourceJson(
+            return studyBookResponse(
 
                 false,
 
@@ -4886,13 +4926,10 @@ if (
 
 
         if (
-
-            subject.subject_status !==
-            "active"
-
+            subject.subject_status !== "active"
         ) {
 
-            return resourceJson(
+            return studyBookResponse(
 
                 false,
 
@@ -4908,13 +4945,10 @@ if (
 
 
         if (
-
-            subject.exam_status !==
-            "active"
-
+            subject.exam_status !== "active"
         ) {
 
-            return resourceJson(
+            return studyBookResponse(
 
                 false,
 
@@ -4938,32 +4972,29 @@ if (
 
                 `SELECT id
 
-                FROM study_resources
+                 FROM study_resources
 
-                WHERE subject_id = ?
+                 WHERE subject_id = ?
 
-                AND LOWER(title) = LOWER(?)
+                 AND LOWER(title) = LOWER(?)
 
-                LIMIT 1`
+                 LIMIT 1`
 
             )
             .bind(
-
                 subjectId,
-
                 title
-
             )
             .first();
 
 
         if (duplicate) {
 
-            return resourceJson(
+            return studyBookResponse(
 
                 false,
 
-                "A study resource with this title already exists for this subject.",
+                "A study book with this title already exists for this subject.",
 
                 null,
 
@@ -4975,7 +5006,7 @@ if (
 
 
         // -----------------------------------------
-        // CREATE RESOURCE
+        // CREATE
         // -----------------------------------------
 
         const resourceId =
@@ -5048,11 +5079,11 @@ if (
         .run();
 
 
-        return resourceJson(
+        return studyBookResponse(
 
             true,
 
-            "Study resource created successfully.",
+            "Study book created successfully.",
 
             {
                 id: resourceId
@@ -5065,15 +5096,15 @@ if (
     } catch (error) {
 
         console.error(
-            "CREATE study resource failed:",
+            "CREATE study book failed:",
             error
         );
 
-        return resourceJson(
+        return studyBookResponse(
 
             false,
 
-            "Failed to create the study resource.",
+            "Failed to create the study book.",
 
             null,
 
@@ -5087,41 +5118,33 @@ if (
 
 
 // =====================================================
-// UPDATE STUDY RESOURCE
+// UPDATE STUDY BOOK
 // PUT /api/admin/resources/:id
-//
-// Metadata can be changed without replacing the
-// existing R2 files.
-//
-// R2 replacement will be handled separately.
 // =====================================================
 
 if (
 
     method === "PUT" &&
 
-    pathname.startsWith(
-        "/api/admin/resources/"
-    ) &&
+    pathname.startsWith("/api/admin/resources/") &&
 
-    !pathname.endsWith("/status")
+    !pathname.endsWith("/status") &&
+
+    !pathname.includes("/upload/")
 
 ) {
 
     const resourceId =
-        pathname
-            .split("/")
-            .filter(Boolean)
-            .pop();
+        studyBookId(pathname);
 
 
     if (!resourceId) {
 
-        return resourceJson(
+        return studyBookResponse(
 
             false,
 
-            "Study resource ID is required.",
+            "Study book ID is required.",
 
             null,
 
@@ -5133,12 +5156,12 @@ if (
 
 
     const body =
-        await readJsonBody(request);
+        await studyBookJson(request);
 
 
     if (!body) {
 
-        return resourceJson(
+        return studyBookResponse(
 
             false,
 
@@ -5154,46 +5177,39 @@ if (
 
 
     const subjectId =
-        normalizeText(body.subject_id);
+        studyBookText(body.subject_id);
 
     const title =
-        normalizeText(body.title);
+        studyBookText(body.title);
 
     const author =
-        normalizeText(body.author);
+        studyBookText(body.author);
 
     const description =
-        normalizeText(body.description);
+        studyBookText(body.description);
 
     const fileUrl =
-        normalizeText(body.file_url);
+        studyBookText(body.file_url);
 
     const coverImage =
-        normalizeText(body.cover_image);
+        studyBookText(body.cover_image);
 
     const fileType =
-        normalizeFileType(body.file_type);
+        studyBookFileType(body.file_type);
 
     const status =
-        normalizeStatus(
+        studyBookStatus(
             body.status || "active"
         );
 
 
-    // -----------------------------------------
-    // VALIDATION
-    // -----------------------------------------
-
     if (!subjectId) {
 
-        return resourceJson(
+        return studyBookResponse(
 
             false,
-
             "Please select a subject.",
-
             null,
-
             400
 
         );
@@ -5203,14 +5219,11 @@ if (
 
     if (!title) {
 
-        return resourceJson(
+        return studyBookResponse(
 
             false,
-
-            "Resource title is required.",
-
+            "Study book title is required.",
             null,
-
             400
 
         );
@@ -5220,14 +5233,11 @@ if (
 
     if (!author) {
 
-        return resourceJson(
+        return studyBookResponse(
 
             false,
-
             "Book author is required.",
-
             null,
-
             400
 
         );
@@ -5237,14 +5247,11 @@ if (
 
     if (!fileUrl) {
 
-        return resourceJson(
+        return studyBookResponse(
 
             false,
-
-            "Study resource file URL is required.",
-
+            "Study book file is required.",
             null,
-
             400
 
         );
@@ -5253,21 +5260,14 @@ if (
 
 
     if (
-
-        !STUDY_RESOURCE_FILE_TYPES.includes(
-            fileType
-        )
-
+        !STUDY_BOOK_FILE_TYPES.includes(fileType)
     ) {
 
-        return resourceJson(
+        return studyBookResponse(
 
             false,
-
-            "Invalid study resource file type.",
-
+            "Invalid study book file type.",
             null,
-
             400
 
         );
@@ -5276,21 +5276,14 @@ if (
 
 
     if (
-
-        !STUDY_RESOURCE_STATUSES.includes(
-            status
-        )
-
+        !STUDY_BOOK_STATUSES.includes(status)
     ) {
 
-        return resourceJson(
+        return studyBookResponse(
 
             false,
-
-            "Invalid resource status.",
-
+            "Invalid study book status.",
             null,
-
             400
 
         );
@@ -5307,21 +5300,13 @@ if (
         const existing =
             await env.DB.prepare(
 
-                `SELECT
+                `SELECT id
 
-                    id,
+                 FROM study_resources
 
-                    subject_id,
+                 WHERE id = ?
 
-                    file_url,
-
-                    cover_image
-
-                FROM study_resources
-
-                WHERE id = ?
-
-                LIMIT 1`
+                 LIMIT 1`
 
             )
             .bind(resourceId)
@@ -5330,14 +5315,11 @@ if (
 
         if (!existing) {
 
-            return resourceJson(
+            return studyBookResponse(
 
                 false,
-
-                "Study resource not found.",
-
+                "Study book not found.",
                 null,
-
                 404
 
             );
@@ -5360,14 +5342,14 @@ if (
 
                     e.status AS exam_status
 
-                FROM subjects s
+                 FROM subjects s
 
-                INNER JOIN exams e
+                 INNER JOIN exams e
                     ON e.id = s.exam_id
 
-                WHERE s.id = ?
+                 WHERE s.id = ?
 
-                LIMIT 1`
+                 LIMIT 1`
 
             )
             .bind(subjectId)
@@ -5376,14 +5358,11 @@ if (
 
         if (!subject) {
 
-            return resourceJson(
+            return studyBookResponse(
 
                 false,
-
                 "Selected subject does not exist.",
-
                 null,
-
                 404
 
             );
@@ -5392,20 +5371,14 @@ if (
 
 
         if (
-
-            subject.subject_status !==
-            "active"
-
+            subject.subject_status !== "active"
         ) {
 
-            return resourceJson(
+            return studyBookResponse(
 
                 false,
-
                 "Selected subject is inactive.",
-
                 null,
-
                 409
 
             );
@@ -5414,20 +5387,14 @@ if (
 
 
         if (
-
-            subject.exam_status !==
-            "active"
-
+            subject.exam_status !== "active"
         ) {
 
-            return resourceJson(
+            return studyBookResponse(
 
                 false,
-
                 "The examination associated with this subject is inactive.",
-
                 null,
-
                 409
 
             );
@@ -5444,36 +5411,32 @@ if (
 
                 `SELECT id
 
-                FROM study_resources
+                 FROM study_resources
 
-                WHERE subject_id = ?
+                 WHERE subject_id = ?
 
-                AND LOWER(title) = LOWER(?)
+                 AND LOWER(title) = LOWER(?)
 
-                AND id <> ?
+                 AND id <> ?
 
-                LIMIT 1`
+                 LIMIT 1`
 
             )
             .bind(
-
                 subjectId,
-
                 title,
-
                 resourceId
-
             )
             .first();
 
 
         if (duplicate) {
 
-            return resourceJson(
+            return studyBookResponse(
 
                 false,
 
-                "Another study resource with this title already exists for this subject.",
+                "Another study book with this title already exists for this subject.",
 
                 null,
 
@@ -5492,7 +5455,7 @@ if (
 
             `UPDATE study_resources
 
-            SET
+             SET
 
                 subject_id = ?,
 
@@ -5512,7 +5475,7 @@ if (
 
                 updated_at = ?
 
-            WHERE id = ?`
+             WHERE id = ?`
 
         )
         .bind(
@@ -5541,11 +5504,11 @@ if (
         .run();
 
 
-        return resourceJson(
+        return studyBookResponse(
 
             true,
 
-            "Study resource updated successfully.",
+            "Study book updated successfully.",
 
             {
                 id: resourceId
@@ -5558,15 +5521,15 @@ if (
     } catch (error) {
 
         console.error(
-            "UPDATE study resource failed:",
+            "UPDATE study book failed:",
             error
         );
 
-        return resourceJson(
+        return studyBookResponse(
 
             false,
 
-            "Failed to update the study resource.",
+            "Failed to update the study book.",
 
             null,
 
@@ -5580,7 +5543,7 @@ if (
 
 
 // =====================================================
-// ACTIVATE / DEACTIVATE STUDY RESOURCE
+// ACTIVATE / DEACTIVATE STUDY BOOK
 // PATCH /api/admin/resources/:id/status
 // =====================================================
 
@@ -5588,9 +5551,7 @@ if (
 
     method === "PATCH" &&
 
-    pathname.startsWith(
-        "/api/admin/resources/"
-    ) &&
+    pathname.startsWith("/api/admin/resources/") &&
 
     pathname.endsWith("/status")
 
@@ -5602,24 +5563,21 @@ if (
             .filter(Boolean);
 
 
-    const statusIndex =
-        parts.length - 1;
-
-
     const resourceId =
-        parts[statusIndex - 1];
+        parts[parts.length - 2];
+
+
+    const body =
+        await studyBookJson(request);
 
 
     if (!resourceId) {
 
-        return resourceJson(
+        return studyBookResponse(
 
             false,
-
-            "Study resource ID is required.",
-
+            "Study book ID is required.",
             null,
-
             400
 
         );
@@ -5627,20 +5585,13 @@ if (
     }
 
 
-    const body =
-        await readJsonBody(request);
-
-
     if (!body) {
 
-        return resourceJson(
+        return studyBookResponse(
 
             false,
-
             "Invalid JSON request body.",
-
             null,
-
             400
 
         );
@@ -5649,25 +5600,18 @@ if (
 
 
     const status =
-        normalizeStatus(body.status);
+        studyBookStatus(body.status);
 
 
     if (
-
-        !STUDY_RESOURCE_STATUSES.includes(
-            status
-        )
-
+        !STUDY_BOOK_STATUSES.includes(status)
     ) {
 
-        return resourceJson(
+        return studyBookResponse(
 
             false,
-
             "Status must be 'active' or 'inactive'.",
-
             null,
-
             400
 
         );
@@ -5682,11 +5626,11 @@ if (
 
                 `SELECT id
 
-                FROM study_resources
+                 FROM study_resources
 
-                WHERE id = ?
+                 WHERE id = ?
 
-                LIMIT 1`
+                 LIMIT 1`
 
             )
             .bind(resourceId)
@@ -5695,14 +5639,11 @@ if (
 
         if (!resource) {
 
-            return resourceJson(
+            return studyBookResponse(
 
                 false,
-
-                "Study resource not found.",
-
+                "Study book not found.",
                 null,
-
                 404
 
             );
@@ -5714,13 +5655,13 @@ if (
 
             `UPDATE study_resources
 
-            SET
+             SET
 
                 status = ?,
 
                 updated_at = ?
 
-            WHERE id = ?`
+             WHERE id = ?`
 
         )
         .bind(
@@ -5735,15 +5676,15 @@ if (
         .run();
 
 
-        return resourceJson(
+        return studyBookResponse(
 
             true,
 
             status === "active"
 
-                ? "Study resource activated successfully."
+                ? "Study book activated successfully."
 
-                : "Study resource deactivated successfully.",
+                : "Study book deactivated successfully.",
 
             {
                 id: resourceId,
@@ -5757,18 +5698,15 @@ if (
     } catch (error) {
 
         console.error(
-            "UPDATE study resource status failed:",
+            "UPDATE study book status failed:",
             error
         );
 
-        return resourceJson(
+        return studyBookResponse(
 
             false,
-
-            "Failed to update study resource status.",
-
+            "Failed to update study book status.",
             null,
-
             500
 
         );
@@ -5779,22 +5717,15 @@ if (
 
 
 // =====================================================
-// SOFT DELETE STUDY RESOURCE
+// SOFT DELETE STUDY BOOK
 // DELETE /api/admin/resources/:id
-//
-// We deliberately do NOT delete the R2 files here.
-// R2 cleanup will be handled by the dedicated storage
-// cleanup flow so that a database deletion cannot
-// accidentally orphan or destroy files incorrectly.
 // =====================================================
 
 if (
 
     method === "DELETE" &&
 
-    pathname.startsWith(
-        "/api/admin/resources/"
-    )
+    pathname.startsWith("/api/admin/resources/")
 
 ) {
 
@@ -5810,14 +5741,11 @@ if (
 
     if (!resourceId) {
 
-        return resourceJson(
+        return studyBookResponse(
 
             false,
-
-            "Study resource ID is required.",
-
+            "Study book ID is required.",
             null,
-
             400
 
         );
@@ -5830,17 +5758,13 @@ if (
         const resource =
             await env.DB.prepare(
 
-                `SELECT
+                `SELECT id
 
-                    id,
+                 FROM study_resources
 
-                    status
+                 WHERE id = ?
 
-                FROM study_resources
-
-                WHERE id = ?
-
-                LIMIT 1`
+                 LIMIT 1`
 
             )
             .bind(resourceId)
@@ -5849,14 +5773,11 @@ if (
 
         if (!resource) {
 
-            return resourceJson(
+            return studyBookResponse(
 
                 false,
-
-                "Study resource not found.",
-
+                "Study book not found.",
                 null,
-
                 404
 
             );
@@ -5868,13 +5789,13 @@ if (
 
             `UPDATE study_resources
 
-            SET
+             SET
 
                 status = 'inactive',
 
                 updated_at = ?
 
-            WHERE id = ?`
+             WHERE id = ?`
 
         )
         .bind(
@@ -5887,11 +5808,11 @@ if (
         .run();
 
 
-        return resourceJson(
+        return studyBookResponse(
 
             true,
 
-            "Study resource deactivated successfully.",
+            "Study book deactivated successfully.",
 
             {
                 id: resourceId,
@@ -5905,18 +5826,15 @@ if (
     } catch (error) {
 
         console.error(
-            "DELETE study resource failed:",
+            "DELETE study book failed:",
             error
         );
 
-        return resourceJson(
+        return studyBookResponse(
 
             false,
-
-            "Failed to delete the study resource.",
-
+            "Failed to delete the study book.",
             null,
-
             500
 
         );
@@ -5925,94 +5843,9 @@ if (
 
 }
 
-// =====================================================
-// STUDY RESOURCE R2 MULTIPART UPLOAD
-// PRODUCTION UPLOAD PIPELINE
-// =====================================================
-
-const RESOURCE_UPLOAD_TYPES = {
-    document: {
-        bucket: "DOCUMENTS",
-        folder: "study-resources/documents"
-    },
-
-    cover: {
-        bucket: "IMAGES",
-        folder: "study-resources/covers"
-    }
-};
-
-
-const RESOURCE_UPLOAD_MIME_TYPES = {
-    pdf:
-        "application/pdf",
-
-    docx:
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-
-    xlsx:
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-
-    csv:
-        "text/csv"
-};
-
-
-const RESOURCE_COVER_MIME_TYPES = {
-    "image/jpeg": "jpg",
-    "image/png": "png",
-    "image/webp": "webp"
-};
-
-
-function resourceUploadError(message, status = 400) {
-
-    return Response.json(
-        {
-            success: false,
-            message
-        },
-        {
-            status,
-            headers: {
-                "Cache-Control": "no-store"
-            }
-        }
-    );
-
-}
-
-
-function resourceUploadSuccess(
-    message,
-    data = null,
-    status = 200
-) {
-
-    const response = {
-        success: true,
-        message
-    };
-
-    if (data !== null) {
-        response.data = data;
-    }
-
-    return Response.json(
-        response,
-        {
-            status,
-            headers: {
-                "Cache-Control": "no-store"
-            }
-        }
-    );
-
-}
-
 
 // =====================================================
-// INITIALIZE MULTIPART UPLOAD
+// R2 — INITIALIZE MULTIPART UPLOAD
 // POST /api/admin/resources/upload/init
 // =====================================================
 
@@ -6026,47 +5859,50 @@ if (
 ) {
 
     const body =
-        await readJsonBody(request);
+        await studyBookJson(request);
 
 
     if (!body) {
 
-        return resourceUploadError(
-            "Invalid JSON request body."
+        return studyBookResponse(
+
+            false,
+            "Invalid JSON request body.",
+            null,
+            400
+
         );
 
     }
 
 
     const uploadType =
-        String(
-            body.upload_type ?? ""
-        )
-        .trim()
-        .toLowerCase();
-
+        studyBookText(
+            body.upload_type
+        ).toLowerCase();
 
     const fileName =
-        String(
-            body.file_name ?? ""
-        )
-        .trim();
-
+        studyBookText(
+            body.file_name
+        );
 
     const contentType =
-        String(
-            body.content_type ?? ""
-        )
-        .trim()
-        .toLowerCase();
+        studyBookText(
+            body.content_type
+        ).toLowerCase();
 
 
     if (
-        !RESOURCE_UPLOAD_TYPES[uploadType]
+        !STUDY_BOOK_UPLOAD_TYPES[uploadType]
     ) {
 
-        return resourceUploadError(
-            "Invalid upload type."
+        return studyBookResponse(
+
+            false,
+            "Invalid upload type.",
+            null,
+            400
+
         );
 
     }
@@ -6074,8 +5910,13 @@ if (
 
     if (!fileName) {
 
-        return resourceUploadError(
-            "File name is required."
+        return studyBookResponse(
+
+            false,
+            "File name is required.",
+            null,
+            400
+
         );
 
     }
@@ -6083,55 +5924,60 @@ if (
 
     if (!contentType) {
 
-        return resourceUploadError(
-            "File content type is required."
+        return studyBookResponse(
+
+            false,
+            "Content type is required.",
+            null,
+            400
+
         );
 
     }
 
 
     // -----------------------------------------
-    // DOCUMENT VALIDATION
+    // DOCUMENT TYPE
     // -----------------------------------------
 
     if (
-        uploadType === "document"
+        uploadType === "document" &&
+        !Object.values(
+            STUDY_BOOK_DOCUMENT_MIME_TYPES
+        ).includes(contentType)
     ) {
 
-        if (
-            !Object.values(
-                RESOURCE_UPLOAD_MIME_TYPES
-            ).includes(contentType)
-        ) {
+        return studyBookResponse(
 
-            return resourceUploadError(
-                "Unsupported study resource file type."
-            );
+            false,
+            "Unsupported study book file type.",
+            null,
+            400
 
-        }
+        );
 
     }
 
 
     // -----------------------------------------
-    // COVER VALIDATION
+    // COVER TYPE
     // -----------------------------------------
 
     if (
-        uploadType === "cover"
+        uploadType === "cover" &&
+        !STUDY_BOOK_COVER_MIME_TYPES.includes(
+            contentType
+        )
     ) {
 
-        if (
-            !Object.keys(
-                RESOURCE_COVER_MIME_TYPES
-            ).includes(contentType)
-        ) {
+        return studyBookResponse(
 
-            return resourceUploadError(
-                "Only JPG, PNG and WebP cover images are supported."
-            );
+            false,
+            "Only JPG, PNG and WebP cover images are supported.",
+            null,
+            400
 
-        }
+        );
 
     }
 
@@ -6139,23 +5985,26 @@ if (
     try {
 
         const bucket =
-            uploadType === "document"
-                ? env.DOCUMENTS
-                : env.IMAGES;
+            studyBookBucket(
+                env,
+                uploadType
+            );
 
 
         if (!bucket) {
 
             console.error(
                 "Missing R2 binding:",
-                uploadType === "document"
-                    ? "DOCUMENTS"
-                    : "IMAGES"
+                uploadType
             );
 
-            return resourceUploadError(
-                "R2 storage is not configured.",
+            return studyBookResponse(
+
+                false,
+                "Storage service is not configured.",
+                null,
                 500
+
             );
 
         }
@@ -6167,14 +6016,17 @@ if (
 
         const safeName =
             fileName
+
                 .replace(
                     /[^a-zA-Z0-9._-]/g,
                     "-"
                 )
+
                 .replace(
                     /-+/g,
                     "-"
                 )
+
                 .slice(
                     0,
                     180
@@ -6182,18 +6034,24 @@ if (
 
 
         const objectKey =
-            `${RESOURCE_UPLOAD_TYPES[uploadType].folder}/${uploadId}-${safeName}`;
+            `${STUDY_BOOK_UPLOAD_TYPES[uploadType].folder}/${uploadId}-${safeName}`;
 
 
         const multipartUpload =
             await bucket.createMultipartUpload(
+
                 objectKey,
+
                 {
+
                     httpMetadata: {
+
                         contentType
+
                     },
 
                     customMetadata: {
+
                         resourceUploadId:
                             uploadId,
 
@@ -6202,22 +6060,27 @@ if (
 
                         originalFileName:
                             fileName
+
                     }
+
                 }
+
             );
 
 
-        return resourceUploadSuccess(
-            "Multipart upload initialized successfully.",
+        return studyBookResponse(
+
+            true,
+
+            "File upload initialized successfully.",
+
             {
+
                 upload_id:
                     uploadId,
 
                 object_key:
                     objectKey,
-
-                r2_upload_id:
-                    multipartUpload.uploadId,
 
                 upload_type:
                     uploadType,
@@ -6225,22 +6088,29 @@ if (
                 content_type:
                     contentType,
 
-                original_file_name:
-                    fileName
+                r2_upload_id:
+                    multipartUpload.uploadId
+
             },
+
             201
+
         );
 
     } catch (error) {
 
         console.error(
-            "Study resource upload initialization failed:",
+            "R2 multipart initialization failed:",
             error
         );
 
-        return resourceUploadError(
+        return studyBookResponse(
+
+            false,
             "Unable to initialize file upload.",
+            null,
             500
+
         );
 
     }
@@ -6249,7 +6119,7 @@ if (
 
 
 // =====================================================
-// UPLOAD PART
+// R2 — UPLOAD PART
 // PUT /api/admin/resources/upload/part
 // =====================================================
 
@@ -6263,47 +6133,47 @@ if (
 ) {
 
     const uploadType =
-        String(
+        studyBookText(
             request.headers.get(
                 "X-Upload-Type"
-            ) || ""
-        )
-        .trim()
-        .toLowerCase();
-
+            )
+        ).toLowerCase();
 
     const objectKey =
-        String(
+        studyBookText(
             request.headers.get(
                 "X-Object-Key"
-            ) || ""
-        )
-        .trim();
-
+            )
+        );
 
     const r2UploadId =
-        String(
+        studyBookText(
             request.headers.get(
                 "X-R2-Upload-Id"
-            ) || ""
-        )
-        .trim();
-
+            )
+        );
 
     const partNumber =
         Number(
-            request.headers.get(
-                "X-Part-Number"
+            studyBookText(
+                request.headers.get(
+                    "X-Part-Number"
+                )
             )
         );
 
 
     if (
-        !RESOURCE_UPLOAD_TYPES[uploadType]
+        !STUDY_BOOK_UPLOAD_TYPES[uploadType]
     ) {
 
-        return resourceUploadError(
-            "Invalid upload type."
+        return studyBookResponse(
+
+            false,
+            "Invalid upload type.",
+            null,
+            400
+
         );
 
     }
@@ -6311,8 +6181,13 @@ if (
 
     if (!objectKey) {
 
-        return resourceUploadError(
-            "Object key is required."
+        return studyBookResponse(
+
+            false,
+            "Upload object key is required.",
+            null,
+            400
+
         );
 
     }
@@ -6320,20 +6195,33 @@ if (
 
     if (!r2UploadId) {
 
-        return resourceUploadError(
-            "R2 upload ID is required."
+        return studyBookResponse(
+
+            false,
+            "R2 upload ID is required.",
+            null,
+            400
+
         );
 
     }
 
 
     if (
+
         !Number.isInteger(partNumber) ||
+
         partNumber < 1
+
     ) {
 
-        return resourceUploadError(
-            "Invalid upload part number."
+        return studyBookResponse(
+
+            false,
+            "Invalid upload part number.",
+            null,
+            400
+
         );
 
     }
@@ -6341,8 +6229,13 @@ if (
 
     if (!request.body) {
 
-        return resourceUploadError(
-            "Upload part is empty."
+        return studyBookResponse(
+
+            false,
+            "Upload part is empty.",
+            null,
+            400
+
         );
 
     }
@@ -6351,16 +6244,21 @@ if (
     try {
 
         const bucket =
-            uploadType === "document"
-                ? env.DOCUMENTS
-                : env.IMAGES;
+            studyBookBucket(
+                env,
+                uploadType
+            );
 
 
         if (!bucket) {
 
-            return resourceUploadError(
-                "R2 storage is not configured.",
+            return studyBookResponse(
+
+                false,
+                "Storage service is not configured.",
+                null,
                 500
+
             );
 
         }
@@ -6368,39 +6266,58 @@ if (
 
         const multipartUpload =
             bucket.resumeMultipartUpload(
+
                 objectKey,
+
                 r2UploadId
+
             );
 
 
         const uploadedPart =
             await multipartUpload.uploadPart(
+
                 partNumber,
+
                 request.body
+
             );
 
 
-        return resourceUploadSuccess(
+        return studyBookResponse(
+
+            true,
+
             "Upload part received successfully.",
+
             {
+
                 part_number:
                     partNumber,
 
                 etag:
                     uploadedPart.etag
-            }
+
+            },
+
+            200
+
         );
 
     } catch (error) {
 
         console.error(
-            "Study resource upload part failed:",
+            "R2 upload part failed:",
             error
         );
 
-        return resourceUploadError(
+        return studyBookResponse(
+
+            false,
             "Unable to upload file part.",
+            null,
             500
+
         );
 
     }
@@ -6409,7 +6326,7 @@ if (
 
 
 // =====================================================
-// COMPLETE MULTIPART UPLOAD
+// R2 — COMPLETE MULTIPART UPLOAD
 // POST /api/admin/resources/upload/complete
 // =====================================================
 
@@ -6423,39 +6340,37 @@ if (
 ) {
 
     const body =
-        await readJsonBody(request);
+        await studyBookJson(request);
 
 
     if (!body) {
 
-        return resourceUploadError(
-            "Invalid JSON request body."
+        return studyBookResponse(
+
+            false,
+            "Invalid JSON request body.",
+            null,
+            400
+
         );
 
     }
 
 
     const uploadType =
-        String(
-            body.upload_type ?? ""
-        )
-        .trim()
-        .toLowerCase();
-
+        studyBookText(
+            body.upload_type
+        ).toLowerCase();
 
     const objectKey =
-        String(
-            body.object_key ?? ""
-        )
-        .trim();
-
+        studyBookText(
+            body.object_key
+        );
 
     const r2UploadId =
-        String(
-            body.r2_upload_id ?? ""
-        )
-        .trim();
-
+        studyBookText(
+            body.r2_upload_id
+        );
 
     const rawParts =
         Array.isArray(body.parts)
@@ -6464,11 +6379,16 @@ if (
 
 
     if (
-        !RESOURCE_UPLOAD_TYPES[uploadType]
+        !STUDY_BOOK_UPLOAD_TYPES[uploadType]
     ) {
 
-        return resourceUploadError(
-            "Invalid upload type."
+        return studyBookResponse(
+
+            false,
+            "Invalid upload type.",
+            null,
+            400
+
         );
 
     }
@@ -6476,8 +6396,13 @@ if (
 
     if (!objectKey) {
 
-        return resourceUploadError(
-            "Object key is required."
+        return studyBookResponse(
+
+            false,
+            "Object key is required.",
+            null,
+            400
+
         );
 
     }
@@ -6485,8 +6410,13 @@ if (
 
     if (!r2UploadId) {
 
-        return resourceUploadError(
-            "R2 upload ID is required."
+        return studyBookResponse(
+
+            false,
+            "R2 upload ID is required.",
+            null,
+            400
+
         );
 
     }
@@ -6494,8 +6424,13 @@ if (
 
     if (!rawParts.length) {
 
-        return resourceUploadError(
-            "No upload parts were supplied."
+        return studyBookResponse(
+
+            false,
+            "No upload parts were supplied.",
+            null,
+            400
+
         );
 
     }
@@ -6504,16 +6439,29 @@ if (
     const parts =
         rawParts
             .map(part => ({
+
                 partNumber:
                     Number(
                         part.part_number
                     ),
 
                 etag:
-                    String(
-                        part.etag ?? ""
-                    ).trim()
+                    studyBookText(
+                        part.etag
+                    )
+
             }))
+            .filter(part => (
+
+                Number.isInteger(
+                    part.partNumber
+                ) &&
+
+                part.partNumber > 0 &&
+
+                part.etag
+
+            ))
             .sort(
                 (a, b) =>
                     a.partNumber -
@@ -6521,38 +6469,47 @@ if (
             );
 
 
-    for (
-        let i = 0;
-        i < parts.length;
-        i++
+    if (
+        parts.length !==
+        rawParts.length
     ) {
 
-        if (
-            !Number.isInteger(
-                parts[i].partNumber
-            ) ||
-            parts[i].partNumber < 1 ||
-            !parts[i].etag
-        ) {
+        return studyBookResponse(
 
-            return resourceUploadError(
-                "One or more upload parts are invalid."
-            );
+            false,
+            "One or more upload parts are invalid.",
+            null,
+            400
 
-        }
+        );
+
+    }
 
 
-        if (
-            i > 0 &&
-            parts[i].partNumber ===
-                parts[i - 1].partNumber
-        ) {
+    // Prevent duplicate part numbers.
 
-            return resourceUploadError(
-                "Duplicate upload part detected."
-            );
+    const uniquePartNumbers =
+        new Set(
+            parts.map(
+                part =>
+                    part.partNumber
+            )
+        );
 
-        }
+
+    if (
+        uniquePartNumbers.size !==
+        parts.length
+    ) {
+
+        return studyBookResponse(
+
+            false,
+            "Duplicate upload part numbers were supplied.",
+            null,
+            400
+
+        );
 
     }
 
@@ -6560,16 +6517,21 @@ if (
     try {
 
         const bucket =
-            uploadType === "document"
-                ? env.DOCUMENTS
-                : env.IMAGES;
+            studyBookBucket(
+                env,
+                uploadType
+            );
 
 
         if (!bucket) {
 
-            return resourceUploadError(
-                "R2 storage is not configured.",
+            return studyBookResponse(
+
+                false,
+                "Storage service is not configured.",
+                null,
                 500
+
             );
 
         }
@@ -6577,8 +6539,11 @@ if (
 
         const multipartUpload =
             bucket.resumeMultipartUpload(
+
                 objectKey,
+
                 r2UploadId
+
             );
 
 
@@ -6588,30 +6553,40 @@ if (
             );
 
 
-        return resourceUploadSuccess(
+        return studyBookResponse(
+
+            true,
+
             "File uploaded successfully.",
+
             {
+
                 object_key:
                     objectKey,
 
                 etag:
-                    completed.etag || null,
+                    completed.etag || null
 
-                upload_type:
-                    uploadType
-            }
+            },
+
+            200
+
         );
 
     } catch (error) {
 
         console.error(
-            "Study resource multipart completion failed:",
+            "R2 multipart completion failed:",
             error
         );
 
-        return resourceUploadError(
+        return studyBookResponse(
+
+            false,
             "Unable to complete file upload.",
+            null,
             500
+
         );
 
     }
@@ -6620,7 +6595,7 @@ if (
 
 
 // =====================================================
-// ABORT MULTIPART UPLOAD
+// R2 — ABORT MULTIPART UPLOAD
 // POST /api/admin/resources/upload/abort
 // =====================================================
 
@@ -6634,46 +6609,50 @@ if (
 ) {
 
     const body =
-        await readJsonBody(request);
+        await studyBookJson(request);
 
 
     if (!body) {
 
-        return resourceUploadError(
-            "Invalid JSON request body."
+        return studyBookResponse(
+
+            false,
+            "Invalid JSON request body.",
+            null,
+            400
+
         );
 
     }
 
 
     const uploadType =
-        String(
-            body.upload_type ?? ""
-        )
-        .trim()
-        .toLowerCase();
-
+        studyBookText(
+            body.upload_type
+        ).toLowerCase();
 
     const objectKey =
-        String(
-            body.object_key ?? ""
-        )
-        .trim();
-
+        studyBookText(
+            body.object_key
+        );
 
     const r2UploadId =
-        String(
-            body.r2_upload_id ?? ""
-        )
-        .trim();
+        studyBookText(
+            body.r2_upload_id
+        );
 
 
     if (
-        !RESOURCE_UPLOAD_TYPES[uploadType]
+        !STUDY_BOOK_UPLOAD_TYPES[uploadType]
     ) {
 
-        return resourceUploadError(
-            "Invalid upload type."
+        return studyBookResponse(
+
+            false,
+            "Invalid upload type.",
+            null,
+            400
+
         );
 
     }
@@ -6684,8 +6663,13 @@ if (
         !r2UploadId
     ) {
 
-        return resourceUploadError(
-            "Upload information is incomplete."
+        return studyBookResponse(
+
+            false,
+            "Upload information is incomplete.",
+            null,
+            400
+
         );
 
     }
@@ -6694,16 +6678,21 @@ if (
     try {
 
         const bucket =
-            uploadType === "document"
-                ? env.DOCUMENTS
-                : env.IMAGES;
+            studyBookBucket(
+                env,
+                uploadType
+            );
 
 
         if (!bucket) {
 
-            return resourceUploadError(
-                "R2 storage is not configured.",
+            return studyBookResponse(
+
+                false,
+                "Storage service is not configured.",
+                null,
                 500
+
             );
 
         }
@@ -6711,28 +6700,40 @@ if (
 
         const multipartUpload =
             bucket.resumeMultipartUpload(
+
                 objectKey,
+
                 r2UploadId
+
             );
 
 
         await multipartUpload.abort();
 
 
-        return resourceUploadSuccess(
-            "File upload cancelled."
+        return studyBookResponse(
+
+            true,
+            "File upload cancelled.",
+            null,
+            200
+
         );
 
     } catch (error) {
 
         console.error(
-            "Study resource multipart abort failed:",
+            "R2 multipart abort failed:",
             error
         );
 
-        return resourceUploadError(
+        return studyBookResponse(
+
+            false,
             "Unable to cancel file upload.",
+            null,
             500
+
         );
 
     }
