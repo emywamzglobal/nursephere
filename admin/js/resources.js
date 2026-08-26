@@ -79,31 +79,13 @@ const addResourceBtn =
    API
    ========================================================= */
 
-const API = {
-
-    resources:
-        "/api/admin/resources",
-
-    exams:
-        "/api/admin/exams",
-
-    subjects:
-        "/api/admin/subjects",
-
-    uploadInit:
-        "/api/admin/resources/upload/init",
-
-    uploadPart:
-        "/api/admin/resources/upload/part",
-
-    uploadComplete:
-        "/api/admin/resources/upload/complete",
-
-    uploadAbort:
-        "/api/admin/resources/upload/abort"
-
+const RESOURCE_API = {
+    resources: "/admin/resources",
+    uploadInit: "/admin/resources/upload/init",
+    uploadPart: "/admin/resources/upload/part",
+    uploadComplete: "/admin/resources/upload/complete",
+    uploadAbort: "/admin/resources/upload/abort"
 };
-
 
 /* =========================================================
    R2 MULTIPART PART SIZE
@@ -510,7 +492,7 @@ async function loadResources() {
 
     const response =
         await fetch(
-            API.resources,
+            RESOURCE_API.resources,
             {
                 method: "GET",
                 cache: "no-store"
@@ -1268,7 +1250,7 @@ async function uploadLargeFile(
 
         const initResponse =
             await fetch(
-                API.uploadInit,
+                RESOURCE_API.uploadInit,
                 {
                     method: "POST",
 
@@ -1623,8 +1605,8 @@ async function submitResource(
 
     const url =
         resourceId
-            ? `${API.resources}/${encodeURIComponent(resourceId)}`
-            : API.resources;
+            ? `${RESOURCE_API.resources}/${encodeURIComponent(resourceId)}`
+            : RESOURCE_API.resources;
 
 
     const response =
@@ -1833,7 +1815,7 @@ async function toggleResource(id) {
 
         const response =
             await fetch(
-                `${API.resources}/${encodeURIComponent(id)}/status`,
+                `${RESOURCE_API.resources}/${encodeURIComponent(id)}/status`,
                 {
                     method: "PATCH",
 
