@@ -693,33 +693,6 @@ function validateSelectedFile() {
         parser worker limit.
     */
 
-    const MAX_FILE_SIZE =
-        25 * 1024 * 1024;
-
-
-    if (
-        file.size >
-        MAX_FILE_SIZE
-    ) {
-
-        notifyUser(
-
-            "The selected file is too large. Maximum size is 25 MB.",
-
-            "error"
-
-        );
-
-
-        questionFile.value =
-            "";
-
-
-        return false;
-
-    }
-
-
     return true;
 
 }
@@ -840,67 +813,25 @@ function restoreButton(
 =========================================================*/
 
 function notifyUser(
-
     message,
-
     type = "info"
-
 ) {
 
-    /*
-        Use the existing project notification
-        system if available.
-    */
-
     if (
-
-        typeof window.notifyUser ===
-        "function"
-
-    ) {
-
-        window.notifyUser(
-
-            message,
-
-            type
-
-        );
-
-        return;
-
-    }
-
-
-    /*
-        Fallback to project Utils.
-    */
-
-    if (
-
         window.Utils &&
-
         typeof window.Utils.showToast ===
         "function"
-
     ) {
 
         window.Utils.showToast(
-
             message,
-
             type
-
         );
 
         return;
 
     }
 
-
-    /*
-        Final fallback.
-    */
 
     if (
         type === "error"
@@ -919,10 +850,5 @@ function notifyUser(
         );
 
     }
-
-
-    alert(
-        message
-    );
 
 }

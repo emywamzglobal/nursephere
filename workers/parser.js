@@ -35,13 +35,6 @@
 import * as XLSX from "xlsx";
 import mammoth from "mammoth";
 
-
-const MAX_FILE_SIZE =
-    25 * 1024 * 1024;
-
-const MAX_IMPORT_QUESTIONS =
-    500;
-
 const ALLOWED_EXTENSIONS = [
     "docx",
     "xlsx",
@@ -165,25 +158,6 @@ export default async function parserHandler(
 
                     message:
                         "Invalid uploaded file."
-
-                }, {
-                    status: 400
-                });
-
-            }
-
-
-            if (
-                file.size >
-                MAX_FILE_SIZE
-            ) {
-
-                return Response.json({
-
-                    success: false,
-
-                    message:
-                        "The uploaded file is too large. Maximum size is 25 MB."
 
                 }, {
                     status: 400
