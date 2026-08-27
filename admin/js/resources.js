@@ -81,21 +81,46 @@ const addResourceBtn =
 
 const RESOURCE_API = {
 
-    exams: "/api/admin/exams",
+    exams:
+        "/api/admin/exams",
 
-    subjects: "/api/admin/subjects",
+    subjects:
+        "/api/admin/subjects",
 
-    resources: "/api/admin/resources",
+    resources:
+        "/api/admin/resources",
 
-    uploadInit: "/api/admin/resources/upload/init",
+    uploadInit:
+        "/api/admin/resources/upload/init",
 
-    uploadPart: "/api/admin/resources/upload/part",
+    uploadPart:
+        "/api/admin/resources/upload/part",
 
-    uploadComplete: "/api/admin/resources/upload/complete",
+    uploadComplete:
+        "/api/admin/resources/upload/complete",
 
-    uploadAbort: "/api/admin/resources/upload/abort"
+    uploadAbort:
+        "/api/admin/resources/upload/abort",
+
+    /* -----------------------------------------
+       STUDY RESOURCE VIEW
+       Existing Admin Worker endpoint
+       ----------------------------------------- */
+
+    view:
+        "/api/admin/resources",
+
+    /* -----------------------------------------
+       STUDY RESOURCE DOWNLOAD
+       Existing Admin Worker endpoint
+       ----------------------------------------- */
+
+    download:
+        "/api/admin/resources"
 
 };
+
+
 /* =========================================================
    R2 MULTIPART PART SIZE
    =========================================================
@@ -360,12 +385,6 @@ async function loadExams() {
 
 /* =========================================================
    EXAM CHANGE
-   =========================================================
-
-   SUBJECTS ALWAYS COME FROM THE SELECTED EXAM.
-
-   We do not accept an arbitrary exam_id from the
-   resource save operation.
    ========================================================= */
 
 async function handleExamChange() {
@@ -392,7 +411,7 @@ async function handleExamChange() {
 
 
 /* =========================================================
-   LOAD SUBJECTS FOR EXAM
+   LOAD SUBJECTS
    ========================================================= */
 
 async function loadSubjects(examId) {
@@ -602,18 +621,64 @@ function createResourceRow(resource) {
             .toLowerCase() === "active";
 
 
-    const fileButton =
+    /* =====================================================
+       VIEW BUTTON
+
+       Uses the existing Admin Worker route:
+
+       GET /api/admin/resources/:id/view
+
+       The Worker returns the actual R2 object with:
+
+       Content-Disposition: inline
+
+       Therefore the browser can open/view the resource.
+       ===================================================== */
+
+    const viewButton =
         resource.file_url
             ? `
-                <a
-                    href="${escapeAttribute(resource.file_url)}"
-                    target="_blank"
-                    rel="noopener noreferrer"
+                <button
+                    type="button"
                     class="btn btn-sm btn-primary"
+                    data-action="view"
+                    data-id="${escapeAttribute(resource.id)}"
+                    title="View study resource"
                 >
                     <i class="fas fa-eye"></i>
                     View
-                </a>
+                </button>
+            `
+            : "";
+
+
+    /* =====================================================
+       DOWNLOAD BUTTON
+
+       Uses the existing Admin Worker route:
+
+       GET /api/admin/resources/:id/download
+
+       The Worker returns the actual R2 object with:
+
+       Content-Disposition: attachment
+
+       Therefore the browser downloads the file.
+       ===================================================== */
+
+    const downloadButton =
+        resource.file_url
+            ? `
+                <button
+                    type="button"
+                    class="btn btn-sm btn-success"
+                    data-action="download"
+                    data-id="${escapeAttribute(resource.id)}"
+                    title="Download study resource"
+                >
+                    <i class="fas fa-download"></i>
+                    Download
+                </button>
             `
             : "";
 
@@ -624,6 +689,7 @@ function createResourceRow(resource) {
             <td>
                 ${cover}
             </td>
+
 
             <td>
 
@@ -640,12 +706,14 @@ function createResourceRow(resource) {
 
             </td>
 
+
             <td>
                 ${escapeHtml(
                     resource.exam_name ||
                     "—"
                 )}
             </td>
+
 
             <td>
                 ${escapeHtml(
@@ -654,6 +722,7 @@ function createResourceRow(resource) {
                 )}
             </td>
 
+
             <td>
                 ${escapeHtml(
                     resource.author ||
@@ -661,21 +730,27 @@ function createResourceRow(resource) {
                 )}
             </td>
 
+
             <td>
 
                 <div class="resource-actions">
 
-                    ${fileButton}
+                    ${viewButton}
+
+                    ${downloadButton}
+
 
                     <button
                         type="button"
                         class="btn btn-sm btn-secondary"
                         data-action="edit"
                         data-id="${escapeAttribute(resource.id)}"
+                        title="Edit study resource"
                     >
                         <i class="fas fa-pen"></i>
                         Edit
                     </button>
+
 
                     <button
                         type="button"
@@ -686,6 +761,11 @@ function createResourceRow(resource) {
                         }"
                         data-action="toggle"
                         data-id="${escapeAttribute(resource.id)}"
+                        title="${
+                            active
+                                ? "Deactivate study resource"
+                                : "Activate study resource"
+                        }"
                     >
 
                         <i class="fas ${
@@ -746,6 +826,42 @@ async function handleTableAction(event) {
     }
 
 
+    /* =====================================================
+       VIEW
+       ===================================================== */
+
+    if (action === "view") {
+
+        viewResource(
+            id,
+            button
+        );
+
+        return;
+
+    }
+
+
+    /* =====================================================
+       DOWNLOAD
+       ===================================================== */
+
+    if (action === "download") {
+
+        downloadResource(
+            id,
+            button
+        );
+
+        return;
+
+    }
+
+
+    /* =====================================================
+       EDIT
+       ===================================================== */
+
     if (action === "edit") {
 
         await editResource(id);
@@ -755,9 +871,268 @@ async function handleTableAction(event) {
     }
 
 
+    /* =====================================================
+       TOGGLE
+       ===================================================== */
+
     if (action === "toggle") {
 
         await toggleResource(id);
+
+    }
+
+}
+
+
+/* =========================================================
+   VIEW RESOURCE
+   =========================================================
+
+   Existing Worker endpoint:
+
+   GET /api/admin/resources/:id/view
+
+   The Worker returns the actual R2 object.
+
+   Content-Disposition:
+       inline
+
+   No JSON parsing is performed because this endpoint
+   returns the file itself, not a JSON download_url.
+   ========================================================= */
+
+function viewResource(
+    resourceId,
+    button
+) {
+
+    if (!resourceId) {
+
+        return;
+
+    }
+
+
+    const originalHTML =
+        button.innerHTML;
+
+
+    const viewUrl =
+        `${RESOURCE_API.view}/${encodeURIComponent(resourceId)}/view`;
+
+
+    try {
+
+        /*
+         * Open immediately from the user click.
+         *
+         * This avoids popup blockers caused by waiting
+         * for an asynchronous fetch before opening.
+         */
+
+        const newWindow =
+            window.open(
+                viewUrl,
+                "_blank",
+                "noopener,noreferrer"
+            );
+
+
+        /*
+         * If the browser blocked the popup, give the
+         * administrator a useful message instead of
+         * silently failing.
+         */
+
+        if (!newWindow) {
+
+            showMessage(
+                "The resource could not be opened. Please allow pop-ups for this site.",
+                "error"
+            );
+
+            return;
+
+        }
+
+
+        button.disabled =
+            true;
+
+
+        button.innerHTML = `
+            <i class="fas fa-check"></i>
+            Opened
+        `;
+
+
+        setTimeout(
+            () => {
+
+                if (button) {
+
+                    button.disabled =
+                        false;
+
+                    button.innerHTML =
+                        originalHTML;
+
+                }
+
+            },
+            1200
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            "View resource failed:",
+            error
+        );
+
+
+        showMessage(
+            "Unable to open this study resource.",
+            "error"
+        );
+
+
+        button.disabled =
+            false;
+
+
+        button.innerHTML =
+            originalHTML;
+
+    }
+
+}
+
+
+/* =========================================================
+   DOWNLOAD RESOURCE
+   =========================================================
+
+   Existing Worker endpoint:
+
+   GET /api/admin/resources/:id/download
+
+   The Worker returns the actual R2 object.
+
+   Content-Disposition:
+       attachment
+
+   We deliberately do NOT use fetch() + response.json()
+   because this endpoint returns the binary file itself.
+
+   A temporary same-origin anchor is used so the browser
+   performs a normal download without navigating the
+   Admin page away.
+   ========================================================= */
+
+function downloadResource(
+    resourceId,
+    button
+) {
+
+    if (!resourceId) {
+
+        return;
+
+    }
+
+
+    const originalHTML =
+        button.innerHTML;
+
+
+    const downloadUrl =
+        `${RESOURCE_API.download}/${encodeURIComponent(resourceId)}/download`;
+
+
+    try {
+
+        button.disabled =
+            true;
+
+
+        button.innerHTML = `
+            <i class="fas fa-spinner fa-spin"></i>
+            Downloading...
+        `;
+
+
+        const anchor =
+            document.createElement(
+                "a"
+            );
+
+
+        anchor.href =
+            downloadUrl;
+
+
+        /*
+         * The Worker controls the actual filename through
+         * Content-Disposition: attachment.
+         *
+         * Setting download to an empty string still tells
+         * the browser this is intended as a download while
+         * allowing the server filename to take precedence.
+         */
+
+        anchor.download =
+            "";
+
+
+        anchor.style.display =
+            "none";
+
+
+        document.body.appendChild(
+            anchor
+        );
+
+
+        anchor.click();
+
+
+        /*
+         * Remove the temporary element immediately after
+         * initiating the browser download.
+         */
+
+        anchor.remove();
+
+
+        showMessage(
+            "Study resource download started.",
+            "success"
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            "Download resource failed:",
+            error
+        );
+
+
+        showMessage(
+            "Unable to download this study resource.",
+            "error"
+        );
+
+    } finally {
+
+        button.disabled =
+            false;
+
+
+        button.innerHTML =
+            originalHTML;
 
     }
 
@@ -893,14 +1268,6 @@ async function handleSaveResource() {
 
     /* -----------------------------------------
        FILE
-       -----------------------------------------
-
-       New resource:
-       file is required.
-
-       Editing:
-       existing file can remain if no new file
-       was selected.
        ----------------------------------------- */
 
     if (
@@ -1093,15 +1460,6 @@ async function handleSaveResource() {
 
         /* -------------------------------------
            PAYLOAD
-           -------------------------------------
-
-           IMPORTANT:
-           We deliberately send only subject_id.
-
-           The backend derives the exam from
-           subjects -> exams.
-
-           exam_id is NOT trusted from the browser.
            ------------------------------------- */
 
         const payload = {
@@ -1175,25 +1533,6 @@ async function handleSaveResource() {
 
 /* =========================================================
    LARGE FILE UPLOAD
-   =========================================================
-
-   NO FILE SIZE LIMIT.
-
-   The browser does NOT reject large books based on
-   size.
-
-   The file is streamed in multipart chunks.
-
-   Supported:
-   - PDF
-   - DOCX
-   - XLSX
-   - CSV
-
-   Covers:
-   - JPG
-   - PNG
-   - WebP
    ========================================================= */
 
 async function uploadLargeFile(

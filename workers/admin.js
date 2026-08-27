@@ -6740,6 +6740,475 @@ if (
 
 }
 
+// =====================================================
+// STUDY RESOURCE — VIEW BOOK
+// GET /api/admin/resources/:id/view
+// =====================================================
+
+if (
+    method === "GET" &&
+    pathname.startsWith("/api/admin/resources/") &&
+    pathname.endsWith("/view")
+) {
+
+    const resourceId =
+        pathname
+            .slice(
+                "/api/admin/resources/".length,
+                -"/view".length
+            )
+            .replace(/\/$/, "");
+
+    if (!resourceId) {
+
+        return studyBookResponse(
+            false,
+            "Resource ID is required.",
+            null,
+            400
+        );
+
+    }
+
+    try {
+
+        /*
+         * IMPORTANT:
+         * Replace this database lookup with the SAME
+         * database mechanism your existing
+         * /api/admin/resources GET endpoint uses.
+         *
+         * We need:
+         *   - file_url  -> R2 object key
+         *   - file_type
+         *   - title
+         */
+
+        const resource =
+            await getStudyResourceById(
+                env,
+                resourceId
+            );
+
+        if (!resource) {
+
+            return studyBookResponse(
+                false,
+                "Study resource not found.",
+                null,
+                404
+            );
+
+        }
+
+        const objectKey =
+            studyBookText(
+                resource.file_url
+            );
+
+        if (!objectKey) {
+
+            return studyBookResponse(
+                false,
+                "This study resource has no file.",
+                null,
+                404
+            );
+
+        }
+
+        /*
+         * The book is stored in the document bucket.
+         * Do NOT allow the browser to choose an arbitrary
+         * bucket.
+         */
+
+        const bucket =
+            studyBookBucket(
+                env,
+                "document"
+            );
+
+        if (!bucket) {
+
+            console.error(
+                "Study book document R2 binding is missing."
+            );
+
+            return studyBookResponse(
+                false,
+                "Storage service is not configured.",
+                null,
+                500
+            );
+
+        }
+
+        const object =
+            await bucket.get(
+                objectKey
+            );
+
+        if (!object) {
+
+            return studyBookResponse(
+                false,
+                "Study book file was not found.",
+                null,
+                404
+            );
+
+        }
+
+        const headers =
+            new Headers();
+
+        /*
+         * Preserve the stored MIME type.
+         */
+
+        if (
+            object.httpMetadata &&
+            object.httpMetadata.contentType
+        ) {
+
+            headers.set(
+                "Content-Type",
+                object.httpMetadata.contentType
+            );
+
+        } else {
+
+            headers.set(
+                "Content-Type",
+                "application/octet-stream"
+            );
+
+        }
+
+        /*
+         * VIEW in browser.
+         * Do NOT use attachment here.
+         */
+
+        headers.set(
+            "Content-Disposition",
+            "inline"
+        );
+
+        /*
+         * Prevent MIME sniffing.
+         */
+
+        headers.set(
+            "X-Content-Type-Options",
+            "nosniff"
+        );
+
+        /*
+         * Allow browser PDF/document viewers to work
+         * while preventing cross-origin access.
+         */
+
+        headers.set(
+            "Cache-Control",
+            "private, no-store"
+        );
+
+        if (object.httpEtag) {
+
+            headers.set(
+                "ETag",
+                object.httpEtag
+            );
+
+        }
+
+        /*
+         * Return the R2 object's body directly.
+         */
+
+        return new Response(
+            object.body,
+            {
+                status: 200,
+                headers
+            }
+        );
+
+    } catch (error) {
+
+        console.error(
+            "Study resource view failed:",
+            error
+        );
+
+        return studyBookResponse(
+            false,
+            "Unable to open study resource.",
+            null,
+            500
+        );
+
+    }
+
+}
+
+// =====================================================
+// STUDY RESOURCE — DOWNLOAD BOOK
+// GET /api/admin/resources/:id/download
+// =====================================================
+
+if (
+    method === "GET" &&
+    pathname.startsWith("/api/admin/resources/") &&
+    pathname.endsWith("/download")
+) {
+
+    const resourceId =
+        pathname
+            .slice(
+                "/api/admin/resources/".length,
+                -"/download".length
+            )
+            .replace(/\/$/, "");
+
+    if (!resourceId) {
+
+        return studyBookResponse(
+            false,
+            "Resource ID is required.",
+            null,
+            400
+        );
+
+    }
+
+    try {
+
+        /*
+         * Use the SAME database lookup used by View.
+         */
+
+        const resource =
+            await getStudyResourceById(
+                env,
+                resourceId
+            );
+
+        if (!resource) {
+
+            return studyBookResponse(
+                false,
+                "Study resource not found.",
+                null,
+                404
+            );
+
+        }
+
+        const objectKey =
+            studyBookText(
+                resource.file_url
+            );
+
+        if (!objectKey) {
+
+            return studyBookResponse(
+                false,
+                "This study resource has no file.",
+                null,
+                404
+            );
+
+        }
+
+        const bucket =
+            studyBookBucket(
+                env,
+                "document"
+            );
+
+        if (!bucket) {
+
+            console.error(
+                "Study book document R2 binding is missing."
+            );
+
+            return studyBookResponse(
+                false,
+                "Storage service is not configured.",
+                null,
+                500
+            );
+
+        }
+
+        const object =
+            await bucket.get(
+                objectKey
+            );
+
+        if (!object) {
+
+            return studyBookResponse(
+                false,
+                "Study book file was not found.",
+                null,
+                404
+            );
+
+        }
+
+        const headers =
+            new Headers();
+
+        /*
+         * Preserve the actual file MIME type.
+         */
+
+        const contentType =
+            object.httpMetadata &&
+            object.httpMetadata.contentType
+                ? object.httpMetadata.contentType
+                : "application/octet-stream";
+
+        headers.set(
+            "Content-Type",
+            contentType
+        );
+
+        /*
+         * Force DOWNLOAD instead of browser viewing.
+         *
+         * The filename comes from the original R2
+         * metadata where available.
+         */
+
+        let downloadName =
+            resource.title ||
+            "study-resource";
+
+        const originalFileName =
+            object.customMetadata &&
+            object.customMetadata.originalFileName
+                ? object.customMetadata.originalFileName
+                : "";
+
+        if (originalFileName) {
+
+            downloadName =
+                originalFileName;
+
+        }
+
+        /*
+         * Prevent CR/LF header injection and unsafe
+         * characters in the fallback filename.
+         */
+
+        downloadName =
+            String(downloadName)
+                .replace(/[\r\n"]/g, "")
+                .replace(/[\\/:*?<>|]/g, "-")
+                .trim()
+                .slice(0, 180);
+
+        if (!downloadName) {
+
+            downloadName =
+                "study-resource";
+
+        }
+
+        /*
+         * RFC 6266 / RFC 5987 compatible filename.
+         *
+         * filename is the safe ASCII fallback.
+         * filename*=UTF-8 preserves Unicode names.
+         */
+
+        const asciiName =
+            downloadName
+                .replace(/[^\x20-\x7E]/g, "")
+                .replace(/["\\]/g, "")
+                .trim() ||
+            "study-resource";
+
+        const encodedName =
+            encodeURIComponent(
+                downloadName
+            );
+
+        headers.set(
+            "Content-Disposition",
+            `attachment; filename="${asciiName}"; filename*=UTF-8''${encodedName}`
+        );
+
+        /*
+         * Security headers.
+         */
+
+        headers.set(
+            "X-Content-Type-Options",
+            "nosniff"
+        );
+
+        headers.set(
+            "Cache-Control",
+            "private, no-store"
+        );
+
+        /*
+         * Tell the browser the exact size when available.
+         */
+
+        if (
+            typeof object.size === "number"
+        ) {
+
+            headers.set(
+                "Content-Length",
+                String(object.size)
+            );
+
+        }
+
+        if (object.httpEtag) {
+
+            headers.set(
+                "ETag",
+                object.httpEtag
+            );
+
+        }
+
+        return new Response(
+            object.body,
+            {
+                status: 200,
+                headers
+            }
+        );
+
+    } catch (error) {
+
+        console.error(
+            "Study resource download failed:",
+            error
+        );
+
+        return studyBookResponse(
+            false,
+            "Unable to download study resource.",
+            null,
+            500
+        );
+
+    }
+
+}
+
         // =====================================================
 // STUDENT MANAGEMENT
 // =====================================================
