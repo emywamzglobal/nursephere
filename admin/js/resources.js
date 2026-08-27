@@ -80,11 +80,21 @@ const addResourceBtn =
    ========================================================= */
 
 const RESOURCE_API = {
+
+    exams: "/api/admin/exams",
+
+    subjects: "/api/admin/subjects",
+
     resources: "/admin/resources",
+
     uploadInit: "/admin/resources/upload/init",
+
     uploadPart: "/admin/resources/upload/part",
+
     uploadComplete: "/admin/resources/upload/complete",
+
     uploadAbort: "/admin/resources/upload/abort"
+
 };
 
 /* =========================================================
@@ -300,7 +310,7 @@ async function loadExams() {
 
     const response =
         await fetch(
-            API.exams,
+            RESOURCE_API.exams,
             {
                 method: "GET",
                 cache: "no-store"
@@ -397,7 +407,7 @@ async function loadSubjects(examId) {
     try {
 
         const url =
-            `${API.subjects}?exam_id=${encodeURIComponent(examId)}`;
+            `${RESOURCE_API.subjects}?exam_id=${encodeURIComponent(examId)}`;
 
 
         const response =
@@ -1391,7 +1401,7 @@ async function uploadLargeFile(
 
             const partResponse =
                 await fetch(
-                    API.uploadPart,
+                    RESOURCE_API.uploadPart,
                     {
                         method: "PUT",
 
@@ -1465,7 +1475,7 @@ async function uploadLargeFile(
 
         const completeResponse =
             await fetch(
-                API.uploadComplete,
+                RESOURCE_API.uploadComplete,
                 {
                     method: "POST",
 
@@ -1550,7 +1560,7 @@ async function abortUpload(upload) {
     try {
 
         await fetch(
-            API.uploadAbort,
+            RESOURCE_API.uploadAbort,
             {
                 method: "POST",
 
