@@ -85,18 +85,17 @@ const RESOURCE_API = {
 
     subjects: "/api/admin/subjects",
 
-    resources: "/admin/resources",
+    resources: "/api/admin/resources",
 
-    uploadInit: "/admin/resources/upload/init",
+    uploadInit: "/api/admin/resources/upload/init",
 
-    uploadPart: "/admin/resources/upload/part",
+    uploadPart: "/api/admin/resources/upload/part",
 
-    uploadComplete: "/admin/resources/upload/complete",
+    uploadComplete: "/api/admin/resources/upload/complete",
 
-    uploadAbort: "/admin/resources/upload/abort"
+    uploadAbort: "/api/admin/resources/upload/abort"
 
 };
-
 /* =========================================================
    R2 MULTIPART PART SIZE
    =========================================================
