@@ -4591,15 +4591,12 @@ if (
 // =====================================================
 
 if (
-
     method === "GET" &&
-
     pathname.startsWith("/api/admin/resources/") &&
-
     !pathname.endsWith("/status") &&
-
+    !pathname.endsWith("/view") &&
+    !pathname.endsWith("/download") &&
     !pathname.includes("/upload/")
-
 ) {
 
     const resourceId =
