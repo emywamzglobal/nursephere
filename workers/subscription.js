@@ -135,40 +135,36 @@ if (
 
 
     const plan =
-        await env.DB.prepare(
+    await env.DB.prepare(
 
-            `
-            SELECT
+        `
+        SELECT
 
-                id,
-                name,
-                price,
-                currency,
-                duration_days,
-                description,
-                display_order,
-                status
+            id,
+            name,
+            price,
+            currency,
+            duration_days,
+            description,
+            display_order,
+            status
 
-            FROM subscription_plans
+        FROM subscription_plans
 
-            WHERE (
-                id = ?
-                OR LOWER(name) = LOWER(?)
-            )
+        WHERE id = ?
 
-            AND status = 'active'
+        AND status = 'active'
 
-            LIMIT 1
-            `
+        LIMIT 1
+        `
 
-        )
+    )
 
-        .bind(
-            planId,
-            planId
-        )
+    .bind(
+        planId
+    )
 
-        .first();
+    .first();
 
 
     if (!plan) {
