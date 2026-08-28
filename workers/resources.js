@@ -817,6 +817,126 @@ export default async function resourcesHandler(
 
         }
 
+        // =====================================================
+// STUDENT — GET ALL ACTIVE SUBJECTS
+// GET /api/subjects
+//
+// Purpose:
+//   • Load all active subjects for the Resources page
+//   • Student selects a subject
+//   • Resources are then loaded for that subject
+//
+// Security:
+//   • Student JWT required
+//   • Student account must exist
+//   • Student account must be active
+//   • Only active subjects are returned
+//   • Only active exams are included
+// =====================================================
+
+if (
+    method === "GET" &&
+    pathname === "/api/subjects"
+) {
+
+    const authentication =
+        await studyBookAuthenticateStudent(
+            request,
+            env
+        );
+
+    if (!authentication.ok) {
+
+        return studyBookResponse(
+            false,
+            authentication.message,
+            null,
+            authentication.status
+        );
+
+    }
+
+
+    try {
+
+        const { results } =
+            await env.DB.prepare(
+                `
+                SELECT
+
+                    s.id,
+                    s.exam_id,
+
+                    e.name AS exam_name,
+                    e.code AS exam_code,
+
+                    s.name,
+                    s.description,
+                    s.image_url,
+
+                    s.display_order,
+                    s.status
+
+                FROM subjects s
+
+                INNER JOIN exams e
+                    ON e.id = s.exam_id
+
+                WHERE
+                    s.status = 'active'
+
+                    AND e.status = 'active'
+
+                ORDER BY
+
+                    e.display_order ASC,
+                    e.name COLLATE NOCASE ASC,
+
+                    s.display_order ASC,
+                    s.name COLLATE NOCASE ASC
+                `
+            )
+            .all();
+
+
+        return studyBookResponse(
+
+            true,
+
+            "Subjects retrieved successfully.",
+
+            results || [],
+
+            200
+
+        );
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "GET /api/subjects failed:",
+            error
+        );
+
+
+        return studyBookResponse(
+
+            false,
+
+            "Failed to retrieve subjects.",
+
+            null,
+
+            500
+
+        );
+
+    }
+
+}
+
 
         // =====================================================
         // ADMIN — GET ALL STUDY BOOKS
