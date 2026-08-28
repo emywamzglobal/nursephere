@@ -20,6 +20,7 @@ import passwordResetHandler from "./workers/password-reset.js";
 import passwordChangeHandler from "./workers/password-change.js";
 import settingsHandler from "./workers/settings.js";
 import parserHandler from "./workers/parser.js";
+import resourcesHandler from "./workers/resources.js";
 export default {
 
     async fetch(request, env, ctx) {
@@ -614,6 +615,8 @@ if (
     return response;
 
 }
+
+
 // -----------------------------
 // Payment Management
 // -----------------------------
@@ -695,6 +698,43 @@ if (
         response.headers.set(key, value);
 
     });
+
+    return response;
+
+}
+
+// ======================================================
+// STUDY RESOURCES
+// ======================================================
+
+if (
+
+    url.pathname === "/api/admin/resources" ||
+
+    url.pathname.startsWith("/api/admin/resources/") ||
+
+    url.pathname.startsWith("/api/resources/")
+
+) {
+
+    const response =
+        await resourcesHandler(
+            request,
+            env
+        );
+
+    Object.entries(
+        corsHeaders
+    ).forEach(
+        ([key, value]) => {
+
+            response.headers.set(
+                key,
+                value
+            );
+
+        }
+    );
 
     return response;
 
