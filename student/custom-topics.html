@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Student Dashboard | Nursephere</title>
+
+    <meta name="description"
+        content="Nursephere Student Dashboard">
+
+    <!-- Favicon -->
+
+    <link rel="icon" type="image/png" sizes="32x32"
+        href="../assets/favicon/favicon-32x32.png">
+
+    <link rel="icon" type="image/png" sizes="16x16"
+        href="../assets/favicon/favicon-16x16.png">
+
+    <!-- Google Fonts -->
+
+    <link rel="preconnect"
+        href="https://fonts.googleapis.com">
+
+    <link rel="preconnect"
+        href="https://fonts.gstatic.com"
+        crossorigin>
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <!-- Font Awesome -->
+
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+
+    <!-- CSS -->
+
+    <link rel="stylesheet"
+        href="../css/sidebar.css">
+
+    <link rel="stylesheet"
+        href="../css/header.css">
+
+    <link rel="stylesheet"
+        href="../css/dashboard-student.css">
+
+    <link rel="stylesheet"
+        href="../css/practice.css">
+
+     <link rel="stylesheet"
+        href="../css/custom-topics.css">
+        
+
+</head>
+
+<body>
+
+    <!-- ===================================
+            STUDENT APPLICATION LAYOUT
+    ==================================== -->
+
+    <div class="student-layout">
+
+        <!-- Sidebar -->
+
+<aside class="student-sidebar" id="studentSidebar">
+
+    <!-- Logo -->
+    <div class="sidebar-brand">
+
+        <a href="dashboard.html" class="brand-link">
+
+            <img src="../assets/logo/logo.jpeg" alt="Nursephere Logo">
+
+            <div class="brand-text">
+                <h2>Nursephere</h2>
+                <span>Learn • Practice • Pass</span>
+            </div>
+
+        </a>
+
+    </div>
+
+    <!-- Main Navigation -->
+
+    <div class="sidebar-section">
+
+        <h3 class="sidebar-title">MAIN MENU</h3>
+
+        <ul class="sidebar-menu">
+
+            <li>
+                <a href="dashboard.html">
+                    <i class="fas fa-house"></i>
+                    <span>Dashboard</span>
+                </a>
+            </li>
+
+            <li>
+                <a href="practice.html">
+                    <i class="fas fa-book-medical"></i>
+                    <span>Practice</span>
+                </a>
+            </li>
+
+            <li>
+    <a href="resources.html">
+        <i class="fas fa-book"></i>
+        <span>Study Books</span>
+    </a>
+</li>
+
+            <li>
+    <a href="case-studies.html">
+        <i class="fas fa-notes-medical"></i>
+        <span>Case Studies</span>
+    </a>
+</li>
+
+<li>
+    <a href="custom-topics.html">
+        <i class="fas fa-book-open"></i>
+        <span>Custom Topics</span>
+    </a>
+</li>
+
+            <li>
+                <a href="progress.html">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Track Progress</span>
+                </a>
+            </li>
+
+            <li>
+                <a href="documents.html">
+                    <i class="fas fa-folder-open"></i>
+                    <span>Documents</span>
+                </a>
+            </li>
+
+        </ul>
+
+    </div>
+
+    <!-- Account -->
+
+    <div class="sidebar-section">
+
+        <h3 class="sidebar-title">ACCOUNT</h3>
+
+        <ul class="sidebar-menu">
+
+            <li>
+                <a href="profile.html">
+                    <i class="fas fa-user"></i>
+                    <span>Profile</span>
+                </a>
+            </li>
+
+            <li>
+                <a href="referral.html">
+                    <i class="fas fa-user-plus"></i>
+                    <span>Referral</span>
+                </a>
+            </li>
+
+            <li>
+                <a href="subscription.html">
+                    <i class="fas fa-credit-card"></i>
+                    <span>Subscription</span>
+                </a>
+            </li>
+
+            <li>
+                <a href="settings.html">
+                    <i class="fas fa-gear"></i>
+                    <span>Settings</span>
+                </a>
+            </li>
+
+            <li>
+                <a href="../index.html" id="logoutBtn">
+                    <i class="fas fa-right-from-bracket"></i>
+                    <span>Logout</span>
+                </a>
+            </li>
+
+        </ul>
+
+    </div>
+
+    <div class="upgrade-card">
+
+        <div class="upgrade-icon">
+
+            <i class="fas fa-crown"></i>
+
+        </div>
+
+        <div class="upgrade-text">
+
+            <h3>Upgrade to Premium</h3>
+
+            <p>
+
+                Unlock unlimited questions,
+                full mock exams,
+                detailed analytics,
+                and every nursing subject.
+
+            </p>
+
+        </div>
+
+        <a href="../pricing.html" class="upgrade-btn">
+
+            Upgrade Now
+
+        </a>
+
+    </div>
+
+</aside>
+
+        <!-- ===========================
+                MAIN APPLICATION
+        ============================ -->
+
+        <div class="student-main">
+
+            <!-- Header -->
+
+            <header class="student-header">
+
+    <div class="header-left">
+
+        <button class="menu-toggle" id="menuToggle">
+
+            <i class="fas fa-bars"></i>
+
+        </button>
+
+        <div class="search-box">
+
+            <i class="fas fa-search"></i>
+
+            <input
+                type="text"
+                id="searchInput"
+                placeholder="Search questions, exams or documents...">
+
+        </div>
+
+    </div>
+
+    <div class="header-right">
+
+        <div class="profile-dropdown">
+
+            <button class="profile-btn" id="profileToggle">
+
+                <div class="avatar-wrapper">
+
+                    <img
+                        src="../assets/images/avatar-placeholder.png"
+                        id="studentAvatar"
+                        alt="Student">
+
+                    <input
+                        type="file"
+                        id="avatarUpload"
+                        hidden>
+
+                </div>
+
+                <div class="profile-info">
+
+                    <h4 id="headerStudentName">
+
+                        Student
+
+                    </h4>
+
+                    <span id="studentPlan">
+
+                        Free Trial
+
+                    </span>
+
+                </div>
+
+                <i class="fas fa-chevron-down"></i>
+
+            </button>
+
+            <div class="profile-menu" id="profileMenu">
+
+                <a href="#" id="uploadPhoto">
+
+                    <i class="fas fa-camera"></i>
+
+                    Upload Photo
+
+                </a>
+
+                <a href="profile.html">
+
+                    <i class="fas fa-user"></i>
+
+                    My Profile
+
+                </a>
+
+                <a href="subscription.html">
+
+                    <i class="fas fa-credit-card"></i>
+
+                    Subscription
+
+                </a>
+
+                <a href="settings.html">
+
+                    <i class="fas fa-gear"></i>
+
+                    Settings
+
+                </a>
+
+                <hr>
+
+                <a href="../index.html" id="logoutBtn">
+
+                    <i class="fas fa-right-from-bracket"></i>
+
+                    Logout
+
+                </a>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</header>
+
+            <!-- ===========================
+        PAGE CONTENT
+=========================== -->
+
+<main class="dashboard-content">
+
+    <!-- ===========================
+            CUSTOM TOPICS HERO
+    ============================ -->
+
+    <section class="dashboard-top">
+
+        <div>
+
+            <h1>
+                Custom Topics
+            </h1>
+
+            <p>
+                Explore focused nursing topics created to help
+                you strengthen your knowledge, review important
+                concepts, and prepare more effectively for your exams.
+            </p>
+
+        </div>
+
+    </section>
+
+
+    <!-- ===========================
+            CUSTOM TOPICS
+    ============================ -->
+
+    <section class="custom-topics-section">
+
+        <div class="section-heading">
+
+            <h2>
+                Nursing Topics
+            </h2>
+
+            <p>
+                Access focused study topics organized around
+                important nursing concepts and exam preparation.
+            </p>
+
+        </div>
+
+
+        <!-- ===========================
+                COMING SOON CARD
+        ============================ -->
+
+        <div class="custom-topics-coming-soon">
+
+            <div class="coming-soon-icon">
+
+                <i class="fas fa-book-open"></i>
+
+            </div>
+
+
+            <div class="coming-soon-content">
+
+                <span class="coming-soon-badge">
+                    Coming Soon
+                </span>
+
+                <h3>
+                    Custom Topics Are Coming Soon
+                </h3>
+
+                <p>
+                    We are preparing focused nursing topics
+                    designed to help you review important
+                    concepts and strengthen your exam preparation.
+                </p>
+
+                <p>
+                    New topics will be available here as they
+                    are released.
+                </p>
+
+            </div>
+
+        </div>
+
+    </section>
+
+</main>
+
+        </div>
+
+    </div>
+
+    <!-- JavaScript -->
+
+    <script src="../js/student-main.js"></script>
+    <script src="../js/dashboard-student.js"></script>
+    <script src="../js/auth.js"></script>
+
+</body>
+
+</html>
+                         
