@@ -989,20 +989,132 @@ async function studyBookRequireAccess(
         }
 
         // =====================================================
-// STUDENT — GET ALL ACTIVE SUBJECTS
-// GET /api/subjects
+// STUDENT — GET ALL ACTIVE EXAMS
+// GET /api/exams
 //
 // Purpose:
-//   • Load all active subjects for the Resources page
-//   • Student selects a subject
-//   • Resources are then loaded for that subject
+//   • Load all active exams for the Resources page
+//   • Student selects an exam
+//   • Subjects are then loaded for that exam
+//
+// Security:
+//   • Student JWT required
+//   • Student account must exist
+//   • Student account must be active
+//   • Only active exams are returned
+// =====================================================
+
+if (
+    method === "GET" &&
+    pathname === "/api/exams"
+) {
+
+    const authentication =
+        await studyBookAuthenticateStudent(
+            request,
+            env
+        );
+
+
+    if (!authentication.ok) {
+
+        return studyBookResponse(
+            false,
+            authentication.message,
+            null,
+            authentication.status
+        );
+
+    }
+
+
+    try {
+
+        const { results } =
+            await env.DB.prepare(
+                `
+                SELECT
+
+                    id,
+                    name,
+                    code,
+                    description,
+                    image_url,
+                    display_order,
+                    status
+
+                FROM exams
+
+                WHERE
+                    status = 'active'
+
+                ORDER BY
+                    display_order ASC,
+                    name COLLATE NOCASE ASC
+                `
+            )
+            .all();
+
+
+        return studyBookResponse(
+
+            true,
+
+            "Exams retrieved successfully.",
+
+            results || [],
+
+            200
+
+        );
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "GET /api/exams failed:",
+            error
+        );
+
+
+        return studyBookResponse(
+
+            false,
+
+            "Failed to retrieve exams.",
+
+            null,
+
+            500
+
+        );
+
+    }
+
+}
+
+
+// =====================================================
+// STUDENT — GET ALL ACTIVE SUBJECTS
+// GET /api/subjects?exam_id=:exam_id
+// =====================================================
+
+// =====================================================
+// STUDENT — GET ACTIVE SUBJECTS FOR EXAM
+// GET /api/subjects?exam_id=:exam_id
+//
+// Purpose:
+//   • Load active subjects for the selected exam
+//   • Student selects an exam first
+//   • Subjects are then loaded for that exam
 //
 // Security:
 //   • Student JWT required
 //   • Student account must exist
 //   • Student account must be active
 //   • Only active subjects are returned
-//   • Only active exams are included
+//   • Only subjects belonging to an active exam are returned
 // =====================================================
 
 if (
@@ -1023,6 +1135,26 @@ if (
             authentication.message,
             null,
             authentication.status
+        );
+
+    }
+
+
+    const examId =
+        studyBookText(
+            url.searchParams.get(
+                "exam_id"
+            )
+        );
+
+
+    if (!examId) {
+
+        return studyBookResponse(
+            false,
+            "Exam ID is required.",
+            null,
+            400
         );
 
     }
@@ -1054,18 +1186,20 @@ if (
                     ON e.id = s.exam_id
 
                 WHERE
-                    s.status = 'active'
+                    s.exam_id = ?
+
+                    AND s.status = 'active'
 
                     AND e.status = 'active'
 
                 ORDER BY
 
-                    e.display_order ASC,
-                    e.name COLLATE NOCASE ASC,
-
                     s.display_order ASC,
                     s.name COLLATE NOCASE ASC
                 `
+            )
+            .bind(
+                examId
             )
             .all();
 

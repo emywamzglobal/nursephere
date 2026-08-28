@@ -1228,89 +1228,48 @@ function createSubjectSelector() {
 
 
     // -----------------------------------------------------
-    // Change event.
-    // -----------------------------------------------------
+// Change event.
+// -----------------------------------------------------
 
-    select.addEventListener(
-        "change",
-        async event => {
+select.addEventListener(
+    "change",
+    async event => {
 
-            const value =
-                String(
-                    event.target.value ||
-                    ""
-                ).trim();
-
-
-            if (!value) {
-
-                return;
-
-            }
+        const value =
+            String(
+                event.target.value ||
+                ""
+            ).trim();
 
 
-            selectedSubjectId =
-                value;
+        if (!value) {
 
-
-            updateSubjectUrl(
-                value
-            );
-
-
-            await loadSelectedSubjectResources(
-                value
-            );
+            return;
 
         }
-    );
 
 
-    // -----------------------------------------------------
-    // Change event.
-    // -----------------------------------------------------
-
-    select.addEventListener(
-        "change",
-        async event => {
-
-            const value =
-                String(
-                    event.target.value ||
-                    ""
-                ).trim();
+        selectedSubjectId =
+            value;
 
 
-            if (!value) {
-
-                return;
-
-            }
+        updateSubjectUrl(
+            value
+        );
 
 
-            selectedSubjectId =
-                value;
+        await loadSelectedSubjectResources(
+            value
+        );
+
+    }
+);
 
 
-            updateSubjectUrl(
-                value
-            );
-
-
-            await loadSelectedSubjectResources(
-                value
-            );
-
-        }
-    );
-
-
-    wrapper.append(
-        label,
-        select
-    );
-
-
+wrapper.append(
+    label,
+    select
+);
     // -----------------------------------------------------
     // Insert selector.
     //
