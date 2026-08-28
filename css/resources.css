@@ -402,3 +402,68 @@ body{
     opacity:.65;
     cursor:not-allowed;
 }
+
+/* =====================================================
+   STUDY RESOURCES — SUBJECT SELECT
+   ===================================================== */
+
+.resource-subject-selector {
+    margin: 0 0 24px;
+}
+
+.resource-subject-selector label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #17365d;
+}
+
+#resourceSubjectSelect {
+    width: 100%;
+    max-width: 420px;
+    height: 50px;
+    padding: 0 44px 0 16px;
+
+    border: 1px solid #d9e1ec;
+    border-radius: 12px;
+
+    background-color: #ffffff;
+    color: #17365d;
+
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 600;
+
+    cursor: pointer;
+
+    outline: none;
+
+    box-shadow:
+        0 2px 8px rgba(20, 50, 90, 0.05);
+
+    transition:
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+#resourceSubjectSelect:hover {
+    border-color: #b8c7da;
+}
+
+#resourceSubjectSelect:focus {
+    border-color: #1677ff;
+
+    box-shadow:
+        0 0 0 3px rgba(22, 119, 255, 0.12);
+}
+
+
+/* Mobile */
+@media (max-width: 600px) {
+
+    #resourceSubjectSelect {
+        max-width: 100%;
+    }
+
+}
