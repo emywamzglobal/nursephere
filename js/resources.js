@@ -2534,6 +2534,201 @@ function openBlobInNewTab(
 
 }
 
+// =========================================================
+// RESOURCE NOTIFICATION
+// =========================================================
+
+function showResourceNotification(
+    message,
+    type = "info",
+    duration = 3500
+) {
+
+    const existing =
+        document.getElementById(
+            "nursephereResourceNotification"
+        );
+
+    if (existing) {
+        existing.remove();
+    }
+
+    const overlay =
+        document.createElement("div");
+
+    overlay.id =
+        "nursephereResourceNotification";
+
+    Object.assign(
+        overlay.style,
+        {
+            position: "fixed",
+            inset: "0",
+            background: "rgba(15, 23, 42, 0.38)",
+            backdropFilter: "blur(4px)",
+            WebkitBackdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+            zIndex: "99999",
+            animation: "nursephereNoticeFadeIn 0.2s ease"
+        }
+    );
+
+    const box =
+        document.createElement("div");
+
+    Object.assign(
+        box.style,
+        {
+            width: "100%",
+            maxWidth: "430px",
+            background: "#ffffff",
+            borderRadius: "20px",
+            padding: "30px",
+            boxShadow:
+                "0 25px 70px rgba(0,0,0,0.22)",
+            textAlign: "center",
+            fontFamily:
+                "Noto Sans, Arial, sans-serif"
+        }
+    );
+
+    const icon =
+        document.createElement("div");
+
+    icon.textContent =
+        type === "success"
+            ? "✓"
+            : type === "error"
+                ? "!"
+                : "i";
+
+    Object.assign(
+        icon.style,
+        {
+            width: "58px",
+            height: "58px",
+            margin: "0 auto 18px",
+            borderRadius: "50%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: "28px",
+            fontWeight: "800",
+            background:
+                type === "success"
+                    ? "#e8f7ee"
+                    : type === "error"
+                        ? "#fff0f0"
+                        : "#eef5ff",
+            color:
+                type === "success"
+                    ? "#16834a"
+                    : type === "error"
+                        ? "#d93025"
+                        : "#1459c7"
+        }
+    );
+
+    const title =
+        document.createElement("h3");
+
+    title.textContent =
+        type === "success"
+            ? "Success"
+            : type === "error"
+                ? "Unable to Complete"
+                : "Study Resource";
+
+    Object.assign(
+        title.style,
+        {
+            margin: "0 0 10px",
+            fontSize: "21px",
+            fontWeight: "800",
+            color: "#0b2545"
+        }
+    );
+
+    const text =
+        document.createElement("p");
+
+    text.textContent =
+        message;
+
+    Object.assign(
+        text.style,
+        {
+            margin: "0",
+            fontSize: "15px",
+            lineHeight: "1.6",
+            color: "#64748b"
+        }
+    );
+
+    const closeButton =
+        document.createElement("button");
+
+    closeButton.type =
+        "button";
+
+    closeButton.textContent =
+        "OK";
+
+    Object.assign(
+        closeButton.style,
+        {
+            marginTop: "24px",
+            minWidth: "110px",
+            padding: "11px 24px",
+            border: "none",
+            borderRadius: "10px",
+            background: "#0b3b78",
+            color: "#ffffff",
+            fontSize: "14px",
+            fontWeight: "700",
+            cursor: "pointer"
+        }
+    );
+
+    closeButton.addEventListener(
+        "click",
+        () => overlay.remove()
+    );
+
+    box.append(
+        icon,
+        title,
+        text,
+        closeButton
+    );
+
+    overlay.appendChild(box);
+
+    document.body.appendChild(
+        overlay
+    );
+
+    if (
+        type === "success" &&
+        duration > 0
+    ) {
+        setTimeout(
+            () => {
+                if (
+                    document.body.contains(
+                        overlay
+                    )
+                ) {
+                    overlay.remove();
+                }
+            },
+            duration
+        );
+    }
+}
 
 // =========================================================
 // VIEW RESOURCE
@@ -2553,7 +2748,8 @@ async function viewResource(
     if (!resourceId) {
 
         alert(
-            "This study resource is unavailable."
+            "This study resource could not be identified. Please refresh the page and try again.",
+            "error"
         );
 
         return;
@@ -2606,7 +2802,8 @@ async function viewResource(
         alert(
 
             error?.message ||
-            "Unable to open this study resource."
+            "Unable to open this study resource.",
+            "error"
 
         );
 
