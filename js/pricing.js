@@ -7,7 +7,7 @@
    Configuration
    ========================================================================== */
 
-const API_BASE = "https://your-worker-domain.workers.dev/api";
+const API_BASE = "https://nursephere.wamalwaemily.workers.dev/api";
 
 
 /* ==========================================================================
