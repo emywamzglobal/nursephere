@@ -1117,96 +1117,146 @@ function createSubjectSelector() {
 
 
     // -----------------------------------------------------
-    // Select.
-    // -----------------------------------------------------
+// Select.
+// -----------------------------------------------------
 
-    const select =
-        document.createElement(
-            "select"
-        );
-
-    select.id =
-        "resourceSubjectSelect";
-
-    select.name =
-        "subject_id";
-
-
-    const placeholder =
-        document.createElement(
-            "option"
-        );
-
-    placeholder.value =
-        "";
-
-    placeholder.textContent =
-        "Choose a subject";
-
-    placeholder.disabled =
-        true;
-
-
-    select.appendChild(
-        placeholder
+const select =
+    document.createElement(
+        "select"
     );
 
+select.id =
+    "resourceSubjectSelect";
 
-    // -----------------------------------------------------
-    // Populate subjects.
-    // -----------------------------------------------------
-
-    availableSubjects.forEach(
-        subject => {
-
-            const id =
-                String(
-                    subject?.id ??
-                    subject?.subject_id ??
-                    ""
-                ).trim();
+select.name =
+    "subject_id";
 
 
-            if (!id) {
+// -----------------------------------------------------
+// Placeholder.
+// -----------------------------------------------------
 
-                return;
+const placeholder =
+    document.createElement(
+        "option"
+    );
 
-            }
+placeholder.value =
+    "";
 
+placeholder.textContent =
+    "Choose a subject";
 
-            const option =
-                document.createElement(
-                    "option"
-                );
+placeholder.disabled =
+    true;
 
-            option.value =
-                id;
-
-
-            option.textContent =
-                subject?.name ||
-                subject?.title ||
-                "Untitled Subject";
-
-
-            if (
-                id ===
-                selectedSubjectId
-            ) {
-
-                option.selected =
-                    true;
-
-            }
+placeholder.selected =
+    true;
 
 
-            select.appendChild(
-                option
-            );
+select.appendChild(
+    placeholder
+);
+
+
+// -----------------------------------------------------
+// Populate subjects.
+// -----------------------------------------------------
+
+availableSubjects.forEach(
+    subject => {
+
+        const id =
+            String(
+                subject?.id ??
+                subject?.subject_id ??
+                ""
+            ).trim();
+
+
+        if (!id) {
+
+            return;
 
         }
-    );
 
+
+        const option =
+            document.createElement(
+                "option"
+            );
+
+        option.value =
+            id;
+
+
+        option.textContent =
+            subject?.name ||
+            subject?.title ||
+            "Untitled Subject";
+
+
+        // -------------------------------------------------
+        // Only select a subject when one was already chosen.
+        // -------------------------------------------------
+
+        if (
+            selectedSubjectId &&
+            id ===
+            selectedSubjectId
+        ) {
+
+            option.selected =
+                true;
+
+        }
+
+
+        select.appendChild(
+            option
+        );
+
+    }
+);
+
+
+// -----------------------------------------------------
+// Change event.
+// -----------------------------------------------------
+
+select.addEventListener(
+    "change",
+    async event => {
+
+        const value =
+            String(
+                event.target.value ||
+                ""
+            ).trim();
+
+
+        if (!value) {
+
+            return;
+
+        }
+
+
+        selectedSubjectId =
+            value;
+
+
+        updateSubjectUrl(
+            value
+        );
+
+
+        await loadSelectedSubjectResources(
+            value
+        );
+
+    }
+);
 
     // -----------------------------------------------------
     // Change event.
