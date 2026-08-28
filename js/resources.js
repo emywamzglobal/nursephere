@@ -476,25 +476,24 @@ async function apiRequest(
 
 
     if (
-        response.status ===
+    response.status === 401
+) {
+
+    const message =
+        await getResponseMessage(
+            response
+        );
+
+    throw new ApiError(
+
+        message ||
+        "Unable to access this study resource.",
+
         401
-    ) {
 
-        localStorage.removeItem(
-            "studentToken"
-        );
+    );
 
-        window.location.replace(
-            LOGIN_PAGE
-        );
-
-        throw new ApiError(
-            "Your session has expired.",
-            401
-        );
-
-    }
-
+}
 
     // -----------------------------------------------------
     // NON-JSON ERROR RESPONSE

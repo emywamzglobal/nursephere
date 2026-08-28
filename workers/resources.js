@@ -397,167 +397,217 @@ export default async function resourcesHandler(
 
 
         // =====================================================
-        // STUDENT JWT
-        // =====================================================
+// STUDENT JWT
+// =====================================================
 
-        async function studyBookAuthenticateStudent(
-            request,
-            env
-        ) {
+async function studyBookAuthenticateStudent(
+    request,
+    env
+) {
 
-            const authorization =
-                request.headers.get(
-                    "Authorization"
-                );
+    const authorization =
+        request.headers.get(
+            "Authorization"
+        );
 
-            if (!authorization) {
 
-                return {
-                    ok: false,
-                    status: 401,
-                    message:
-                        "Authentication required."
-                };
+    if (!authorization) {
 
-            }
+        return {
+            ok: false,
+            status: 401,
+            message:
+                "Authentication required."
+        };
 
-            if (
-                !authorization
-                    .toLowerCase()
-                    .startsWith("bearer ")
-            ) {
+    }
 
-                return {
-                    ok: false,
-                    status: 401,
-                    message:
-                        "Invalid authorization header."
-                };
 
-            }
+    const match =
+        authorization.match(
+            /^Bearer\s+(.+)$/i
+        );
 
-            const token =
-                authorization
-                    .slice(7)
-                    .trim();
 
-            if (!token) {
+    if (!match) {
 
-                return {
-                    ok: false,
-                    status: 401,
-                    message:
-                        "Authentication token is required."
-                };
+        return {
+            ok: false,
+            status: 401,
+            message:
+                "Invalid authorization header."
+        };
 
-            }
+    }
 
-            try {
 
-                const valid =
-                    await jwt.verify(
-                        token,
-                        env.JWT_SECRET
-                    );
+    const token =
+        match[1].trim();
 
-                if (!valid) {
 
-                    return {
-                        ok: false,
-                        status: 401,
-                        message:
-                            "Invalid or expired authentication token."
-                    };
+    if (!token) {
 
-                }
+        return {
+            ok: false,
+            status: 401,
+            message:
+                "Authentication token is required."
+        };
 
-                const decoded =
-                    jwt.decode(
-                        token
-                    );
+    }
 
-                const studentId =
-                    studyBookText(
-                        decoded?.payload?.studentId
-                    );
 
-                if (!studentId) {
+    try {
 
-                    return {
-                        ok: false,
-                        status: 401,
-                        message:
-                            "Invalid authentication token."
-                    };
+        // -------------------------------------------------
+        // VERIFY JWT SIGNATURE
+        // -------------------------------------------------
 
-                }
+        const valid =
+            await jwt.verify(
+                token,
+                env.JWT_SECRET
+            );
 
-                const student =
-                    await env.DB.prepare(
-                        `
-                        SELECT
-                            id,
-                            email,
-                            status
-                        FROM students
-                        WHERE id = ?
-                        LIMIT 1
-                        `
-                    )
-                    .bind(
-                        studentId
-                    )
-                    .first();
 
-                if (!student) {
+        if (!valid) {
 
-                    return {
-                        ok: false,
-                        status: 401,
-                        message:
-                            "Student account was not found."
-                    };
-
-                }
-
-                if (
-                    student.status !== "active"
-                ) {
-
-                    return {
-                        ok: false,
-                        status: 403,
-                        message:
-                            "Student account is inactive."
-                    };
-
-                }
-
-                return {
-                    ok: true,
-                    student
-                };
-
-            }
-
-            catch (error) {
-
-                console.error(
-                    "Student authentication failed:",
-                    error
-                );
-
-                return {
-                    ok: false,
-                    status: 401,
-                    message:
-                        "Authentication failed."
-                };
-
-            }
+            return {
+                ok: false,
+                status: 401,
+                message:
+                    "Invalid or expired authentication token."
+            };
 
         }
 
+
+        // -------------------------------------------------
+        // DECODE VERIFIED TOKEN
+        // -------------------------------------------------
+
+        const decoded =
+            jwt.decode(
+                token
+            );
+
+
+        const payload =
+            decoded?.payload || {};
+
+
+        // -------------------------------------------------
+        // NURSEPHERE JWT STUDENT ID
+        // -------------------------------------------------
+
+        const studentId =
+            studyBookText(
+                payload.studentId
+            );
+
+
+        if (!studentId) {
+
+            console.error(
+                "Study resources JWT has no studentId claim."
+            );
+
+
+            return {
+                ok: false,
+                status: 401,
+                message:
+                    "Invalid authentication token."
+            };
+
+        }
+
+
+        // -------------------------------------------------
+        // LOAD STUDENT
+        // -------------------------------------------------
+
+        const student =
+            await env.DB.prepare(
+                `
+                SELECT
+                    id,
+                    email,
+                    status
+                FROM students
+                WHERE id = ?
+                LIMIT 1
+                `
+            )
+            .bind(
+                studentId
+            )
+            .first();
+
+
+        if (!student) {
+
+            return {
+                ok: false,
+                status: 401,
+                message:
+                    "Student account was not found."
+            };
+
+        }
+
+
+        // -------------------------------------------------
+        // ACCOUNT STATUS
+        // -------------------------------------------------
+
+        if (
+            student.status !==
+            "active"
+        ) {
+
+            return {
+                ok: false,
+                status: 403,
+                message:
+                    "Student account is inactive."
+            };
+
+        }
+
+
+        // -------------------------------------------------
+        // SUCCESS
+        // -------------------------------------------------
+
+        return {
+
+            ok: true,
+
+            student
+
+        };
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Student authentication failed:",
+            error
+        );
+
+
+        return {
+            ok: false,
+            status: 401,
+            message:
+                "Authentication failed."
+        };
+
+    }
+
+}
 
         // =====================================================
         // STUDENT SUBSCRIPTION + FEATURE ACCESS
