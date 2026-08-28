@@ -64,10 +64,12 @@ export default async function resourcesHandler(
             "csv"
         ];
 
+
         const STUDY_BOOK_STATUSES = [
             "active",
             "inactive"
         ];
+
 
         const STUDY_BOOK_ACCESS_LEVELS = [
             "none",
@@ -75,11 +77,14 @@ export default async function resourcesHandler(
             "download"
         ];
 
+
         const STUDY_BOOK_DOCUMENT_FOLDER =
             "study-resources/documents/";
 
+
         const STUDY_BOOK_COVER_FOLDER =
             "study-resources/covers/";
+
 
         const STUDY_BOOK_DOCUMENT_MIME_TYPES = {
 
@@ -94,7 +99,9 @@ export default async function resourcesHandler(
 
             csv:
                 "text/csv"
+
         };
+
 
         const STUDY_BOOK_COVER_MIME_TYPES = [
             "image/jpeg",
@@ -142,26 +149,40 @@ export default async function resourcesHandler(
         ) {
 
             const body = {
+
                 success,
                 message
+
             };
+
 
             if (
                 data !== null
             ) {
 
-                body.data = data;
+                body.data =
+                    data;
 
             }
 
+
             return Response.json(
+
                 body,
+
                 {
+
                     status,
+
                     headers: {
-                        "Cache-Control": "no-store"
+
+                        "Cache-Control":
+                            "no-store"
+
                     }
+
                 }
+
             );
 
         }
@@ -209,18 +230,24 @@ export default async function resourcesHandler(
             return studyBookText(
                 value
             )
+
                 .replace(
                     /[\r\n"]/g,
                     ""
                 )
+
                 .replace(
                     /[\\/:*?<>|]/g,
                     "_"
                 )
+
+                .trim()
+
                 .slice(
                     0,
                     180
                 )
+
                 ||
                 "study-resource";
 
@@ -240,38 +267,134 @@ export default async function resourcesHandler(
                     value
                 );
 
+
             if (!storedValue) {
 
                 return null;
 
             }
 
+
+            let key =
+                storedValue;
+
+
+            // -------------------------------------------------
+            // If the database contains a full URL, extract
+            // only the pathname.
+            // -------------------------------------------------
+
             try {
 
-                const url =
+                const parsedUrl =
                     new URL(
                         storedValue
                     );
 
-                return decodeURIComponent(
-                    url.pathname
-                        .replace(
-                            /^\/+/,
-                            ""
-                        )
-                );
+
+                key =
+                    decodeURIComponent(
+                        parsedUrl.pathname
+                    );
 
             }
 
             catch {
 
-                return storedValue
-                    .replace(
-                        /^\/+/,
-                        ""
+                // Stored value is already an R2 key.
+
+            }
+
+
+            // -------------------------------------------------
+            // Remove leading slashes.
+            // -------------------------------------------------
+
+            key =
+                key.replace(
+                    /^\/+/,
+                    ""
+                );
+
+
+            // -------------------------------------------------
+            // Decode safely if necessary.
+            // -------------------------------------------------
+
+            try {
+
+                key =
+                    decodeURIComponent(
+                        key
                     );
 
             }
+
+            catch {
+
+                return null;
+
+            }
+
+
+            // -------------------------------------------------
+            // Normalize Windows separators.
+            // -------------------------------------------------
+
+            key =
+                key.replace(
+                    /\\/g,
+                    "/"
+                );
+
+
+            return key || null;
+
+        }
+
+
+        // =====================================================
+        // R2 KEY SAFETY
+        // =====================================================
+
+        function studyBookSafeR2Key(
+            value
+        ) {
+
+            const key =
+                studyBookR2Key(
+                    value
+                );
+
+
+            if (!key) {
+
+                return null;
+
+            }
+
+
+            // -------------------------------------------------
+            // Reject traversal-style path segments.
+            // -------------------------------------------------
+
+            const segments =
+                key.split("/");
+
+
+            if (
+                segments.some(
+                    segment =>
+                        segment === ".."
+                )
+            ) {
+
+                return null;
+
+            }
+
+
+            return key;
 
         }
 
@@ -285,15 +408,17 @@ export default async function resourcesHandler(
         ) {
 
             const key =
-                studyBookR2Key(
+                studyBookSafeR2Key(
                     value
                 );
+
 
             if (!key) {
 
                 return null;
 
             }
+
 
             if (
                 !key.startsWith(
@@ -304,6 +429,7 @@ export default async function resourcesHandler(
                 return null;
 
             }
+
 
             return key;
 
@@ -319,15 +445,17 @@ export default async function resourcesHandler(
         ) {
 
             const key =
-                studyBookR2Key(
+                studyBookSafeR2Key(
                     value
                 );
+
 
             if (!key) {
 
                 return null;
 
             }
+
 
             if (
                 !key.startsWith(
@@ -338,6 +466,7 @@ export default async function resourcesHandler(
                 return null;
 
             }
+
 
             return key;
 
@@ -357,21 +486,26 @@ export default async function resourcesHandler(
                     level
                 ).toLowerCase();
 
+
             if (
-                normalized === "download"
+                normalized ===
+                "download"
             ) {
 
                 return 2;
 
             }
 
+
             if (
-                normalized === "view"
+                normalized ===
+                "view"
             ) {
 
                 return 1;
 
             }
+
 
             return 0;
 
@@ -384,13 +518,17 @@ export default async function resourcesHandler(
         ) {
 
             return (
+
                 studyBookAccessRank(
                     actualLevel
                 )
+
                 >=
+
                 studyBookAccessRank(
                     requiredLevel
                 )
+
             );
 
         }
@@ -405,44 +543,31 @@ async function studyBookAuthenticateStudent(
     env
 ) {
 
-    const authorization =
+    const authHeader =
         request.headers.get(
             "Authorization"
         );
 
 
-    if (!authorization) {
+    if (
+        !authHeader ||
+        !authHeader.startsWith(
+            "Bearer "
+        )
+    ) {
 
         return {
             ok: false,
             status: 401,
             message:
-                "Authentication required."
-        };
-
-    }
-
-
-    const match =
-        authorization.match(
-            /^Bearer\s+(.+)$/i
-        );
-
-
-    if (!match) {
-
-        return {
-            ok: false,
-            status: 401,
-            message:
-                "Invalid authorization header."
+                "Unauthorized."
         };
 
     }
 
 
     const token =
-        match[1].trim();
+        authHeader.substring(7).trim();
 
 
     if (!token) {
@@ -451,7 +576,7 @@ async function studyBookAuthenticateStudent(
             ok: false,
             status: 401,
             message:
-                "Authentication token is required."
+                "Unauthorized."
         };
 
     }
@@ -460,7 +585,7 @@ async function studyBookAuthenticateStudent(
     try {
 
         // -------------------------------------------------
-        // VERIFY JWT SIGNATURE
+        // VERIFY JWT
         // -------------------------------------------------
 
         const valid =
@@ -476,14 +601,14 @@ async function studyBookAuthenticateStudent(
                 ok: false,
                 status: 401,
                 message:
-                    "Invalid or expired authentication token."
+                    "Invalid or expired session."
             };
 
         }
 
 
         // -------------------------------------------------
-        // DECODE VERIFIED TOKEN
+        // READ VERIFIED JWT IDENTITY
         // -------------------------------------------------
 
         const decoded =
@@ -496,10 +621,6 @@ async function studyBookAuthenticateStudent(
             decoded?.payload || {};
 
 
-        // -------------------------------------------------
-        // NURSEPHERE JWT STUDENT ID
-        // -------------------------------------------------
-
         const studentId =
             studyBookText(
                 payload.studentId
@@ -508,16 +629,11 @@ async function studyBookAuthenticateStudent(
 
         if (!studentId) {
 
-            console.error(
-                "Study resources JWT has no studentId claim."
-            );
-
-
             return {
                 ok: false,
                 status: 401,
                 message:
-                    "Invalid authentication token."
+                    "Student identity missing."
             };
 
         }
@@ -562,8 +678,9 @@ async function studyBookAuthenticateStudent(
         // -------------------------------------------------
 
         if (
-            student.status !==
-            "active"
+            studyBookStatus(
+                student.status
+            ) !== "active"
         ) {
 
             return {
@@ -583,6 +700,8 @@ async function studyBookAuthenticateStudent(
         return {
 
             ok: true,
+
+            studentId,
 
             student
 
@@ -608,7 +727,6 @@ async function studyBookAuthenticateStudent(
     }
 
 }
-
         // =====================================================
         // STUDENT SUBSCRIPTION + FEATURE ACCESS
         // =====================================================
@@ -725,71 +843,74 @@ async function studyBookAuthenticateStudent(
         }
 
 
-        // =====================================================
-        // REQUIRE STUDY RESOURCE ACCESS
-        // =====================================================
+       // =====================================================
+// REQUIRE STUDY RESOURCE ACCESS
+// =====================================================
 
-        async function studyBookRequireAccess(
+async function studyBookRequireAccess(
+    request,
+    env,
+    requiredLevel
+) {
+
+    const authentication =
+        await studyBookAuthenticateStudent(
             request,
-            env,
+            env
+        );
+
+
+    if (!authentication.ok) {
+
+        return authentication;
+
+    }
+
+
+    const access =
+        await studyBookGetStudentAccess(
+            authentication.studentId,
+            env
+        );
+
+
+    if (!access.ok) {
+
+        return access;
+
+    }
+
+
+    if (
+        !studyBookHasAccess(
+            access.access_level,
             requiredLevel
-        ) {
+        )
+    ) {
 
-            const authentication =
-                await studyBookAuthenticateStudent(
-                    request,
-                    env
-                );
+        return {
+            ok: false,
+            status: 403,
 
-            if (!authentication.ok) {
+            message:
+                requiredLevel === "download"
+                    ? "Your subscription does not include study resource downloads."
+                    : "Your subscription does not include study resources."
+        };
 
-                return authentication;
-
-            }
-
-            const access =
-                await studyBookGetStudentAccess(
-                    authentication.student.id,
-                    env
-                );
-
-            if (!access.ok) {
-
-                return access;
-
-            }
-
-            if (
-                !studyBookHasAccess(
-                    access.access_level,
-                    requiredLevel
-                )
-            ) {
-
-                return {
-                    ok: false,
-                    status: 403,
-
-                    message:
-                        requiredLevel === "download"
-                            ? "Your subscription does not include study resource downloads."
-                            : "Your subscription does not include study resources."
-                };
-
-            }
-
-            return {
-                ok: true,
-
-                student:
-                    authentication.student,
-
-                access
-            };
-
-        }
+    }
 
 
+    return {
+        ok: true,
+
+        studentId:
+            authentication.studentId,
+
+        access
+    };
+
+}
         // =====================================================
         // R2 STREAM RESPONSE
         // =====================================================
