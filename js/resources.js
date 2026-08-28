@@ -5,17 +5,24 @@
 //
 // PRODUCTION VERSION
 //
-// Student flow:
+// Resources are completely independent from Practice.
 //
-//   1. Load ALL subjects
-//   2. Student selects a subject
-//   3. Load study resources for that subject
-//   4. View / download through authenticated Worker endpoints
+// FLOW:
 //
-// API:
-//
-//   GET /api/subjects
+//   /student/resources
+//          ↓
+//   GET /api/exams
+//          ↓
+//   GET /api/subjects?exam_id=...
+//          ↓
+//   Student selects subject
+//          ↓
 //   GET /api/subjects/:subject_id/resources
+//          ↓
+//   Study resources displayed
+//
+// RESOURCE FILE ACCESS:
+//
 //   GET /api/resources/:id/view
 //   GET /api/resources/:id/download
 //
@@ -68,21 +75,6 @@ const resourcesContainer =
     document.getElementById("resourcesContainer");
 
 
-// ---------------------------------------------------------
-// SUBJECT SELECTOR
-//
-// The resources page should have a select element with:
-//
-//     id="subjectSelect"
-//
-// If it does not exist, the page will still work when a
-// subject_id is supplied in the URL.
-// ---------------------------------------------------------
-
-const subjectSelect =
-    document.getElementById("subjectSelect");
-
-
 // =========================================================
 // URL PARAMETERS
 // =========================================================
@@ -100,11 +92,28 @@ const initialSubjectId =
 
 
 // =========================================================
-// CURRENT SUBJECT
+// RUNTIME STATE
 // =========================================================
 
-let currentSubjectId =
+let availableSubjects = [];
+
+let selectedSubjectId =
     initialSubjectId;
+
+let subjectSelector = null;
+
+
+// =========================================================
+// VALIDATE REQUIRED DOM
+// =========================================================
+
+if (!resourcesContainer) {
+
+    console.error(
+        "Nursephere Resources: #resourcesContainer was not found."
+    );
+
+}
 
 
 // =========================================================
@@ -154,7 +163,7 @@ function redirectToLogin() {
 
 
 // =========================================================
-// GENERIC API ERROR
+// API ERROR
 // =========================================================
 
 class ApiError extends Error {
@@ -291,6 +300,102 @@ async function getResponseMessage(
 
 
 // =========================================================
+// JSON RESPONSE PARSER
+// =========================================================
+
+async function parseJsonResponse(
+    response,
+    fallbackMessage = ""
+) {
+
+    try {
+
+        const result =
+            await response.json();
+
+        if (
+            result?.success === false
+        ) {
+
+            throw new ApiError(
+                result.message ||
+                "The request could not be completed.",
+                response.status
+            );
+
+        }
+
+        return result;
+
+    }
+
+    catch (error) {
+
+        if (
+            error instanceof ApiError
+        ) {
+
+            throw error;
+
+        }
+
+        throw new ApiError(
+
+            fallbackMessage ||
+            "The server returned an invalid response.",
+
+            response.status
+
+        );
+
+    }
+
+}
+
+
+// =========================================================
+// HTTP ERROR MESSAGES
+// =========================================================
+
+function getFriendlyHttpMessage(
+    status
+) {
+
+    switch (status) {
+
+        case 400:
+            return "The request was invalid.";
+
+        case 401:
+            return "Your session has expired.";
+
+        case 403:
+            return "You do not have access to this resource.";
+
+        case 404:
+            return "The requested resource was not found.";
+
+        case 409:
+            return "The request could not be completed.";
+
+        case 429:
+            return "Too many requests. Please try again later.";
+
+        case 500:
+        case 502:
+        case 503:
+        case 504:
+            return "Nursephere is temporarily unavailable.";
+
+        default:
+            return "Unable to complete the request.";
+
+    }
+
+}
+
+
+// =========================================================
 // JSON API REQUEST
 // =========================================================
 
@@ -414,158 +519,389 @@ async function apiRequest(
 
 
 // =========================================================
-// JSON RESPONSE PARSER
+// LOADING STATE
 // =========================================================
 
-async function parseJsonResponse(
-    response,
-    fallbackMessage = ""
+function showLoading(
+    message =
+        "Please wait while we load your study resources."
 ) {
 
-    try {
-
-        const result =
-            await response.json();
-
-        if (
-            result?.success === false
-        ) {
-
-            throw new ApiError(
-                result.message ||
-                "The request could not be completed.",
-                response.status
-            );
-
-        }
-
-        return result;
-
+    if (!resourcesContainer) {
+        return;
     }
 
-    catch (error) {
 
-        if (
-            error instanceof ApiError
-        ) {
+    resourcesContainer.innerHTML =
+        "";
 
-            throw error;
 
-        }
+    const loading =
+        document.createElement(
+            "div"
+        );
 
-        throw new ApiError(
+    loading.className =
+        "empty-state";
 
-            fallbackMessage ||
-            "The server returned an invalid response.",
 
-            response.status
+    const icon =
+        document.createElement(
+            "i"
+        );
 
+    icon.className =
+        "fas fa-spinner fa-spin";
+
+    icon.setAttribute(
+        "aria-hidden",
+        "true"
+    );
+
+
+    const title =
+        document.createElement(
+            "h3"
+        );
+
+    title.textContent =
+        "Loading Study Resources";
+
+
+    const text =
+        document.createElement(
+            "p"
+        );
+
+    text.textContent =
+        message;
+
+
+    loading.append(
+        icon,
+        title,
+        text
+    );
+
+
+    resourcesContainer.appendChild(
+        loading
+    );
+
+}
+
+
+// =========================================================
+// ERROR STATE
+// =========================================================
+
+function showError(
+    message,
+    showRetry = true
+) {
+
+    if (!resourcesContainer) {
+        return;
+    }
+
+
+    resourcesContainer.innerHTML =
+        "";
+
+
+    const empty =
+        document.createElement(
+            "div"
+        );
+
+    empty.className =
+        "empty-state";
+
+
+    const icon =
+        document.createElement(
+            "i"
+        );
+
+    icon.className =
+        "fas fa-circle-exclamation";
+
+    icon.setAttribute(
+        "aria-hidden",
+        "true"
+    );
+
+
+    const title =
+        document.createElement(
+            "h3"
+        );
+
+    title.textContent =
+        "Unable to Load Resources";
+
+
+    const text =
+        document.createElement(
+            "p"
+        );
+
+    text.textContent =
+        message ||
+        "Unable to load study resources.";
+
+
+    empty.append(
+        icon,
+        title,
+        text
+    );
+
+
+    if (showRetry) {
+
+        const retry =
+            document.createElement(
+                "button"
+            );
+
+        retry.type =
+            "button";
+
+        retry.className =
+            "retry-btn";
+
+        retry.textContent =
+            "Try Again";
+
+
+        retry.addEventListener(
+            "click",
+            initializeResourcesPage
+        );
+
+
+        empty.appendChild(
+            retry
         );
 
     }
 
+
+    resourcesContainer.appendChild(
+        empty
+    );
+
 }
 
 
 // =========================================================
-// HTTP ERROR MESSAGES
+// EMPTY STATE
 // =========================================================
 
-function getFriendlyHttpMessage(
-    status
-) {
+function renderEmptyResources() {
 
-    switch (status) {
-
-        case 400:
-            return "The request was invalid.";
-
-        case 403:
-            return "You do not have access to this resource.";
-
-        case 404:
-            return "The requested resource was not found.";
-
-        case 409:
-            return "The request could not be completed.";
-
-        case 429:
-            return "Too many requests. Please try again later.";
-
-        case 500:
-        case 502:
-        case 503:
-        case 504:
-            return "Nursephere is temporarily unavailable.";
-
-        default:
-            return "Unable to complete the request.";
-
+    if (!resourcesContainer) {
+        return;
     }
 
+
+    const empty =
+        document.createElement(
+            "div"
+        );
+
+    empty.className =
+        "empty-state";
+
+
+    const icon =
+        document.createElement(
+            "i"
+        );
+
+    icon.className =
+        "fas fa-folder-open";
+
+    icon.setAttribute(
+        "aria-hidden",
+        "true"
+    );
+
+
+    const title =
+        document.createElement(
+            "h3"
+        );
+
+    title.textContent =
+        "No Study Resources Available";
+
+
+    const text =
+        document.createElement(
+            "p"
+        );
+
+    text.textContent =
+        "No study resources have been published for this subject yet.";
+
+
+    empty.append(
+        icon,
+        title,
+        text
+    );
+
+
+    resourcesContainer.appendChild(
+        empty
+    );
+
 }
 
 
 // =========================================================
-// SUBJECT RESPONSE NORMALIZATION
-// =========================================================
-//
-// Supports:
-//
-// {
-//     success: true,
-//     subjects: []
-// }
-//
-// OR:
-//
-// {
-//     success: true,
-//     data: {
-//         subjects: []
-//     }
-// }
-//
-// OR:
-//
-// {
-//     success: true,
-//     data: []
-// }
-//
+// NORMALIZE API PAYLOAD
 // =========================================================
 
-function normalizeSubjectsResponse(
+function getPayload(
     result
 ) {
 
-    const payload =
-        result?.data !== undefined
-            ? result.data
-            : result;
-
-
     if (
-        Array.isArray(payload)
+        result?.data &&
+        typeof result.data === "object" &&
+        !Array.isArray(result.data)
     ) {
 
-        return payload;
+        return result.data;
 
     }
 
+    return result || {};
 
-    if (
-        Array.isArray(
-            payload?.subjects
-        )
+}
+
+
+// =========================================================
+// NORMALIZE ARRAY
+// =========================================================
+
+function extractArray(
+    payload,
+    keys
+) {
+
+    for (
+        const key of keys
     ) {
 
-        return payload.subjects;
+        if (
+            Array.isArray(
+                payload?.[key]
+            )
+        ) {
+
+            return payload[key];
+
+        }
 
     }
-
 
     return [];
+
+}
+
+
+// =========================================================
+// LOAD ACTIVE EXAMS
+// =========================================================
+//
+// Resources does not depend on Practice.
+//
+// We obtain the available exams directly from
+// the API, then obtain their subjects.
+//
+// =========================================================
+
+async function loadExams() {
+
+    const result =
+        await apiRequest(
+            "/exams"
+        );
+
+
+    const payload =
+        getPayload(
+            result
+        );
+
+
+    const exams =
+        extractArray(
+            payload,
+            [
+                "exams",
+                "items",
+                "results"
+            ]
+        );
+
+
+    return exams.filter(
+        exam =>
+            exam &&
+            typeof exam === "object"
+    );
+
+}
+
+
+// =========================================================
+// LOAD SUBJECTS FOR AN EXAM
+// =========================================================
+
+async function loadSubjectsForExam(
+    examId
+) {
+
+    const safeExamId =
+        encodeURIComponent(
+            String(
+                examId || ""
+            ).trim()
+        );
+
+
+    if (!safeExamId) {
+
+        return [];
+
+    }
+
+
+    const result =
+        await apiRequest(
+            `/subjects?exam_id=${safeExamId}`
+        );
+
+
+    const payload =
+        getPayload(
+            result
+        );
+
+
+    return extractArray(
+        payload,
+        [
+            "subjects",
+            "items",
+            "results"
+        ]
+    );
 
 }
 
@@ -574,250 +910,617 @@ function normalizeSubjectsResponse(
 // LOAD ALL SUBJECTS
 // =========================================================
 //
-// This is the important fix.
+// The API exposes subjects by exam.
 //
-// The resources page no longer requires a subject_id
-// before it can start.
+// Therefore we load the active exams first and then
+// collect the subjects belonging to those exams.
 //
-// It loads every available subject first.
+// No subject is hardcoded here.
 //
 // =========================================================
 
-async function loadSubjects() {
+async function loadAllSubjects() {
 
-    if (!subjectSelect) {
+    const exams =
+        await loadExams();
+
+
+    if (!exams.length) {
+
+        return [];
+
+    }
+
+
+    const subjectResults =
+        await Promise.all(
+
+            exams.map(
+                async exam => {
+
+                    const examId =
+                        exam?.id ??
+                        exam?.exam_id ??
+                        exam?.examId;
+
+
+                    if (!examId) {
+
+                        return [];
+
+                    }
+
+
+                    try {
+
+                        const subjects =
+                            await loadSubjectsForExam(
+                                examId
+                            );
+
+
+                        return subjects.map(
+                            subject => ({
+
+                                ...subject,
+
+                                exam_id:
+                                    subject?.exam_id ??
+                                    subject?.examId ??
+                                    examId,
+
+                                exam_name:
+                                    subject?.exam_name ??
+                                    subject?.examName ??
+                                    exam?.name ??
+                                    exam?.title ??
+                                    ""
+
+                            })
+                        );
+
+                    }
+
+                    catch (error) {
+
+                        console.error(
+                            `Unable to load subjects for exam ${examId}:`,
+                            error
+                        );
+
+                        return [];
+
+                    }
+
+                }
+            )
+
+        );
+
+
+    const flattened =
+        subjectResults.flat();
+
+
+    // -----------------------------------------------------
+    // Remove duplicates.
+    // -----------------------------------------------------
+
+    const seen =
+        new Set();
+
+
+    const uniqueSubjects =
+        flattened.filter(
+            subject => {
+
+                const id =
+                    String(
+                        subject?.id ??
+                        subject?.subject_id ??
+                        ""
+                    ).trim();
+
+
+                if (!id) {
+
+                    return false;
+
+                }
+
+
+                if (
+                    seen.has(id)
+                ) {
+
+                    return false;
+
+                }
+
+
+                seen.add(id);
+
+                return true;
+
+            }
+        );
+
+
+    return uniqueSubjects;
+
+}
+
+
+// =========================================================
+// CREATE SUBJECT SELECTOR
+// =========================================================
+
+function createSubjectSelector() {
+
+    // -----------------------------------------------------
+    // If a selector already exists, reuse it.
+    // -----------------------------------------------------
+
+    const existing =
+        document.getElementById(
+            "resourceSubjectSelect"
+        );
+
+
+    if (existing) {
+
+        subjectSelector =
+            existing;
+
+        return existing;
+
+    }
+
+
+    // -----------------------------------------------------
+    // Create wrapper.
+    // -----------------------------------------------------
+
+    const wrapper =
+        document.createElement(
+            "div"
+        );
+
+    wrapper.className =
+        "resource-subject-selector";
+
+
+    // -----------------------------------------------------
+    // Label.
+    // -----------------------------------------------------
+
+    const label =
+        document.createElement(
+            "label"
+        );
+
+    label.htmlFor =
+        "resourceSubjectSelect";
+
+    label.textContent =
+        "Select Subject";
+
+
+    // -----------------------------------------------------
+    // Select.
+    // -----------------------------------------------------
+
+    const select =
+        document.createElement(
+            "select"
+        );
+
+    select.id =
+        "resourceSubjectSelect";
+
+    select.name =
+        "subject_id";
+
+
+    const placeholder =
+        document.createElement(
+            "option"
+        );
+
+    placeholder.value =
+        "";
+
+    placeholder.textContent =
+        "Choose a subject";
+
+    placeholder.disabled =
+        true;
+
+
+    select.appendChild(
+        placeholder
+    );
+
+
+    // -----------------------------------------------------
+    // Populate subjects.
+    // -----------------------------------------------------
+
+    availableSubjects.forEach(
+        subject => {
+
+            const id =
+                String(
+                    subject?.id ??
+                    subject?.subject_id ??
+                    ""
+                ).trim();
+
+
+            if (!id) {
+
+                return;
+
+            }
+
+
+            const option =
+                document.createElement(
+                    "option"
+                );
+
+            option.value =
+                id;
+
+
+            option.textContent =
+                subject?.name ||
+                subject?.title ||
+                "Untitled Subject";
+
+
+            if (
+                id ===
+                selectedSubjectId
+            ) {
+
+                option.selected =
+                    true;
+
+            }
+
+
+            select.appendChild(
+                option
+            );
+
+        }
+    );
+
+
+    // -----------------------------------------------------
+    // Change event.
+    // -----------------------------------------------------
+
+    select.addEventListener(
+        "change",
+        async event => {
+
+            const value =
+                String(
+                    event.target.value ||
+                    ""
+                ).trim();
+
+
+            if (!value) {
+
+                return;
+
+            }
+
+
+            selectedSubjectId =
+                value;
+
+
+            updateSubjectUrl(
+                value
+            );
+
+
+            await loadSelectedSubjectResources(
+                value
+            );
+
+        }
+    );
+
+
+    wrapper.append(
+        label,
+        select
+    );
+
+
+    // -----------------------------------------------------
+    // Insert selector.
+    //
+    // Prefer inserting immediately before the resource
+    // container.
+    // -----------------------------------------------------
+
+    if (resourcesContainer) {
+
+        resourcesContainer.parentNode.insertBefore(
+            wrapper,
+            resourcesContainer
+        );
+
+    }
+
+
+    subjectSelector =
+        select;
+
+
+    return select;
+
+}
+
+
+// =========================================================
+// UPDATE URL
+// =========================================================
+
+function updateSubjectUrl(
+    subjectId
+) {
+
+    const url =
+        new URL(
+            window.location.href
+        );
+
+
+    if (subjectId) {
+
+        url.searchParams.set(
+            "subject_id",
+            subjectId
+        );
+
+    }
+
+    else {
+
+        url.searchParams.delete(
+            "subject_id"
+        );
+
+    }
+
+
+    window.history.replaceState(
+        {},
+        "",
+        url
+    );
+
+}
+
+
+// =========================================================
+// SET SELECTED SUBJECT
+// =========================================================
+
+function setSelectedSubject(
+    subjectId
+) {
+
+    if (!subjectSelector) {
 
         return;
 
     }
 
 
-    subjectSelect.disabled =
-        true;
+    const safeId =
+        String(
+            subjectId || ""
+        ).trim();
 
 
-    subjectSelect.innerHTML =
-        "";
+    subjectSelector.value =
+        safeId;
+
+}
 
 
-    const loadingOption =
-        document.createElement(
-            "option"
-        );
+// =========================================================
+// FIND SUBJECT
+// =========================================================
 
-    loadingOption.value =
-        "";
+function findSubject(
+    subjectId
+) {
 
-    loadingOption.textContent =
-        "Loading subjects...";
+    const safeId =
+        String(
+            subjectId || ""
+        ).trim();
 
-    subjectSelect.appendChild(
-        loadingOption
-    );
+
+    return availableSubjects.find(
+        subject => {
+
+            const id =
+                String(
+                    subject?.id ??
+                    subject?.subject_id ??
+                    ""
+                ).trim();
+
+            return id === safeId;
+
+        }
+    ) || null;
+
+}
+
+
+// =========================================================
+// RENDER SUBJECT
+// =========================================================
+
+function renderSubject(
+    subject
+) {
+
+    if (subjectName) {
+
+        subjectName.textContent =
+            subject?.name ||
+            subject?.title ||
+            "Study Resources";
+
+    }
+
+
+    if (subjectDescription) {
+
+        subjectDescription.textContent =
+            subject?.description ||
+            "Study resources for this subject.";
+
+    }
+
+}
+
+
+// =========================================================
+// LOAD SELECTED SUBJECT RESOURCES
+// =========================================================
+
+async function loadSelectedSubjectResources(
+    subjectId
+) {
+
+    const safeId =
+        String(
+            subjectId || ""
+        ).trim();
+
+
+    if (!safeId) {
+
+        if (subjectName) {
+
+            subjectName.textContent =
+                "Study Resources";
+
+        }
+
+
+        if (subjectDescription) {
+
+            subjectDescription.textContent =
+                "Select a subject to view available study resources.";
+
+        }
+
+
+        if (resourcesContainer) {
+
+            resourcesContainer.innerHTML =
+                "";
+
+        }
+
+
+        return;
+
+    }
+
+
+    showLoading();
 
 
     try {
 
         const result =
             await apiRequest(
-                "/subjects"
+
+                `/subjects/${encodeURIComponent(
+                    safeId
+                )}/resources`
+
             );
 
 
-        const subjects =
-            normalizeSubjectsResponse(
+        const payload =
+            getPayload(
                 result
             );
 
 
-        subjectSelect.innerHTML =
-            "";
-
-
-        const defaultOption =
-            document.createElement(
-                "option"
+        const subject =
+            payload?.subject ||
+            findSubject(
+                safeId
             );
 
-        defaultOption.value =
-            "";
 
-        defaultOption.textContent =
-            "Select Subject";
+        const resources =
+            extractArray(
+                payload,
+                [
+                    "resources",
+                    "items",
+                    "results"
+                ]
+            );
 
-        subjectSelect.appendChild(
-            defaultOption
-        );
 
+        if (!subject) {
 
-        if (
-            subjects.length === 0
-        ) {
-
-            subjectSelect.disabled =
-                true;
-
-            showNoSubjects();
-
-            return;
+            throw new ApiError(
+                "The selected subject could not be found.",
+                404
+            );
 
         }
 
 
-        subjects.forEach(
-            subject => {
-
-                if (
-                    !subject ||
-                    typeof subject !== "object"
-                ) {
-
-                    return;
-
-                }
-
-
-                const id =
-                    String(
-                        subject.id ??
-                        subject.subject_id ??
-                        ""
-                    ).trim();
-
-
-                const name =
-                    String(
-                        subject.name ??
-                        subject.subject_name ??
-                        "Unnamed Subject"
-                    ).trim();
-
-
-                if (!id) {
-
-                    return;
-
-                }
-
-
-                const option =
-                    document.createElement(
-                        "option"
-                    );
-
-                option.value =
-                    id;
-
-                option.textContent =
-                    name ||
-                    "Unnamed Subject";
-
-
-                option.dataset.description =
-                    String(
-                        subject.description ||
-                        ""
-                    );
-
-
-                subjectSelect.appendChild(
-                    option
-                );
-
-            }
+        renderSubject(
+            subject
         );
 
 
-        subjectSelect.disabled =
-            false;
+        setSelectedSubject(
+            safeId
+        );
 
 
-        // -------------------------------------------------
-        // Preserve a subject_id supplied by Practice or
-        // another page.
-        // -------------------------------------------------
-
-        if (
-            initialSubjectId
-        ) {
-
-            const matchingOption =
-                Array.from(
-                    subjectSelect.options
-                )
-                .find(
-                    option =>
-                        option.value ===
-                        initialSubjectId
-                );
-
-
-            if (
-                matchingOption
-            ) {
-
-                subjectSelect.value =
-                    initialSubjectId;
-
-                currentSubjectId =
-                    initialSubjectId;
-
-                loadSubjectResources();
-
-                return;
-
-            }
-
-        }
-
-
-        // -------------------------------------------------
-        // No subject selected yet.
-        // -------------------------------------------------
-
-        currentSubjectId =
-            "";
-
-
-        renderSelectSubjectState();
+        renderResources(
+            resources
+        );
 
     }
 
     catch (error) {
 
         console.error(
-            "Nursephere Subjects:",
+            "Nursephere Resources:",
             error
         );
 
 
-        subjectSelect.innerHTML =
-            "";
-
-
-        const errorOption =
-            document.createElement(
-                "option"
-            );
-
-        errorOption.value =
-            "";
-
-        errorOption.textContent =
-            "Unable to load subjects";
-
-        subjectSelect.appendChild(
-            errorOption
-        );
-
-
-        subjectSelect.disabled =
-            true;
-
-
         showError(
+
             error?.message ||
-            "Unable to load subjects."
+            "Unable to load study resources."
+
         );
 
     }
@@ -826,81 +1529,10 @@ async function loadSubjects() {
 
 
 // =========================================================
-// SUBJECT SELECT CHANGE
+// INITIAL SUBJECT SCREEN
 // =========================================================
 
-function handleSubjectChange() {
-
-    if (!subjectSelect) {
-
-        return;
-
-    }
-
-
-    const selectedId =
-        String(
-            subjectSelect.value ||
-            ""
-        ).trim();
-
-
-    currentSubjectId =
-        selectedId;
-
-
-    if (!selectedId) {
-
-        renderSelectSubjectState();
-
-        return;
-
-    }
-
-
-    // -----------------------------------------------------
-    // Keep URL synchronized without reloading the page.
-    // -----------------------------------------------------
-
-    try {
-
-        const url =
-            new URL(
-                window.location.href
-            );
-
-
-        url.searchParams.set(
-            "subject_id",
-            selectedId
-        );
-
-
-        window.history.replaceState(
-            {},
-            "",
-            url.toString()
-        );
-
-    }
-
-    catch {
-
-        // URL synchronization is non-critical.
-
-    }
-
-
-    loadSubjectResources();
-
-}
-
-
-// =========================================================
-// SELECT SUBJECT STATE
-// =========================================================
-
-function renderSelectSubjectState() {
+function renderSubjectSelectionState() {
 
     if (subjectName) {
 
@@ -958,7 +1590,7 @@ function renderSelectSubjectState() {
         );
 
     title.textContent =
-        "Select a Subject";
+        "Choose a Subject";
 
 
     const text =
@@ -967,9 +1599,9 @@ function renderSelectSubjectState() {
         );
 
     text.textContent =
-        "Choose a subject above to view its study resources.";
+        "Select a subject above to view its study resources.";
 
-
+    
     empty.append(
         icon,
         title,
@@ -985,31 +1617,66 @@ function renderSelectSubjectState() {
 
 
 // =========================================================
-// NO SUBJECTS STATE
+// RESOURCE ACCESS NORMALIZATION
 // =========================================================
 
-function showNoSubjects() {
+function getResourceAccessLevel(
+    resource
+) {
 
-    if (subjectName) {
+    const candidates = [
 
-        subjectName.textContent =
-            "Study Resources";
+        resource?.access_level,
+
+        resource?.accessLevel,
+
+        resource?.student_access_level,
+
+        resource?.studentAccessLevel
+
+    ];
+
+
+    for (
+        const candidate of candidates
+    ) {
+
+        const value =
+            String(
+                candidate ?? ""
+            )
+            .trim()
+            .toLowerCase();
+
+
+        if (
+            value === "download" ||
+            value === "view" ||
+            value === "none"
+        ) {
+
+            return value;
+
+        }
 
     }
 
 
-    if (subjectDescription) {
+    return null;
 
-        subjectDescription.textContent =
-            "No subjects are currently available.";
+}
 
-    }
 
+// =========================================================
+// RENDER RESOURCES
+// =========================================================
+
+function renderResources(
+    resources
+) {
 
     if (!resourcesContainer) {
-
         return;
-
     }
 
 
@@ -1017,27 +1684,95 @@ function showNoSubjects() {
         "";
 
 
-    const empty =
+    if (
+        !Array.isArray(resources) ||
+        resources.length === 0
+    ) {
+
+        renderEmptyResources();
+
+        return;
+
+    }
+
+
+    const fragment =
+        document.createDocumentFragment();
+
+
+    resources.forEach(
+        resource => {
+
+            if (
+                !resource ||
+                typeof resource !== "object"
+            ) {
+
+                return;
+
+            }
+
+
+            const card =
+                createResourceCard(
+                    resource
+                );
+
+
+            fragment.appendChild(
+                card
+            );
+
+        }
+    );
+
+
+    if (
+        !fragment.childNodes.length
+    ) {
+
+        renderEmptyResources();
+
+        return;
+
+    }
+
+
+    resourcesContainer.appendChild(
+        fragment
+    );
+
+}
+
+
+// =========================================================
+// CREATE RESOURCE CARD
+// =========================================================
+
+function createResourceCard(
+    resource
+) {
+
+    const card =
+        document.createElement(
+            "article"
+        );
+
+    card.className =
+        "resource-card";
+
+
+    // -----------------------------------------------------
+    // HEADER
+    // -----------------------------------------------------
+
+    const header =
         document.createElement(
             "div"
         );
 
-    empty.className =
-        "empty-state";
-
-
-    const icon =
-        document.createElement(
-            "i"
-        );
-
-    icon.className =
-        "fas fa-folder-open";
-
-    icon.setAttribute(
-        "aria-hidden",
-        "true"
-    );
+    header.className =
+        "resource-header";
 
 
     const title =
@@ -1046,46 +1781,205 @@ function showNoSubjects() {
         );
 
     title.textContent =
-        "No Subjects Available";
+        resource?.title ||
+        "Untitled Resource";
 
 
-    const text =
+    const type =
+        document.createElement(
+            "span"
+        );
+
+    type.className =
+        "resource-type";
+
+    type.textContent =
+        (
+            resource?.file_type ||
+            resource?.type ||
+            "Study Material"
+        )
+        .toString()
+        .toUpperCase();
+
+
+    header.append(
+        title,
+        type
+    );
+
+
+    // -----------------------------------------------------
+    // AUTHOR
+    // -----------------------------------------------------
+
+    const author =
         document.createElement(
             "p"
         );
 
-    text.textContent =
-        "There are currently no subjects available for study resources.";
+    author.className =
+        "resource-author";
+
+    author.textContent =
+        resource?.author
+            ? `By ${resource.author}`
+            : "";
 
 
-    empty.append(
-        icon,
-        title,
-        text
+    if (
+        !resource?.author
+    ) {
+
+        author.hidden =
+            true;
+
+    }
+
+
+    // -----------------------------------------------------
+    // DESCRIPTION
+    // -----------------------------------------------------
+
+    const description =
+        document.createElement(
+            "p"
+        );
+
+    description.className =
+        "resource-description";
+
+    description.textContent =
+        resource?.description ||
+        "Study material for this subject.";
+
+
+    // -----------------------------------------------------
+    // ACTIONS
+    // -----------------------------------------------------
+
+    const actions =
+        document.createElement(
+            "div"
+        );
+
+    actions.className =
+        "resource-actions";
+
+
+    // -----------------------------------------------------
+    // VIEW
+    // -----------------------------------------------------
+
+    const viewButton =
+        document.createElement(
+            "button"
+        );
+
+    viewButton.type =
+        "button";
+
+    viewButton.className =
+        "view-resource";
+
+    viewButton.innerHTML =
+        '<i class="fas fa-eye" aria-hidden="true"></i> View Resource';
+
+    viewButton.dataset.resourceId =
+        resource?.id || "";
+
+
+    viewButton.addEventListener(
+        "click",
+        () => {
+
+            viewResource(
+                resource,
+                viewButton
+            );
+
+        }
     );
 
 
-    resourcesContainer.appendChild(
-        empty
+    actions.appendChild(
+        viewButton
     );
+
+
+    // -----------------------------------------------------
+    // DOWNLOAD
+    // -----------------------------------------------------
+
+    const accessLevel =
+        getResourceAccessLevel(
+            resource
+        );
+
+
+    if (
+        accessLevel !== "view" &&
+        accessLevel !== "none"
+    ) {
+
+        const downloadButton =
+            document.createElement(
+                "button"
+            );
+
+        downloadButton.type =
+            "button";
+
+        downloadButton.className =
+            "download-resource";
+
+        downloadButton.dataset.resourceId =
+            resource?.id || "";
+
+
+        downloadButton.innerHTML =
+            '<i class="fas fa-download" aria-hidden="true"></i> Download';
+
+
+        downloadButton.addEventListener(
+            "click",
+            () => {
+
+                downloadResource(
+                    resource,
+                    downloadButton
+                );
+
+            }
+        );
+
+
+        actions.appendChild(
+            downloadButton
+        );
+
+    }
+
+
+    // -----------------------------------------------------
+    // CARD
+    // -----------------------------------------------------
+
+    card.append(
+        header,
+        author,
+        description,
+        actions
+    );
+
+
+    return card;
 
 }
 
 
 // =========================================================
 // RESOURCE FILE REQUEST
-// =========================================================
-//
-// The Worker streams the actual R2 object.
-//
-// The browser receives:
-//
-//     PDF / DOCX / XLSX / CSV
-//
-// NOT:
-//
-//     public R2 URL
-//
 // =========================================================
 
 async function requestResourceFile(
@@ -1229,7 +2123,8 @@ async function requestResourceFile(
         )
     ) {
 
-        let result = null;
+        let result =
+            null;
 
 
         try {
@@ -1400,9 +2295,7 @@ function sanitizeFileName(
     .slice(
         0,
         180
-    )
-    ||
-    "study-resource";
+    ) || "study-resource";
 
 }
 
@@ -1486,821 +2379,6 @@ function createResourceFileName(
 
 
     return `${title}.${extension}`;
-
-}
-
-
-// =========================================================
-// LOADING STATE
-// =========================================================
-
-function showLoading() {
-
-    if (!resourcesContainer) {
-
-        return;
-
-    }
-
-
-    resourcesContainer.innerHTML =
-        "";
-
-
-    const loading =
-        document.createElement(
-            "div"
-        );
-
-
-    loading.className =
-        "empty-state";
-
-
-    const icon =
-        document.createElement(
-            "i"
-        );
-
-
-    icon.className =
-        "fas fa-spinner fa-spin";
-
-
-    icon.setAttribute(
-        "aria-hidden",
-        "true"
-    );
-
-
-    const title =
-        document.createElement(
-            "h3"
-        );
-
-
-    title.textContent =
-        "Loading Study Resources";
-
-
-    const text =
-        document.createElement(
-            "p"
-        );
-
-
-    text.textContent =
-        "Please wait while we load the resources for this subject.";
-
-
-    loading.append(
-        icon,
-        title,
-        text
-    );
-
-
-    resourcesContainer.appendChild(
-        loading
-    );
-
-}
-
-
-// =========================================================
-// ERROR STATE
-// =========================================================
-
-function showError(
-    message,
-    showRetry = true
-) {
-
-    if (!resourcesContainer) {
-
-        return;
-
-    }
-
-
-    resourcesContainer.innerHTML =
-        "";
-
-
-    const empty =
-        document.createElement(
-            "div"
-        );
-
-
-    empty.className =
-        "empty-state";
-
-
-    const icon =
-        document.createElement(
-            "i"
-        );
-
-
-    icon.className =
-        "fas fa-circle-exclamation";
-
-
-    icon.setAttribute(
-        "aria-hidden",
-        "true"
-    );
-
-
-    const title =
-        document.createElement(
-            "h3"
-        );
-
-
-    title.textContent =
-        "Unable to Load Resources";
-
-
-    const text =
-        document.createElement(
-            "p"
-        );
-
-
-    text.textContent =
-        message ||
-        "Unable to load study resources.";
-
-
-    empty.append(
-        icon,
-        title,
-        text
-    );
-
-
-    if (showRetry) {
-
-        const retry =
-            document.createElement(
-                "button"
-            );
-
-
-        retry.type =
-            "button";
-
-
-        retry.className =
-            "retry-btn";
-
-
-        retry.textContent =
-            "Try Again";
-
-
-        retry.addEventListener(
-            "click",
-            () => {
-
-                if (
-                    currentSubjectId
-                ) {
-
-                    loadSubjectResources();
-
-                }
-
-                else {
-
-                    loadSubjects();
-
-                }
-
-            }
-        );
-
-
-        empty.appendChild(
-            retry
-        );
-
-    }
-
-
-    resourcesContainer.appendChild(
-        empty
-    );
-
-}
-
-
-// =========================================================
-// EMPTY RESOURCE STATE
-// =========================================================
-
-function renderEmptyResources() {
-
-    if (!resourcesContainer) {
-
-        return;
-
-    }
-
-
-    const empty =
-        document.createElement(
-            "div"
-        );
-
-
-    empty.className =
-        "empty-state";
-
-
-    const icon =
-        document.createElement(
-            "i"
-        );
-
-
-    icon.className =
-        "fas fa-folder-open";
-
-
-    icon.setAttribute(
-        "aria-hidden",
-        "true"
-    );
-
-
-    const title =
-        document.createElement(
-            "h3"
-        );
-
-
-    title.textContent =
-        "No Study Resources Available";
-
-
-    const text =
-        document.createElement(
-            "p"
-        );
-
-
-    text.textContent =
-        "No study resources have been published for this subject yet.";
-
-
-    empty.append(
-        icon,
-        title,
-        text
-    );
-
-
-    resourcesContainer.appendChild(
-        empty
-    );
-
-}
-
-
-// =========================================================
-// LOAD SUBJECT + RESOURCES
-// =========================================================
-
-async function loadSubjectResources() {
-
-    const selectedSubjectId =
-        String(
-            currentSubjectId ||
-            ""
-        ).trim();
-
-
-    if (!selectedSubjectId) {
-
-        renderSelectSubjectState();
-
-        return;
-
-    }
-
-
-    showLoading();
-
-
-    try {
-
-        const result =
-            await apiRequest(
-
-                `/subjects/${encodeURIComponent(
-                    selectedSubjectId
-                )}/resources`
-
-            );
-
-
-        /*
-         * Supports:
-         *
-         * {
-         *     success: true,
-         *     subject: {...},
-         *     resources: [...]
-         * }
-         *
-         * and:
-         *
-         * {
-         *     success: true,
-         *     data: {
-         *         subject: {...},
-         *         resources: [...]
-         *     }
-         * }
-         */
-
-
-        const payload =
-            result?.data &&
-            typeof result.data === "object"
-                ? result.data
-                : result;
-
-
-        const subject =
-            payload?.subject;
-
-
-        const resources =
-            Array.isArray(
-                payload?.resources
-            )
-                ? payload.resources
-                : [];
-
-
-        if (!subject) {
-
-            throw new ApiError(
-                "The selected subject could not be found.",
-                404
-            );
-
-        }
-
-
-        renderSubject(
-            subject
-        );
-
-
-        renderResources(
-            resources
-        );
-
-    }
-
-    catch (error) {
-
-        console.error(
-            "Nursephere Resources:",
-            error
-        );
-
-
-        showError(
-
-            error?.message ||
-            "Unable to load study resources."
-
-        );
-
-    }
-
-}
-
-
-// =========================================================
-// RENDER SUBJECT
-// =========================================================
-
-function renderSubject(
-    subject
-) {
-
-    if (subjectName) {
-
-        subjectName.textContent =
-            subject?.name ||
-            subject?.subject_name ||
-            "Study Resources";
-
-    }
-
-
-    if (subjectDescription) {
-
-        subjectDescription.textContent =
-            subject?.description ||
-            "Study resources for this subject.";
-
-    }
-
-}
-
-
-// =========================================================
-// RESOURCE ACCESS NORMALIZATION
-// =========================================================
-//
-// Worker remains the final authority.
-//
-// Frontend only uses access_level to decide whether
-// to display the download button.
-//
-// =========================================================
-
-function getResourceAccessLevel(
-    resource
-) {
-
-    const candidates = [
-
-        resource?.access_level,
-
-        resource?.accessLevel,
-
-        resource?.student_access_level,
-
-        resource?.studentAccessLevel
-
-    ];
-
-
-    for (
-        const candidate of candidates
-    ) {
-
-        const value =
-            String(
-                candidate ?? ""
-            )
-            .trim()
-            .toLowerCase();
-
-
-        if (
-            value === "download" ||
-            value === "view" ||
-            value === "none"
-        ) {
-
-            return value;
-
-        }
-
-    }
-
-
-    return null;
-
-}
-
-
-// =========================================================
-// RENDER RESOURCES
-// =========================================================
-
-function renderResources(
-    resources
-) {
-
-    if (!resourcesContainer) {
-
-        return;
-
-    }
-
-
-    resourcesContainer.innerHTML =
-        "";
-
-
-    if (
-        !Array.isArray(resources) ||
-        resources.length === 0
-    ) {
-
-        renderEmptyResources();
-
-        return;
-
-    }
-
-
-    const fragment =
-        document.createDocumentFragment();
-
-
-    resources.forEach(
-        resource => {
-
-            if (
-                !resource ||
-                typeof resource !== "object"
-            ) {
-
-                return;
-
-            }
-
-
-            const card =
-                createResourceCard(
-                    resource
-                );
-
-
-            fragment.appendChild(
-                card
-            );
-
-        }
-    );
-
-
-    if (
-        !fragment.childNodes.length
-    ) {
-
-        renderEmptyResources();
-
-        return;
-
-    }
-
-
-    resourcesContainer.appendChild(
-        fragment
-    );
-
-}
-
-
-// =========================================================
-// CREATE RESOURCE CARD
-// =========================================================
-
-function createResourceCard(
-    resource
-) {
-
-    const card =
-        document.createElement(
-            "article"
-        );
-
-
-    card.className =
-        "resource-card";
-
-
-    // -----------------------------------------------------
-    // HEADER
-    // -----------------------------------------------------
-
-    const header =
-        document.createElement(
-            "div"
-        );
-
-
-    header.className =
-        "resource-header";
-
-
-    const title =
-        document.createElement(
-            "h3"
-        );
-
-
-    title.textContent =
-        resource?.title ||
-        "Untitled Resource";
-
-
-    const type =
-        document.createElement(
-            "span"
-        );
-
-
-    type.className =
-        "resource-type";
-
-
-    type.textContent =
-        (
-            resource?.file_type ||
-            resource?.type ||
-            "Study Material"
-        )
-        .toString()
-        .toUpperCase();
-
-
-    header.append(
-        title,
-        type
-    );
-
-
-    // -----------------------------------------------------
-    // AUTHOR
-    // -----------------------------------------------------
-
-    const author =
-        document.createElement(
-            "p"
-        );
-
-
-    author.className =
-        "resource-author";
-
-
-    author.textContent =
-        resource?.author
-            ? `By ${resource.author}`
-            : "";
-
-
-    if (
-        !resource?.author
-    ) {
-
-        author.hidden =
-            true;
-
-    }
-
-
-    // -----------------------------------------------------
-    // DESCRIPTION
-    // -----------------------------------------------------
-
-    const description =
-        document.createElement(
-            "p"
-        );
-
-
-    description.className =
-        "resource-description";
-
-
-    description.textContent =
-        resource?.description ||
-        "Study material for this subject.";
-
-
-    // -----------------------------------------------------
-    // ACTIONS
-    // -----------------------------------------------------
-
-    const actions =
-        document.createElement(
-            "div"
-        );
-
-
-    actions.className =
-        "resource-actions";
-
-
-    // -----------------------------------------------------
-    // VIEW BUTTON
-    // -----------------------------------------------------
-
-    const viewButton =
-        document.createElement(
-            "button"
-        );
-
-
-    viewButton.type =
-        "button";
-
-
-    viewButton.className =
-        "view-resource";
-
-
-    viewButton.innerHTML =
-        '<i class="fas fa-eye" aria-hidden="true"></i> View Resource';
-
-
-    viewButton.dataset.resourceId =
-        resource?.id || "";
-
-
-    viewButton.addEventListener(
-        "click",
-        () => {
-
-            viewResource(
-                resource,
-                viewButton
-            );
-
-        }
-    );
-
-
-    actions.appendChild(
-        viewButton
-    );
-
-
-    // -----------------------------------------------------
-    // DOWNLOAD BUTTON
-    // -----------------------------------------------------
-
-    const accessLevel =
-        getResourceAccessLevel(
-            resource
-        );
-
-
-    if (
-        accessLevel !== "view" &&
-        accessLevel !== "none"
-    ) {
-
-        const downloadButton =
-            document.createElement(
-                "button"
-            );
-
-
-        downloadButton.type =
-            "button";
-
-
-        downloadButton.className =
-            "download-resource";
-
-
-        downloadButton.dataset.resourceId =
-            resource?.id || "";
-
-
-        downloadButton.innerHTML =
-            '<i class="fas fa-download" aria-hidden="true"></i> Download';
-
-
-        downloadButton.addEventListener(
-            "click",
-            () => {
-
-                downloadResource(
-                    resource,
-                    downloadButton
-                );
-
-            }
-        );
-
-
-        actions.appendChild(
-            downloadButton
-        );
-
-    }
-
-
-    // -----------------------------------------------------
-    // CARD
-    // -----------------------------------------------------
-
-    card.append(
-        header,
-        author,
-        description,
-        actions
-    );
-
-
-    return card;
 
 }
 
@@ -2432,8 +2510,7 @@ async function viewResource(
 
     const resourceId =
         String(
-            resource?.id ||
-            ""
+            resource?.id || ""
         ).trim();
 
 
@@ -2519,8 +2596,7 @@ async function downloadResource(
 
     const resourceId =
         String(
-            resource?.id ||
-            ""
+            resource?.id || ""
         ).trim();
 
 
@@ -2641,10 +2717,173 @@ async function downloadResource(
 
 
 // =========================================================
+// LOAD SUBJECT LIST
+// =========================================================
+
+async function loadSubjectList() {
+
+    showLoading(
+        "Loading available subjects..."
+    );
+
+
+    try {
+
+        availableSubjects =
+            await loadAllSubjects();
+
+
+        if (
+            !availableSubjects.length
+        ) {
+
+            if (subjectName) {
+
+                subjectName.textContent =
+                    "Study Resources";
+
+            }
+
+
+            if (subjectDescription) {
+
+                subjectDescription.textContent =
+                    "No subjects are currently available.";
+
+            }
+
+
+            if (resourcesContainer) {
+
+                resourcesContainer.innerHTML =
+                    "";
+
+
+                const empty =
+                    document.createElement(
+                        "div"
+                    );
+
+                empty.className =
+                    "empty-state";
+
+
+                const icon =
+                    document.createElement(
+                        "i"
+                    );
+
+                icon.className =
+                    "fas fa-book-open";
+
+
+                const title =
+                    document.createElement(
+                        "h3"
+                    );
+
+                title.textContent =
+                    "No Subjects Available";
+
+
+                const text =
+                    document.createElement(
+                        "p"
+                    );
+
+                text.textContent =
+                    "No subjects have been published yet.";
+
+                
+                empty.append(
+                    icon,
+                    title,
+                    text
+                );
+
+
+                resourcesContainer.appendChild(
+                    empty
+                );
+
+            }
+
+
+            return;
+
+        }
+
+
+        createSubjectSelector();
+
+
+        // -------------------------------------------------
+        // If URL contains a valid subject, load it.
+        // -------------------------------------------------
+
+        if (
+            initialSubjectId &&
+            findSubject(
+                initialSubjectId
+            )
+        ) {
+
+            selectedSubjectId =
+                initialSubjectId;
+
+
+            setSelectedSubject(
+                initialSubjectId
+            );
+
+
+            await loadSelectedSubjectResources(
+                initialSubjectId
+            );
+
+
+            return;
+
+        }
+
+
+        // -------------------------------------------------
+        // Otherwise show the subject-selection state.
+        // -------------------------------------------------
+
+        selectedSubjectId =
+            "";
+
+
+        renderSubjectSelectionState();
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Nursephere subject loading error:",
+            error
+        );
+
+
+        showError(
+
+            error?.message ||
+            "Unable to load available subjects."
+
+        );
+
+    }
+
+}
+
+
+// =========================================================
 // INITIALIZATION
 // =========================================================
 
-function initializeResourcesPage() {
+async function initializeResourcesPage() {
 
     // -----------------------------------------------------
     // Authentication is mandatory.
@@ -2660,27 +2899,10 @@ function initializeResourcesPage() {
 
 
     // -----------------------------------------------------
-    // Subject selector.
+    // Load subjects independently.
     // -----------------------------------------------------
 
-    if (subjectSelect) {
-
-        subjectSelect.addEventListener(
-            "change",
-            handleSubjectChange
-        );
-
-    }
-
-
-    // -----------------------------------------------------
-    // Load ALL subjects first.
-    //
-    // If a subject_id exists in the URL, that subject will
-    // automatically be selected after subjects load.
-    // -----------------------------------------------------
-
-    loadSubjects();
+    await loadSubjectList();
 
 }
 
