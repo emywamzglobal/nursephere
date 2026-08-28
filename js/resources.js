@@ -2046,7 +2046,6 @@ function createResourceCard(
 
 }
 
-
 // =========================================================
 // RESOURCE FILE REQUEST
 // =========================================================
@@ -2147,17 +2146,18 @@ async function requestResourceFile(
         401
     ) {
 
-        localStorage.removeItem(
-            "studentToken"
-        );
-
-        window.location.replace(
-            LOGIN_PAGE
-        );
+        const message =
+            await getResponseMessage(
+                response
+            );
 
         throw new ApiError(
-            "Your session has expired.",
+
+            message ||
+            "Unable to access this study resource.",
+
             401
+
         );
 
     }
@@ -2266,7 +2266,6 @@ async function requestResourceFile(
     };
 
 }
-
 
 // =========================================================
 // RESPONSE FILE NAME
