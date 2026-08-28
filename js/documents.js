@@ -1703,7 +1703,7 @@ function showDocumentsLocked() {
             </p>
 
             <a
-                href="../checkout.html?plan=41bcea00daa9844a9fc995be824682409"
+                href="../checkout.html?plan=41bcea0daa9844a9fc995be824682409"
                 class="documents-upgrade-btn"
             >
                 <i class="fas fa-crown"></i>
