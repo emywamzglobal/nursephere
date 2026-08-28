@@ -488,13 +488,16 @@ async function apiRequest(
     }
 
 
-    const message =
-        await getResponseMessage(
-            response
-        );
-
+    // -----------------------------------------------------
+    // NON-JSON ERROR RESPONSE
+    // -----------------------------------------------------
 
     if (!response.ok) {
+
+        const message =
+            await getResponseMessage(
+                response
+            );
 
         throw new ApiError(
 
@@ -510,13 +513,20 @@ async function apiRequest(
     }
 
 
+    // -----------------------------------------------------
+    // SUCCESS RESPONSE
+    // -----------------------------------------------------
+    //
+    // IMPORTANT:
+    // Do NOT call getResponseMessage() before this.
+    // The response body must only be consumed once.
+    //
+
     return parseJsonResponse(
-        response,
-        message
+        response
     );
 
 }
-
 
 // =========================================================
 // LOADING STATE
