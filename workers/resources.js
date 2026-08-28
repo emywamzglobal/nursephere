@@ -937,6 +937,193 @@ if (
 
 }
 
+// =====================================================
+// STUDENT — GET SUBJECT STUDY RESOURCES
+// GET /api/subjects/:subject_id/resources
+//
+// ACCESS:
+//   study_resources feature required
+//
+//   none     = denied
+//   view     = allowed
+//   download = allowed
+// =====================================================
+
+if (
+    method === "GET" &&
+    pathname.startsWith("/api/subjects/") &&
+    pathname.endsWith("/resources")
+) {
+
+    const parts =
+        pathname
+            .split("/")
+            .filter(Boolean);
+
+    const subjectId =
+        parts[
+            parts.length - 2
+        ];
+
+    if (!subjectId) {
+
+        return studyBookResponse(
+            false,
+            "Subject ID is required.",
+            null,
+            400
+        );
+
+    }
+
+
+    // =================================================
+    // AUTHENTICATION + FEATURE ACCESS
+    // =================================================
+
+    const authorization =
+        await studyBookRequireAccess(
+            request,
+            env,
+            "view"
+        );
+
+    if (!authorization.ok) {
+
+        return studyBookResponse(
+            false,
+            authorization.message,
+            null,
+            authorization.status
+        );
+
+    }
+
+
+    try {
+
+        // =================================================
+        // SUBJECT
+        // =================================================
+
+        const subject =
+            await env.DB.prepare(
+                `
+                SELECT
+                    s.id,
+                    s.name,
+                    s.description,
+                    s.image_url,
+                    s.exam_id,
+                    e.name AS exam_name,
+                    e.code AS exam_code
+
+                FROM subjects s
+
+                INNER JOIN exams e
+                    ON e.id = s.exam_id
+
+                WHERE
+                    s.id = ?
+                    AND s.status = 'active'
+                    AND e.status = 'active'
+
+                LIMIT 1
+                `
+            )
+            .bind(
+                subjectId
+            )
+            .first();
+
+
+        if (!subject) {
+
+            return studyBookResponse(
+                false,
+                "Subject not found.",
+                null,
+                404
+            );
+
+        }
+
+
+        // =================================================
+        // STUDY BOOKS
+        // =================================================
+
+        const { results } =
+            await env.DB.prepare(
+                `
+                SELECT
+                    id,
+                    subject_id,
+                    title,
+                    author,
+                    description,
+                    cover_image,
+                    file_type,
+                    status,
+                    created_at,
+                    updated_at
+
+                FROM study_resources
+
+                WHERE
+                    subject_id = ?
+                    AND status = 'active'
+
+                ORDER BY
+                    created_at DESC
+                `
+            )
+            .bind(
+                subjectId
+            )
+            .all();
+
+
+        // =================================================
+        // RETURN
+        // =================================================
+
+        return studyBookResponse(
+            true,
+            "Study resources retrieved successfully.",
+            {
+                subject,
+                resources:
+                    results || [],
+
+                access_level:
+                    authorization.access
+                        ?.access_level ||
+                    "none"
+            },
+            200
+        );
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "GET subject study resources failed:",
+            error
+        );
+
+        return studyBookResponse(
+            false,
+            "Failed to retrieve study resources.",
+            null,
+            500
+        );
+
+    }
+
+}
+
 
         // =====================================================
         // ADMIN — GET ALL STUDY BOOKS

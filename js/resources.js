@@ -3,43 +3,45 @@
 // File: student/js/resources.js
 // =========================================================
 //
-// PRODUCTION VERSION
-//
-// Resources are completely independent from Practice.
-//
-// FLOW:
-//
-//   /student/resources
-//          ↓
-//   GET /api/exams
-//          ↓
-//   GET /api/subjects?exam_id=...
-//          ↓
-//   Student selects subject
-//          ↓
-//   GET /api/subjects/:subject_id/resources
-//          ↓
-//   Study resources displayed
-//
-// RESOURCE FILE ACCESS:
-//
-//   GET /api/resources/:id/view
-//   GET /api/resources/:id/download
-//
-// SECURITY:
-//
-//   • JWT stored locally
-//   • JWT sent only through Authorization header
-//   • Private R2 objects are NEVER exposed directly
-//   • Worker performs subscription authorization
-//   • Worker performs plan_features authorization
-//   • View/download requests are authenticated server-side
-//   • No resource file URL is opened directly
-//   • No HTML from API responses is injected
-//   • Blob URLs are revoked after use
-//   • 401 automatically clears the student session
-//
-// =========================================================
+/*
+ * PRODUCTION VERSION
+ *
+ * Resources are completely independent from Practice.
+ *
+ * FLOW:
+ *
+ *   /student/resources
+ *          ↓
+ *   GET /api/exams
+ *          ↓
+ *   GET /api/subjects?exam_id=...
+ *          ↓
+ *   Student selects subject
+ *          ↓
+ *   GET /api/subjects/:subject_id/resources
+ *          ↓
+ *   Study resources displayed
+ *
+ * RESOURCE FILE ACCESS:
+ *
+ *   GET /api/resources/:id/view
+ *   GET /api/resources/:id/download
+ *
+ * SECURITY:
+ *
+ *   • JWT stored locally
+ *   • JWT sent only through Authorization header
+ *   • Private R2 objects are NEVER exposed directly
+ *   • Worker performs subscription authorization
+ *   • Worker performs plan_features authorization
+ *   • View/download requests are authenticated server-side
+ *   • No resource file URL is opened directly
+ *   • No HTML from API responses is injected
+ *   • Blob URLs are revoked after use
+ *   • 401 automatically clears the student session
+ *
+ * =========================================================
+ */
 
 "use strict";
 
@@ -120,44 +122,37 @@ if (!resourcesContainer) {
 // SESSION
 // =========================================================
 
-function getToken() {
+function getStudentToken() {
 
-    const token =
-        localStorage.getItem(
-            "studentToken"
-        );
-
-    return token
-        ? token.trim()
-        : "";
-
-}
-
-
-function clearStudentSession() {
-
-    localStorage.removeItem(
+    return localStorage.getItem(
         "studentToken"
     );
 
-    localStorage.removeItem(
-        "student"
-    );
-
-    localStorage.removeItem(
-        "studentId"
-    );
-
 }
 
 
-function redirectToLogin() {
+// =========================================================
+// VERIFY LOGIN
+// =========================================================
 
-    clearStudentSession();
+function verifyLogin() {
 
-    window.location.replace(
-        LOGIN_PAGE
-    );
+    const token =
+        getStudentToken();
+
+
+    if (!token) {
+
+        window.location.replace(
+            LOGIN_PAGE
+        );
+
+        return false;
+
+    }
+
+
+    return true;
 
 }
 
@@ -405,11 +400,14 @@ async function apiRequest(
 ) {
 
     const token =
-        getToken();
+        getStudentToken();
+
 
     if (!token) {
 
-        redirectToLogin();
+        window.location.replace(
+            LOGIN_PAGE
+        );
 
         throw new ApiError(
             "Your session has expired.",
@@ -426,6 +424,9 @@ async function apiRequest(
 
         "Authorization":
             `Bearer ${token}`,
+
+        "Content-Type":
+            "application/json",
 
         ...(options.headers || {})
 
@@ -475,10 +476,17 @@ async function apiRequest(
 
 
     if (
-        response.status === 401
+        response.status ===
+        401
     ) {
 
-        redirectToLogin();
+        localStorage.removeItem(
+            "studentToken"
+        );
+
+        window.location.replace(
+            LOGIN_PAGE
+        );
 
         throw new ApiError(
             "Your session has expired.",
@@ -516,17 +524,13 @@ async function apiRequest(
     // -----------------------------------------------------
     // SUCCESS RESPONSE
     // -----------------------------------------------------
-    //
-    // IMPORTANT:
-    // Do NOT call getResponseMessage() before this.
-    // The response body must only be consumed once.
-    //
 
     return parseJsonResponse(
         response
     );
 
 }
+
 
 // =========================================================
 // LOADING STATE
@@ -789,6 +793,7 @@ function getPayload(
 
     }
 
+
     return result || {};
 
 }
@@ -818,6 +823,7 @@ function extractArray(
         }
 
     }
+
 
     return [];
 
@@ -998,6 +1004,7 @@ async function loadAllSubjects() {
                             error
                         );
 
+
                         return [];
 
                     }
@@ -1117,146 +1124,148 @@ function createSubjectSelector() {
 
 
     // -----------------------------------------------------
-// Select.
-// -----------------------------------------------------
+    // Select.
+    // -----------------------------------------------------
 
-const select =
-    document.createElement(
-        "select"
+    const select =
+        document.createElement(
+            "select"
+        );
+
+    select.id =
+        "resourceSubjectSelect";
+
+    select.name =
+        "subject_id";
+
+
+    // -----------------------------------------------------
+    // Placeholder.
+    // -----------------------------------------------------
+
+    const placeholder =
+        document.createElement(
+            "option"
+        );
+
+    placeholder.value =
+        "";
+
+    placeholder.textContent =
+        "Choose a subject";
+
+    placeholder.disabled =
+        true;
+
+    placeholder.selected =
+        true;
+
+
+    select.appendChild(
+        placeholder
     );
 
-select.id =
-    "resourceSubjectSelect";
 
-select.name =
-    "subject_id";
+    // -----------------------------------------------------
+    // Populate subjects.
+    // -----------------------------------------------------
 
+    availableSubjects.forEach(
+        subject => {
 
-// -----------------------------------------------------
-// Placeholder.
-// -----------------------------------------------------
-
-const placeholder =
-    document.createElement(
-        "option"
-    );
-
-placeholder.value =
-    "";
-
-placeholder.textContent =
-    "Choose a subject";
-
-placeholder.disabled =
-    true;
-
-placeholder.selected =
-    true;
+            const id =
+                String(
+                    subject?.id ??
+                    subject?.subject_id ??
+                    ""
+                ).trim();
 
 
-select.appendChild(
-    placeholder
-);
+            if (!id) {
+
+                return;
+
+            }
 
 
-// -----------------------------------------------------
-// Populate subjects.
-// -----------------------------------------------------
-
-availableSubjects.forEach(
-    subject => {
-
-        const id =
-            String(
-                subject?.id ??
-                subject?.subject_id ??
-                ""
-            ).trim();
+            const option =
+                document.createElement(
+                    "option"
+                );
 
 
-        if (!id) {
-
-            return;
-
-        }
+            option.value =
+                id;
 
 
-        const option =
-            document.createElement(
-                "option"
+            option.textContent =
+                subject?.name ||
+                subject?.title ||
+                "Untitled Subject";
+
+
+            // -------------------------------------------------
+            // Only select a subject when one was already chosen.
+            // -------------------------------------------------
+
+            if (
+                selectedSubjectId &&
+                id ===
+                selectedSubjectId
+            ) {
+
+                option.selected =
+                    true;
+
+            }
+
+
+            select.appendChild(
+                option
             );
 
-        option.value =
-            id;
+        }
+    );
 
 
-        option.textContent =
-            subject?.name ||
-            subject?.title ||
-            "Untitled Subject";
+    // -----------------------------------------------------
+    // Change event.
+    // -----------------------------------------------------
+
+    select.addEventListener(
+        "change",
+        async event => {
+
+            const value =
+                String(
+                    event.target.value ||
+                    ""
+                ).trim();
 
 
-        // -------------------------------------------------
-        // Only select a subject when one was already chosen.
-        // -------------------------------------------------
+            if (!value) {
 
-        if (
-            selectedSubjectId &&
-            id ===
-            selectedSubjectId
-        ) {
+                return;
 
-            option.selected =
-                true;
+            }
+
+
+            selectedSubjectId =
+                value;
+
+
+            updateSubjectUrl(
+                value
+            );
+
+
+            await loadSelectedSubjectResources(
+                value
+            );
 
         }
+    );
 
-
-        select.appendChild(
-            option
-        );
-
-    }
-);
-
-
-// -----------------------------------------------------
-// Change event.
-// -----------------------------------------------------
-
-select.addEventListener(
-    "change",
-    async event => {
-
-        const value =
-            String(
-                event.target.value ||
-                ""
-            ).trim();
-
-
-        if (!value) {
-
-            return;
-
-        }
-
-
-        selectedSubjectId =
-            value;
-
-
-        updateSubjectUrl(
-            value
-        );
-
-
-        await loadSelectedSubjectResources(
-            value
-        );
-
-    }
-);
 
     // -----------------------------------------------------
     // Change event.
@@ -1420,6 +1429,7 @@ function findSubject(
                     subject?.subject_id ??
                     ""
                 ).trim();
+
 
             return id === safeId;
 
@@ -1661,7 +1671,7 @@ function renderSubjectSelectionState() {
     text.textContent =
         "Select a subject above to view its study resources.";
 
-    
+
     empty.append(
         icon,
         title,
@@ -2048,12 +2058,14 @@ async function requestResourceFile(
 ) {
 
     const token =
-        getToken();
+        getStudentToken();
 
 
     if (!token) {
 
-        redirectToLogin();
+        window.location.replace(
+            LOGIN_PAGE
+        );
 
         throw new ApiError(
             "Your session has expired.",
@@ -2132,10 +2144,17 @@ async function requestResourceFile(
 
 
     if (
-        response.status === 401
+        response.status ===
+        401
     ) {
 
-        redirectToLogin();
+        localStorage.removeItem(
+            "studentToken"
+        );
+
+        window.location.replace(
+            LOGIN_PAGE
+        );
 
         throw new ApiError(
             "Your session has expired.",
@@ -2854,7 +2873,7 @@ async function loadSubjectList() {
                 text.textContent =
                     "No subjects have been published yet.";
 
-                
+
                 empty.append(
                     icon,
                     title,
@@ -2949,9 +2968,7 @@ async function initializeResourcesPage() {
     // Authentication is mandatory.
     // -----------------------------------------------------
 
-    if (!getToken()) {
-
-        redirectToLogin();
+    if (!verifyLogin()) {
 
         return;
 
