@@ -711,20 +711,29 @@ async function studyBookAuthenticateStudent(
 
     catch (error) {
 
-        console.error(
-            "Student authentication failed:",
-            error
-        );
+    console.error(
+        "Student authentication failed:",
+        error?.message || error
+    );
 
+    console.error(
+        "Student authentication error name:",
+        error?.name || "Unknown"
+    );
 
-        return {
-            ok: false,
-            status: 401,
-            message:
-                "Authentication failed."
-        };
+    console.error(
+        "Student authentication stack:",
+        error?.stack || "No stack"
+    );
 
-    }
+    return {
+        ok: false,
+        status: 401,
+        message:
+            "Authentication failed."
+    };
+
+}
 
 }
         // =====================================================
