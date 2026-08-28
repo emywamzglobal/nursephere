@@ -644,33 +644,38 @@ async function studyBookAuthenticateStudent(
         // -------------------------------------------------
 
         const student =
-            await env.DB.prepare(
-                `
-                SELECT
-                    id,
-                    email,
-                    status
-                FROM students
-                WHERE id = ?
-                LIMIT 1
-                `
-            )
-            .bind(
-                studentId
-            )
-            .first();
+    await env.DB.prepare(
+        `
+        SELECT
+            id,
+            email
+        FROM students
+        WHERE id = ?
+        LIMIT 1
+        `
+    )
+    .bind(
+        studentId
+    )
+    .first();
 
 
-        if (!student) {
+if (!student) {
 
-            return {
-                ok: false,
-                status: 401,
-                message:
-                    "Student account was not found."
-            };
+    return {
+        ok: false,
+        status: 401,
+        message:
+            "Student account was not found."
+    };
 
-        }
+}
+
+
+return {
+    ok: true,
+    student
+};
 
 
         // -------------------------------------------------
