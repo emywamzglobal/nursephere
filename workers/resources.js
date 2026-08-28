@@ -742,120 +742,119 @@ return {
 
 }
         // =====================================================
-        // STUDENT SUBSCRIPTION + FEATURE ACCESS
-        // =====================================================
+// STUDENT SUBSCRIPTION + FEATURE ACCESS
+// =====================================================
 
-        async function studyBookGetStudentAccess(
-            studentId,
-            env
-        ) {
+async function studyBookGetStudentAccess(
+    studentId,
+    env
+) {
 
-            try {
+    try {
 
-                const access =
-                    await env.DB.prepare(
-                        `
-                        SELECT
-                            s.id AS subscription_id,
-                            s.start_date,
-                            s.end_date,
-                            s.payment_status,
-                            s.status AS subscription_status,
+        const access =
+            await env.DB.prepare(
+                `
+                SELECT
+                    s.id AS subscription_id,
+                    s.start_date,
+                    s.end_date,
+                    s.payment_status,
+                    s.status AS subscription_status,
 
-                            sp.id AS plan_id,
-                            sp.name AS plan_name,
+                    sp.id AS plan_id,
+                    sp.name AS plan_name,
 
-                            pf.access_level,
+                    pf.access_level,
 
-                            f.feature_key,
-                            f.feature_name
+                    f.feature_key,
+                    f.feature_name
 
-                        FROM subscriptions s
+                FROM subscriptions s
 
-                        INNER JOIN subscription_plans sp
-                            ON sp.id = s.plan_id
+                INNER JOIN subscription_plans sp
+                    ON sp.id = s.plan_id
 
-                        INNER JOIN plan_features pf
-                            ON pf.plan_id = sp.id
+                INNER JOIN plan_features pf
+                    ON pf.plan_id = sp.id
 
-                        INNER JOIN features f
-                            ON f.id = pf.feature_id
+                INNER JOIN features f
+                    ON f.id = pf.feature_id
 
-                        WHERE s.student_id = ?
+                WHERE s.student_id = ?
 
-                        AND s.status = 'active'
+                AND s.status = 'active'
 
-                        AND s.payment_status = 'paid'
+                AND s.payment_status = 'paid'
 
-                        AND sp.status = 'active'
+                AND sp.status = 'active'
 
-                        AND f.feature_key = 'study_resources'
+                AND f.feature_key = 'study_resources'
 
-                        AND datetime(s.start_date)
-                            <= datetime('now')
+                AND datetime(s.start_date)
+                    <= datetime('now')
 
-                        AND datetime(s.end_date)
-                            >= datetime('now')
+                AND datetime(s.end_date)
+                    >= datetime('now')
 
-                        ORDER BY
-                            CASE
-                                WHEN pf.access_level = 'download'
-                                    THEN 2
-                                WHEN pf.access_level = 'view'
-                                    THEN 1
-                                ELSE 0
-                            END DESC
+                ORDER BY
+                    CASE
+                        WHEN pf.access_level = 'download'
+                            THEN 2
+                        WHEN pf.access_level = 'view'
+                            THEN 1
+                        ELSE 0
+                    END DESC
 
-                        LIMIT 1
-                        `
-                    )
-                    .bind(
-                        studentId
-                    )
-                    .first();
+                LIMIT 1
+                `
+            )
+            .bind(
+                String(studentId)
+            )
+            .first();
 
-                if (!access) {
+        if (!access) {
 
-                    return {
-                        ok: true,
-                        access_level: "none",
-                        subscription: null
-                    };
-
-                }
-
-                return {
-                    ok: true,
-
-                    access_level:
-                        studyBookText(
-                            access.access_level
-                        ).toLowerCase(),
-
-                    subscription:
-                        access
-                };
-
-            }
-
-            catch (error) {
-
-                console.error(
-                    "Study resource subscription lookup failed:",
-                    error
-                );
-
-                return {
-                    ok: false,
-                    status: 500,
-                    message:
-                        "Unable to verify study resource access."
-                };
-
-            }
+            return {
+                ok: true,
+                access_level: "none",
+                subscription: null
+            };
 
         }
 
+        return {
+            ok: true,
+
+            access_level:
+                studyBookText(
+                    access.access_level
+                ).toLowerCase(),
+
+            subscription:
+                access
+        };
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Study resource subscription lookup failed:",
+            error
+        );
+
+        return {
+            ok: false,
+            status: 500,
+            message:
+                "Unable to verify study resource access."
+        };
+
+    }
+
+}
 
        // =====================================================
 // REQUIRE STUDY RESOURCE ACCESS
