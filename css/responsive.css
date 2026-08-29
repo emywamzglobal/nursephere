@@ -1,326 +1,614 @@
 /* =========================================================
-   NURSEPHere
-   RESPONSIVE.CSS
-   Global Responsive Behaviour
+   NURSEPHERE — RESPONSIVE MOBILE STYLES
+   File: public/css/responsive.css
    ========================================================= */
 
-
-/* =========================================================
-   GLOBAL CONTAINER
-   ========================================================= */
-
-.container {
-    width: 90%;
-    max-width: 1400px;
-    margin: 0 auto;
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
 }
 
+html,
+body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+}
 
-/* =========================================================
-   RESPONSIVE IMAGES
-   ========================================================= */
-
-img {
+img,
+video,
+iframe {
     max-width: 100%;
     height: auto;
 }
 
-.img-fluid {
-    width: 100%;
-    height: auto;
-    display: block;
-}
-
-
 /* =========================================================
-   FLEX UTILITIES
+   CONTAINER
    ========================================================= */
 
-.flex {
-    display: flex;
+.container {
+    width: min(1200px, 100%);
+    margin: 0 auto;
+    padding-left: 20px;
+    padding-right: 20px;
 }
-
-.flex-center {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-.flex-between {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.flex-column {
-    display: flex;
-    flex-direction: column;
-}
-
 
 /* =========================================================
-   GRID UTILITIES
+   HEADER
    ========================================================= */
 
-.grid-2 {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 20px;
-}
+@media (max-width: 900px) {
 
-.grid-3 {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 20px;
-}
+    .navbar {
+        height: 70px;
+        gap: 15px;
+    }
 
-.grid-4 {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 20px;
-}
+    .logo img {
+        height: 50px;
+    }
 
+    .nav {
+        display: none;
+    }
+
+    .header-right {
+        gap: 8px;
+    }
+
+    .header-right .btn-text,
+    .header-right .btn-whatsapp {
+        display: none;
+    }
+
+    .header-right .LogIn {
+        font-size: 14px;
+    }
+
+    .header-right .btn-primary {
+        padding: 10px 14px;
+        font-size: 13px;
+    }
+}
 
 /* =========================================================
-   TABLE RESPONSIVENESS
+   HERO
    ========================================================= */
 
-.table-responsive {
-    width: 100%;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-}
+@media (max-width: 900px) {
 
-.table-responsive table {
-    min-width: 600px;
-}
+    .hero {
+        padding: 60px 0;
+    }
 
+    .hero-container {
+        grid-template-columns: 1fr !important;
+        gap: 40px;
+    }
+
+    .hero-content {
+        text-align: center;
+    }
+
+    .hero-title {
+        font-size: clamp(42px, 11vw, 64px);
+        line-height: 1.05;
+    }
+
+    .hero-text {
+        max-width: 100%;
+        font-size: 17px;
+        line-height: 1.7;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .hero-buttons {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .exam-tags {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .trust-row {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .hero-image,
+    .hero-visual {
+        width: 100%;
+    }
+}
 
 /* =========================================================
-   RESPONSIVE EMBEDS
+   EXAM CATEGORIES
    ========================================================= */
 
-.embed-responsive {
-    position: relative;
-    width: 100%;
-    overflow: hidden;
+@media (max-width: 1100px) {
+
+    .exam-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
 }
 
-.embed-responsive iframe,
-.embed-responsive video {
-    width: 100%;
-    height: 100%;
-}
+@media (max-width: 650px) {
 
+    .exam-categories {
+        padding: 50px 0 70px;
+    }
+
+    .section-heading {
+        margin-bottom: 35px;
+    }
+
+    .section-heading h2 {
+        font-size: 34px;
+        line-height: 1.15;
+    }
+
+    .section-heading p {
+        font-size: 16px;
+        line-height: 1.65;
+    }
+
+    .exam-grid {
+        grid-template-columns: 1fr !important;
+        gap: 20px;
+    }
+
+    .exam-card {
+        width: 100%;
+        padding: 25px;
+    }
+
+    .exam-card h3 {
+        font-size: 24px;
+    }
+}
 
 /* =========================================================
-   VISIBILITY HELPERS
+   HOW IT WORKS
    ========================================================= */
 
-.hide {
-    display: none !important;
+@media (max-width: 1100px) {
+
+    .steps-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
 }
 
-.hide-mobile {
-    display: block;
+@media (max-width: 650px) {
+
+    .how-it-works {
+        padding: 55px 0;
+    }
+
+    .steps-grid {
+        grid-template-columns: 1fr !important;
+        gap: 18px;
+        margin-top: 35px;
+        margin-bottom: 45px;
+    }
+
+    .step-card {
+        width: 100%;
+        padding: 28px 22px;
+    }
+
+    .step-card h3 {
+        font-size: 22px;
+    }
+
+    .step-card p {
+        font-size: 16px;
+    }
 }
 
-.show-mobile {
+/* =========================================================
+   STATS
+   ========================================================= */
+
+@media (max-width: 900px) {
+
+    .stats-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 25px;
+    }
+}
+
+@media (max-width: 550px) {
+
+    .stats-row {
+        grid-template-columns: 1fr !important;
+        gap: 30px;
+        text-align: center;
+    }
+
+    .stat-box h3 {
+        font-size: 42px;
+    }
+
+    .stat-box p {
+        font-size: 16px;
+    }
+}
+
+/* =========================================================
+   SECTION BUTTONS
+   ========================================================= */
+
+@media (max-width: 650px) {
+
+    .section-button {
+        width: 100%;
+    }
+
+    .section-button .btn {
+        width: 100%;
+        text-align: center;
+    }
+}
+
+/* =========================================================
+   PRICING
+   ========================================================= */
+
+@media (max-width: 900px) {
+
+    .pricing-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .pricing-card {
+        width: 100%;
+    }
+
+    .featured {
+        transform: none !important;
+    }
+}
+
+@media (max-width: 550px) {
+
+    .pricing {
+        padding: 55px 0;
+    }
+
+    .pricing .section-title h2 {
+        font-size: 32px;
+    }
+
+    .pricing-card {
+        padding: 25px 20px;
+    }
+
+    .price {
+        font-size: 40px;
+    }
+}
+
+/* =========================================================
+   TESTIMONIALS
+   ========================================================= */
+
+@media (max-width: 650px) {
+
+    .testimonial-grid {
+        grid-template-columns: 1fr !important;
+        gap: 20px;
+    }
+
+    .testimonial-card {
+        width: 100%;
+    }
+}
+
+/* =========================================================
+   GENERAL MOBILE TYPOGRAPHY
+   ========================================================= */
+
+@media (max-width: 650px) {
+
+    h1 {
+        font-size: 40px;
+    }
+
+    h2 {
+        font-size: 32px;
+    }
+
+    h3 {
+        font-size: 23px;
+    }
+
+    p {
+        font-size: 16px;
+    }
+
+    .btn {
+        max-width: 100%;
+    }
+}
+
+/* =========================================================
+   MOBILE SAFETY
+   Prevent individual elements from creating
+   horizontal page overflow.
+   ========================================================= */
+
+@media (max-width: 650px) {
+
+    .container,
+    section,
+    header,
+    footer,
+    main {
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
+    .row,
+    .grid,
+    .flex {
+        max-width: 100%;
+    }
+
+    table {
+        max-width: 100%;
+        display: block;
+        overflow-x: auto;
+    }
+
+    input,
+    textarea,
+    select,
+    button {
+        max-width: 100%;
+    }
+}
+
+/* =========================================================
+   NURSEPHERE — RESPONSIVE NAVBAR
+   ========================================================= */
+
+/* Hide mobile navigation controls on desktop */
+.mobile-menu-toggle,
+.mobile-menu {
     display: none;
 }
 
 
 /* =========================================================
-   FORM SAFETY
-   Prevent inputs from forcing horizontal overflow
+   MOBILE NAVBAR
    ========================================================= */
 
-input,
-select,
-textarea,
-button {
-    max-width: 100%;
-}
+@media (max-width: 900px) {
 
-input,
-select,
-textarea {
-    box-sizing: border-box;
-}
+    /* -----------------------------------------------------
+       Navbar
+       ----------------------------------------------------- */
 
-
-/* =========================================================
-   GENERAL OVERFLOW PROTECTION
-   ========================================================= */
-
-html,
-body {
-    max-width: 100%;
-    overflow-x: hidden;
-}
-
-* {
-    box-sizing: border-box;
-}
-
-
-/* =========================================================
-   TABLET
-   768px - 1023px
-   ========================================================= */
-
-@media (max-width: 1023px) {
-
-    .container {
-        width: 94%;
-    }
-
-    .grid-4 {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .grid-3 {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .grid-2 {
-        grid-template-columns: 1fr;
-    }
-
-}
-
-
-/* =========================================================
-   MOBILE
-   0px - 767px
-   ========================================================= */
-
-@media (max-width: 767px) {
-
-    .container {
-        width: 95%;
-    }
-
-
-    /* ---------------------------------------------
-       FLEX
-       --------------------------------------------- */
-
-    .flex-between {
-        flex-direction: column;
-        align-items: flex-start;
+    .navbar {
+        position: relative;
+        min-height: 70px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
         gap: 15px;
     }
 
 
-    /* ---------------------------------------------
-       GRID
-       --------------------------------------------- */
+    /* -----------------------------------------------------
+       Hide desktop navigation
+       ----------------------------------------------------- */
 
-    .grid-4,
-    .grid-3,
-    .grid-2 {
-        grid-template-columns: 1fr;
-        gap: 14px;
+    .navbar .nav {
+        display: none;
     }
 
 
-    /* ---------------------------------------------
-       VISIBILITY
-       --------------------------------------------- */
+    /* -----------------------------------------------------
+       Hide desktop contact buttons
+       ----------------------------------------------------- */
 
-    .hide-mobile {
-        display: none !important;
-    }
-
-    .show-mobile {
-        display: block !important;
+    .navbar .header-right .btn-text,
+    .navbar .header-right .btn-whatsapp {
+        display: none;
     }
 
 
-    /* ---------------------------------------------
-       TABLE
-       --------------------------------------------- */
-
-    .table-responsive {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
+    /* Keep login + Get Started out of the way */
+    .navbar .header-right {
+        display: none;
     }
 
 
-    /* ---------------------------------------------
-       IMAGES
-       --------------------------------------------- */
+    /* -----------------------------------------------------
+       Mobile hamburger
+       ----------------------------------------------------- */
 
-    img {
-        max-width: 100%;
-        height: auto;
+    .mobile-menu-toggle {
+        display: flex;
+
+        width: 44px;
+        height: 44px;
+
+        padding: 8px;
+        margin-left: auto;
+
+        border: none;
+        background: transparent;
+
+        cursor: pointer;
+
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+
+        gap: 5px;
+
+        flex-shrink: 0;
     }
 
 
-    /* ---------------------------------------------
-       FORMS
-       --------------------------------------------- */
+    .mobile-menu-toggle span {
+        display: block;
 
-    input,
-    select,
-    textarea,
-    button {
-        max-width: 100%;
+        width: 25px;
+        height: 3px;
+
+        border-radius: 3px;
+
+        background: #0A2540;
+
+        transition:
+            transform 0.25s ease,
+            opacity 0.2s ease;
     }
 
 
-    /* ---------------------------------------------
-       BUTTONS
-       --------------------------------------------- */
+    /* -----------------------------------------------------
+       Hamburger → X
+       ----------------------------------------------------- */
 
-    button,
-    .btn {
-        min-height: 42px;
+    .mobile-menu-toggle.active span:nth-child(1) {
+        transform: translateY(8px) rotate(45deg);
+    }
+
+    .mobile-menu-toggle.active span:nth-child(2) {
+        opacity: 0;
+    }
+
+    .mobile-menu-toggle.active span:nth-child(3) {
+        transform: translateY(-8px) rotate(-45deg);
     }
 
 
-    /* ---------------------------------------------
-       CARDS
-       --------------------------------------------- */
+    /* -----------------------------------------------------
+       Mobile menu
+       ----------------------------------------------------- */
 
-    .card {
-        max-width: 100%;
+    .mobile-menu {
+        display: none;
+
+        width: 100%;
+
+        background: #ffffff;
+
+        border-top: 1px solid #e5e7eb;
+
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+
+        padding: 10px 20px 20px;
+
+        position: relative;
+
+        z-index: 9999;
     }
 
 
-    /* ---------------------------------------------
-       MODALS
-       --------------------------------------------- */
+    .mobile-menu.active {
+        display: block;
+    }
 
-    .modal,
-    .modal-content {
-        max-width: calc(100vw - 24px);
+
+    /* -----------------------------------------------------
+       Mobile menu links
+       ----------------------------------------------------- */
+
+    .mobile-menu a {
+        display: block;
+
+        width: 100%;
+
+        padding: 15px 10px;
+
+        color: #0A2540;
+
+        text-decoration: none;
+
+        font-size: 16px;
+        font-weight: 600;
+
+        border-bottom: 1px solid #eef1f5;
+    }
+
+
+    .mobile-menu a:last-child {
+        border-bottom: none;
+    }
+
+
+    .mobile-menu a:hover {
+        color: #2563eb;
+    }
+
+
+    /* -----------------------------------------------------
+       Divider
+       ----------------------------------------------------- */
+
+    .mobile-menu-divider {
+        width: 100%;
+        height: 1px;
+
+        margin: 8px 0;
+
+        background: #e5e7eb;
+    }
+
+
+    /* -----------------------------------------------------
+       Get Started
+       ----------------------------------------------------- */
+
+    .mobile-menu .mobile-get-started {
+        margin-top: 10px;
+
+        padding: 13px 18px;
+
+        border-radius: 8px;
+
+        background: #0A2540;
+        color: #ffffff;
+
+        text-align: center;
+
+        border-bottom: none;
+    }
+
+    .mobile-menu .mobile-get-started:hover {
+        color: #ffffff;
     }
 
 }
 
 
 /* =========================================================
-   SMALL MOBILE
-   0px - 480px
+   SMALL PHONES
    ========================================================= */
 
 @media (max-width: 480px) {
 
-    .container {
-        width: calc(100% - 24px);
+    .navbar {
+        min-height: 64px;
+        padding-left: 15px;
+        padding-right: 15px;
     }
 
-    .grid-4,
-    .grid-3,
-    .grid-2 {
-        gap: 12px;
+    .logo img {
+        max-width: 150px;
+        height: auto;
     }
 
-    button,
-    .btn {
-        width: 100%;
+    .mobile-menu {
+        padding-left: 15px;
+        padding-right: 15px;
     }
 
 }
