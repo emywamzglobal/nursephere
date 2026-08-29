@@ -527,12 +527,24 @@ if (
             !authHeader.startsWith("Bearer ")
         ) {
 
-            return new Response(
-                "Unauthorized.",
-                {
-                    status: 401
+            const response =
+                new Response(
+                    "Unauthorized.",
+                    {
+                        status: 401
+                    }
+                );
+
+            Object.entries(corsHeaders).forEach(
+                ([key, value]) => {
+                    response.headers.set(
+                        key,
+                        value
+                    );
                 }
             );
+
+            return response;
 
         }
 
@@ -547,12 +559,24 @@ if (
 
         if (!valid) {
 
-            return new Response(
-                "Invalid or expired session.",
-                {
-                    status: 401
+            const response =
+                new Response(
+                    "Invalid or expired session.",
+                    {
+                        status: 401
+                    }
+                );
+
+            Object.entries(corsHeaders).forEach(
+                ([key, value]) => {
+                    response.headers.set(
+                        key,
+                        value
+                    );
                 }
             );
+
+            return response;
 
         }
 
@@ -568,12 +592,24 @@ if (
 
         if (!studentId) {
 
-            return new Response(
-                "Student identity missing.",
-                {
-                    status: 401
+            const response =
+                new Response(
+                    "Student identity missing.",
+                    {
+                        status: 401
+                    }
+                );
+
+            Object.entries(corsHeaders).forEach(
+                ([key, value]) => {
+                    response.headers.set(
+                        key,
+                        value
+                    );
                 }
             );
+
+            return response;
 
         }
 
@@ -594,12 +630,24 @@ if (
 
         if (!student) {
 
-            return new Response(
-                "Student not found.",
-                {
-                    status: 404
+            const response =
+                new Response(
+                    "Student not found.",
+                    {
+                        status: 404
+                    }
+                );
+
+            Object.entries(corsHeaders).forEach(
+                ([key, value]) => {
+                    response.headers.set(
+                        key,
+                        value
+                    );
                 }
             );
+
+            return response;
 
         }
 
@@ -608,12 +656,24 @@ if (
 
         if (!avatarKey) {
 
-            return new Response(
-                "Avatar not found.",
-                {
-                    status: 404
+            const response =
+                new Response(
+                    "Avatar not found.",
+                    {
+                        status: 404
+                    }
+                );
+
+            Object.entries(corsHeaders).forEach(
+                ([key, value]) => {
+                    response.headers.set(
+                        key,
+                        value
+                    );
                 }
             );
+
+            return response;
 
         }
 
@@ -628,12 +688,24 @@ if (
 
         if (!object) {
 
-            return new Response(
-                "Avatar file not found.",
-                {
-                    status: 404
+            const response =
+                new Response(
+                    "Avatar file not found.",
+                    {
+                        status: 404
+                    }
+                );
+
+            Object.entries(corsHeaders).forEach(
+                ([key, value]) => {
+                    response.headers.set(
+                        key,
+                        value
+                    );
                 }
             );
+
+            return response;
 
         }
 
@@ -655,6 +727,21 @@ if (
             "private, max-age=3600"
         );
 
+        // =============================================
+        // CORS
+        // =============================================
+
+        Object.entries(corsHeaders).forEach(
+            ([key, value]) => {
+
+                headers.set(
+                    key,
+                    value
+                );
+
+            }
+        );
+
         return new Response(
             object.body,
             {
@@ -672,12 +759,26 @@ if (
             error
         );
 
-        return new Response(
-            "Unable to load profile photo.",
-            {
-                status: 500
+        const response =
+            new Response(
+                "Unable to load profile photo.",
+                {
+                    status: 500
+                }
+            );
+
+        Object.entries(corsHeaders).forEach(
+            ([key, value]) => {
+
+                response.headers.set(
+                    key,
+                    value
+                );
+
             }
         );
+
+        return response;
 
     }
 
@@ -711,7 +812,6 @@ if (
     return response;
 
 }
-
 // ======================================================
 // STUDENT SETTINGS
 // ======================================================
