@@ -612,3 +612,26 @@ iframe {
     }
 
 }
+
+/* =========================================================
+   MOBILE LOGO FIX
+   ========================================================= */
+
+@media (max-width: 900px) {
+
+    .navbar .logo {
+        display: flex;
+        align-items: center;
+        height: 100%;
+        flex-shrink: 0;
+    }
+
+    .navbar .logo img {
+        width: 150px;
+        height: auto;
+        max-height: 80px;
+        object-fit: contain;
+        display: block;
+    }
+
+}
