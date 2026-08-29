@@ -211,15 +211,25 @@ export default async function profileHandler(
                 new Headers();
 
             headers.set(
-                "Content-Type",
-                object.httpMetadata?.contentType ||
-                "image/jpeg"
-            );
+    "Content-Type",
+    object.httpMetadata?.contentType ||
+    "image/jpeg"
+);
 
-            headers.set(
-                "Cache-Control",
-                "private, max-age=3600"
-            );
+headers.set(
+    "Cache-Control",
+    "private, max-age=3600"
+);
+
+headers.set(
+    "Access-Control-Allow-Origin",
+    "https://nursephere.com"
+);
+
+headers.set(
+    "Vary",
+    "Origin"
+);
 
             return new Response(
                 object.body,
@@ -229,7 +239,7 @@ export default async function profileHandler(
                 }
             );
         }
-        
+
         /*=========================================================
             STUDENT PROFILE
 
