@@ -229,129 +229,142 @@
 
 </aside>
 
-        <!-- ===========================
-                MAIN APPLICATION
-        ============================ -->
+       <!-- ===========================
+        MAIN APPLICATION
+============================ -->
 
-        <div class="student-main">
+<div class="student-main">
 
-            <!-- Header -->
+    <!-- Header -->
 
-            <header class="student-header">
+    <header class="student-header">
 
-    <div class="header-left">
+        <div class="header-left">
 
-        <button class="menu-toggle" id="menuToggle">
+            <button class="menu-toggle" id="menuToggle">
 
-            <i class="fas fa-bars"></i>
-
-        </button>
-
-        <div class="search-box">
-
-            <i class="fas fa-search"></i>
-
-            <input
-                type="text"
-                id="searchInput"
-                placeholder="Search questions, exams or documents...">
-
-        </div>
-
-    </div>
-
-    <div class="header-right">
-
-        <div class="profile-dropdown">
-
-            <button class="profile-btn" id="profileToggle">
-
-                <div class="avatar-wrapper">
-
-                    <img
-                        src="../assets/images/avatar-placeholder.png"
-                        id="studentAvatar"
-                        alt="Student">
-
-                    <input
-                        type="file"
-                        id="avatarUpload"
-                        hidden>
-
-                </div>
-
-                <div class="profile-info">
-
-                    <h4 id="headerStudentName">
-
-                        Student
-
-                    </h4>
-
-                    <span id="studentPlan">
-
-                        Free Trial
-
-                    </span>
-
-                </div>
-
-                <i class="fas fa-chevron-down"></i>
+                <i class="fas fa-bars"></i>
 
             </button>
 
-            <div class="profile-menu" id="profileMenu">
+            <div class="search-box">
 
-                <a href="#" id="uploadPhoto">
+                <i class="fas fa-search"></i>
 
-                    <i class="fas fa-camera"></i>
-
-                    Upload Photo
-
-                </a>
-
-                <a href="profile.html">
-
-                    <i class="fas fa-user"></i>
-
-                    My Profile
-
-                </a>
-
-                <a href="subscription.html">
-
-                    <i class="fas fa-credit-card"></i>
-
-                    Subscription
-
-                </a>
-
-                <a href="settings.html">
-
-                    <i class="fas fa-gear"></i>
-
-                    Settings
-
-                </a>
-
-                <hr>
-
-                <a href="../index.html" id="logoutBtn">
-
-                    <i class="fas fa-right-from-bracket"></i>
-
-                    Logout
-
-                </a>
+                <input
+                    type="text"
+                    id="searchInput"
+                    placeholder="Search questions, exams or documents...">
 
             </div>
 
         </div>
 
-    </div>
 
-</header>
+        <div class="header-right">
 
+            <div class="profile-dropdown">
+
+                <!-- Profile Button -->
+
+                <button
+                    class="profile-btn"
+                    id="profileToggle">
+
+                    <div class="avatar-wrapper">
+
+                        <img
+                            src="../assets/images/avatar-placeholder.png"
+                            id="studentAvatar"
+                            alt="Student">
+
+                        <input
+                            type="file"
+                            id="avatarUpload"
+                            hidden>
+
+                    </div>
+
+
+                    <div class="profile-info">
+
+                        <h4 id="headerStudentName">
+                            Student
+                        </h4>
+
+                        <span id="studentPlan">
+                            Free Trial
+                        </span>
+
+                    </div>
+
+
+                    <i class="fas fa-chevron-down"></i>
+
+                </button>
+
+
+                <!-- Profile Dropdown -->
+
+                <div
+                    class="profile-menu"
+                    id="profileMenu">
+
+                    <a href="profile.html">
+
+                        <i class="fas fa-user"></i>
+
+                        <span>
+                            My Profile
+                        </span>
+
+                    </a>
+
+
+                    <a href="subscription.html">
+
+                        <i class="fas fa-credit-card"></i>
+
+                        <span>
+                            Subscription
+                        </span>
+
+                    </a>
+
+
+                    <a href="settings.html">
+
+                        <i class="fas fa-gear"></i>
+
+                        <span>
+                            Settings
+                        </span>
+
+                    </a>
+
+
+                    <hr>
+
+
+                    <a
+                        href="../index.html"
+                        id="profileLogoutBtn">
+
+                        <i class="fas fa-right-from-bracket"></i>
+
+                        <span>
+                            Logout
+                        </span>
+
+                    </a>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </header>
             <!-- ===========================
                     PAGE CONTENT
             ============================ -->
