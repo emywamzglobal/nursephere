@@ -614,13 +614,12 @@ if (
         }
 
         // =============================================
-        // GET AVATAR KEY FROM D1
+        // GET AVATAR KEY FROM DATABASE
         // =============================================
 
         const student =
             await env.DB.prepare(`
-                SELECT
-                    avatar_url
+                SELECT avatar_key
                 FROM students
                 WHERE id = ?
                 LIMIT 1
@@ -652,7 +651,7 @@ if (
         }
 
         const avatarKey =
-            student.avatar_url;
+            student.avatar_key;
 
         if (!avatarKey) {
 
@@ -678,7 +677,7 @@ if (
         }
 
         // =============================================
-        // GET IMAGE FROM R2
+        // GET AVATAR FROM R2
         // =============================================
 
         const object =
@@ -784,6 +783,7 @@ if (
 
 }
 
+
 // -----------------------------
 // Student Avatar Upload
 // -----------------------------
@@ -812,6 +812,7 @@ if (
     return response;
 
 }
+
 // ======================================================
 // STUDENT SETTINGS
 // ======================================================

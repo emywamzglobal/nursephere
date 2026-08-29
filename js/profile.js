@@ -1158,14 +1158,90 @@ async function populateProfile(
 
     }
 
+/*=========================================================
+    LOAD PROFILE AVATAR
+=========================================================*/
 
+async function loadProfileAvatar(
+    studentId
+) {
+
+    if (
+        !studentId
+    ) {
+        return;
+    }
+
+    const token =
+        getStudentToken();
+
+    if (
+        !token
+    ) {
+        return;
+    }
+
+    try {
+
+        const response =
+            await fetch(
+                `${PROFILE_API_BASE}/avatar/${encodeURIComponent(studentId)}`,
+                {
+                    method: "GET",
+
+                    headers: {
+                        "Authorization":
+                            `Bearer ${token}`
+                    }
+                }
+            );
+
+        if (
+            !response.ok
+        ) {
+            return;
+        }
+
+        const blob =
+            await response.blob();
+
+        if (
+            !blob ||
+            !blob.type.startsWith("image/")
+        ) {
+            return;
+        }
+
+        const imageUrl =
+            URL.createObjectURL(
+                blob
+            );
+
+        setAvatar(
+            imageUrl
+        );
+
+    }
+
+    catch (
+        error
+    ) {
+
+        console.error(
+            "Unable to load profile avatar:",
+            error
+        );
+
+    }
+
+}
     /*-----------------------------------------------------
         AVATAR
     -----------------------------------------------------*/
 
-    setAvatar(
-        profile.avatar_url
-    );
+    loadProfileAvatar(
+    profile.student_id
+);
 
 
     /*-----------------------------------------------------
