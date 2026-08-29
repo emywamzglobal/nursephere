@@ -84,7 +84,6 @@ function initialiseStudentHeader() {
     
 }
 
-
 /*=========================================
         PROFILE DROPDOWN
 =========================================*/
@@ -105,11 +104,8 @@ function studentProfileDropdown() {
         !toggle ||
         !menu
     ) {
-
         return;
-
     }
-
 
     toggle.addEventListener(
         "click",
@@ -118,26 +114,24 @@ function studentProfileDropdown() {
             e.stopPropagation();
 
             menu.classList.toggle(
-                "active"
+                "show"
             );
 
         }
     );
-
 
     document.addEventListener(
         "click",
         function () {
 
             menu.classList.remove(
-                "active"
+                "show"
             );
 
         }
     );
 
 }
-
 
 /*=========================================
         PROFILE PHOTO
