@@ -686,7 +686,119 @@
 <script src="js/auth.js"></script>
 <script src="js/main.js"></script>
 <script src="js/pricing.js"></script>
+<script>
+/* =========================================================
+   NURSEPHERE — MOBILE NAVIGATION TOGGLE
+   ========================================================= */
 
+const mobileMenuToggle =
+    document.getElementById("mobileMenuToggle");
+
+const mobileMenu =
+    document.getElementById("mobileMenu");
+
+
+if (mobileMenuToggle && mobileMenu) {
+
+    mobileMenuToggle.addEventListener(
+        "click",
+        function () {
+
+            const isOpen =
+                mobileMenu.classList.toggle("active");
+
+            mobileMenuToggle.classList.toggle(
+                "active",
+                isOpen
+            );
+
+            mobileMenuToggle.setAttribute(
+                "aria-expanded",
+                String(isOpen)
+            );
+
+            mobileMenuToggle.setAttribute(
+                "aria-label",
+                isOpen
+                    ? "Close navigation"
+                    : "Open navigation"
+            );
+
+        }
+    );
+
+
+    /* -----------------------------------------------------
+       Close menu when a link is selected
+       ----------------------------------------------------- */
+
+    mobileMenu
+        .querySelectorAll("a")
+        .forEach(link => {
+
+            link.addEventListener(
+                "click",
+                function () {
+
+                    mobileMenu.classList.remove(
+                        "active"
+                    );
+
+                    mobileMenuToggle.classList.remove(
+                        "active"
+                    );
+
+                    mobileMenuToggle.setAttribute(
+                        "aria-expanded",
+                        "false"
+                    );
+
+                    mobileMenuToggle.setAttribute(
+                        "aria-label",
+                        "Open navigation"
+                    );
+
+                }
+            );
+
+        });
+
+
+    /* -----------------------------------------------------
+       Close menu when switching back to desktop
+       ----------------------------------------------------- */
+
+    window.addEventListener(
+        "resize",
+        function () {
+
+            if (window.innerWidth > 900) {
+
+                mobileMenu.classList.remove(
+                    "active"
+                );
+
+                mobileMenuToggle.classList.remove(
+                    "active"
+                );
+
+                mobileMenuToggle.setAttribute(
+                    "aria-expanded",
+                    "false"
+                );
+
+                mobileMenuToggle.setAttribute(
+                    "aria-label",
+                    "Open navigation"
+                );
+
+            }
+
+        }
+    );
+
+}
+</script>
 </body>
 
 </html>
