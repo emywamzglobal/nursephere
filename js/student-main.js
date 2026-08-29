@@ -134,95 +134,78 @@ function studentProfileDropdown() {
 }
 
 /*=========================================
-        PROFILE PHOTO
+        STUDENT HEADER AVATAR
 =========================================*/
 
-function studentAvatarUpload() {
-
-    const uploadButton =
-        document.getElementById(
-            "uploadPhoto"
-        );
-
-    const uploadInput =
-        document.getElementById(
-            "avatarUpload"
-        );
+async function loadStudentHeaderAvatar() {
 
     const avatar =
         document.getElementById(
             "studentAvatar"
         );
 
-    if (
-        !uploadButton ||
-        !uploadInput ||
-        !avatar
-    ) {
-
+    if (!avatar) {
         return;
+    }
+
+    const token =
+        localStorage.getItem(
+            "studentToken"
+        );
+
+    if (!token) {
+        return;
+    }
+
+    try {
+
+        const response =
+            await fetch(
+                `${STUDENT_API_BASE}/profile`,
+                {
+                    method: "GET",
+
+                    headers: {
+                        "Authorization":
+                            `Bearer ${token}`
+                    }
+                }
+            );
+
+        if (!response.ok) {
+            return;
+        }
+
+        const data =
+            await response.json();
+
+        const profile =
+            data.profile ||
+            data.student ||
+            data;
+
+        if (
+            profile &&
+            profile.avatar_url
+        ) {
+
+            avatar.src =
+                profile.avatar_url;
+
+        }
 
     }
 
+    catch (error) {
 
-    uploadButton.addEventListener(
-        "click",
-        function (e) {
+        console.error(
+            "Unable to load student avatar:",
+            error
+        );
 
-            e.preventDefault();
-
-            uploadInput.click();
-
-        }
-    );
-
-
-    avatar.addEventListener(
-        "click",
-        function () {
-
-            uploadInput.click();
-
-        }
-    );
-
-
-    uploadInput.addEventListener(
-        "change",
-        function () {
-
-            const file =
-                this.files[0];
-
-            if (!file) {
-
-                return;
-
-            }
-
-
-            const reader =
-                new FileReader();
-
-
-            reader.onload =
-                function (event) {
-
-                    avatar.src =
-                        event.target.result;
-
-                };
-
-
-            reader.readAsDataURL(
-                file
-            );
-
-        }
-    );
+    }
 
 }
-
 
 /*=========================================
         LOGOUT
