@@ -78,10 +78,10 @@ function initialiseStudentHeader() {
 
     studentProfileDropdown();
 
-    studentAvatarUpload();
+    loadStudentHeaderAvatar();
 
     studentLogout();
-    
+
 }
 
 /*=========================================
