@@ -506,6 +506,184 @@ if (
 }
 
 // -----------------------------
+// Student Avatar Display
+// -----------------------------
+if (
+    url.pathname.startsWith("/api/avatar/") &&
+    request.method === "GET"
+) {
+
+    try {
+
+        // =============================================
+        // AUTHENTICATION
+        // =============================================
+
+        const authHeader =
+            request.headers.get("Authorization");
+
+        if (
+            !authHeader ||
+            !authHeader.startsWith("Bearer ")
+        ) {
+
+            return new Response(
+                "Unauthorized.",
+                {
+                    status: 401
+                }
+            );
+
+        }
+
+        const token =
+            authHeader.substring(7);
+
+        const valid =
+            await jwt.verify(
+                token,
+                env.JWT_SECRET
+            );
+
+        if (!valid) {
+
+            return new Response(
+                "Invalid or expired session.",
+                {
+                    status: 401
+                }
+            );
+
+        }
+
+        // =============================================
+        // GET STUDENT ID FROM JWT
+        // =============================================
+
+        const payload =
+            jwt.decode(token).payload;
+
+        const studentId =
+            payload.studentId;
+
+        if (!studentId) {
+
+            return new Response(
+                "Student identity missing.",
+                {
+                    status: 401
+                }
+            );
+
+        }
+
+        // =============================================
+        // GET AVATAR KEY FROM D1
+        // =============================================
+
+        const student =
+            await env.DB.prepare(`
+                SELECT
+                    avatar_url
+                FROM students
+                WHERE id = ?
+                LIMIT 1
+            `)
+            .bind(studentId)
+            .first();
+
+        if (!student) {
+
+            return new Response(
+                "Student not found.",
+                {
+                    status: 404
+                }
+            );
+
+        }
+
+        const avatarKey =
+            student.avatar_url;
+
+        if (!avatarKey) {
+
+            return new Response(
+                "Avatar not found.",
+                {
+                    status: 404
+                }
+            );
+
+        }
+
+        // =============================================
+        // GET IMAGE FROM R2
+        // =============================================
+
+        const object =
+            await env.IMAGES.get(
+                avatarKey
+            );
+
+        if (!object) {
+
+            return new Response(
+                "Avatar file not found.",
+                {
+                    status: 404
+                }
+            );
+
+        }
+
+        // =============================================
+        // RETURN IMAGE
+        // =============================================
+
+        const headers =
+            new Headers();
+
+        headers.set(
+            "Content-Type",
+            object.httpMetadata?.contentType ||
+            "image/jpeg"
+        );
+
+        headers.set(
+            "Cache-Control",
+            "private, max-age=3600"
+        );
+
+        return new Response(
+            object.body,
+            {
+                status: 200,
+                headers
+            }
+        );
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "STUDENT AVATAR DISPLAY ERROR:",
+            error
+        );
+
+        return new Response(
+            "Unable to load profile photo.",
+            {
+                status: 500
+            }
+        );
+
+    }
+
+}
+
+// -----------------------------
 // Student Avatar Upload
 // -----------------------------
 if (

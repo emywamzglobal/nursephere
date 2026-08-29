@@ -159,7 +159,11 @@ async function loadStudentHeaderAvatar() {
 
     try {
 
-        const response =
+        /*=====================================
+            GET STUDENT PROFILE
+        =====================================*/
+
+        const profileResponse =
             await fetch(
                 `${STUDENT_API_BASE}/profile`,
                 {
@@ -172,27 +176,96 @@ async function loadStudentHeaderAvatar() {
                 }
             );
 
-        if (!response.ok) {
+        if (!profileResponse.ok) {
             return;
         }
 
         const data =
-            await response.json();
+            await profileResponse.json();
 
         const profile =
-            data.profile ||
-            data.student ||
-            data;
+            data.profile;
 
-        if (
-            profile &&
-            profile.avatar_url
-        ) {
+        if (!profile) {
+            return;
+        }
 
-            avatar.src =
-                profile.avatar_url;
+
+        /*=====================================
+            STUDENT ID
+        =====================================*/
+
+        const studentId =
+            profile.student_id;
+
+        if (!studentId) {
+
+            console.error(
+                "Student ID unavailable for avatar."
+            );
+
+            return;
 
         }
+
+
+        /*=====================================
+            FETCH PRIVATE AVATAR FROM R2
+        =====================================*/
+
+        const avatarResponse =
+            await fetch(
+                `${STUDENT_API_BASE}/avatar/${encodeURIComponent(studentId)}`,
+                {
+                    method: "GET",
+
+                    headers: {
+                        "Authorization":
+                            `Bearer ${token}`
+                    }
+                }
+            );
+
+        if (!avatarResponse.ok) {
+
+            console.error(
+                "Unable to load student avatar:",
+                avatarResponse.status
+            );
+
+            return;
+
+        }
+
+
+        /*=====================================
+            CONVERT IMAGE TO BLOB
+        =====================================*/
+
+        const imageBlob =
+            await avatarResponse.blob();
+
+        const imageUrl =
+            URL.createObjectURL(
+                imageBlob
+            );
+
+
+        /*=====================================
+            DISPLAY AVATAR
+        =====================================*/
+
+        avatar.src =
+            imageUrl;
+
+        avatar.onload =
+            function () {
+
+                URL.revokeObjectURL(
+                    imageUrl
+                );
+
+            };
 
     }
 
@@ -206,56 +279,6 @@ async function loadStudentHeaderAvatar() {
     }
 
 }
-
-/*=========================================
-        LOGOUT
-=========================================*/
-
-function studentLogout() {
-
-    const logoutButtons =
-        document.querySelectorAll(
-            "#logoutBtn, #sidebarLogoutBtn, #profileLogoutBtn"
-        );
-
-    if (
-        !logoutButtons.length
-    ) {
-
-        return;
-
-    }
-
-
-    logoutButtons.forEach(
-        logoutButton => {
-
-            logoutButton.addEventListener(
-                "click",
-                function (e) {
-
-                    const confirmLogout =
-                        confirm(
-                            "Are you sure you want to logout?"
-                        );
-
-
-                    if (
-                        !confirmLogout
-                    ) {
-
-                        e.preventDefault();
-
-                    }
-
-                }
-            );
-
-        }
-    );
-
-}
-
 
 /*=========================================
         SIDEBAR COLLAPSE / EXPAND
