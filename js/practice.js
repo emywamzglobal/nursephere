@@ -724,7 +724,7 @@ function renderSubjects() {
 
             description.textContent =
                 subject.description ||
-                "Begin practicing questions or open the study resources for this subject.";
+                "Begin practicing questions for this subject.";
 
 
             info.append(
@@ -779,41 +779,11 @@ function renderSubjects() {
             );
 
 
-            /*
-            STUDY RESOURCES
-            */
-
-            const resourceButton =
-                document.createElement("button");
-
-
-            resourceButton.type =
-                "button";
-
-
-            resourceButton.className =
-                "resource-btn";
-
-
-            resourceButton.innerHTML =
-                '<i class="fas fa-book-open"></i>' +
-                '<span>Study Resources</span>';
-
-
-            resourceButton.addEventListener(
-                "click",
-                () => {
-
-                    window.location.href =
-                        `resources.html?subject_id=${encodeURIComponent(subjectId)}`;
-
-                }
-            );
-
+            
 
             actions.append(
-                practiceButton,
-                resourceButton
+                practiceButton
+                
             );
 
 
