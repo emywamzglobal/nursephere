@@ -2,7 +2,7 @@ import jwt from "@tsndr/cloudflare-worker-jwt";
 import bcrypt from "bcryptjs";
 
 // ======================================================
-// JWT Authentication Helpers
+// JWT AUTHENTICATION HELPERS
 // ======================================================
 
 function getBearerToken(request) {
@@ -15,25 +15,34 @@ function getBearerToken(request) {
 
     }
 
-    return authHeader.substring(7);
+    return authHeader.substring(7).trim();
 
 }
 
-async function createToken(admin, env) {
 
-    console.log("JWT_SECRET:", typeof env.JWT_SECRET);
+// ======================================================
+// CREATE JWT
+// ======================================================
+
+async function createToken(admin, env) {
 
     return await jwt.sign(
         {
             id: admin.id,
             email: admin.email,
             role: admin.role,
+            token_version: admin.token_version,
             exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24)
         },
         env.JWT_SECRET
     );
 
 }
+
+
+// ======================================================
+// VERIFY JWT
+// ======================================================
 
 async function verifyToken(request, env) {
 
@@ -45,61 +54,696 @@ async function verifyToken(request, env) {
 
     }
 
-    const valid = await jwt.verify(token, env.JWT_SECRET);
+    try {
 
-    if (!valid) {
+        const valid = await jwt.verify(
+            token,
+            env.JWT_SECRET
+        );
+
+        if (!valid) {
+
+            return null;
+
+        }
+
+        const decoded = jwt.decode(token);
+
+        if (!decoded || !decoded.payload) {
+
+            return null;
+
+        }
+
+        return decoded.payload;
+
+    } catch {
 
         return null;
 
     }
 
-    const decoded = jwt.decode(token);
-
-    return decoded.payload;
-
 }
+
+
+// ======================================================
+// REQUIRE AUTHENTICATED ADMIN
+// ======================================================
 
 async function requireAdmin(request, env) {
 
+    const auth = await verifyToken(
+        request,
+        env
+    );
+
+    if (!auth || !auth.id || !auth.role) {
+
+        return {
+            authorized: false,
+            response: Response.json(
+                {
+                    success: false,
+                    message: "Authentication required."
+                },
+                {
+                    status: 401
+                }
+            )
+        };
+
+    }
+
+    // --------------------------------------------------
+    // Verify the admin still exists and is active
+    // --------------------------------------------------
+
+    const admin = await env.DB.prepare(`
+
+        SELECT
+
+            id,
+            first_name,
+            last_name,
+            email,
+            role,
+            status,
+            approval_status,
+            token_version
+
+        FROM admins
+
+        WHERE id = ?
+
+        LIMIT 1
+
+    `)
+
+    .bind(auth.id)
+
+    .first();
+
+    if (!admin) {
+
+        return {
+            authorized: false,
+            response: Response.json(
+                {
+                    success: false,
+                    message: "Administrator account not found."
+                },
+                {
+                    status: 401
+                }
+            )
+        };
+
+    }
+
+    if (admin.status !== "active") {
+
+        return {
+            authorized: false,
+            response: Response.json(
+                {
+                    success: false,
+                    message: "Administrator account is inactive."
+                },
+                {
+                    status: 403
+                }
+            )
+        };
+
+    }
+
+    if (admin.approval_status !== "approved") {
+
+        return {
+            authorized: false,
+            response: Response.json(
+                {
+                    success: false,
+                    message: "Administrator account has not been approved."
+                },
+                {
+                    status: 403
+                }
+            )
+        };
+
+    }
+
+    // --------------------------------------------------
+    // VERIFY TOKEN VERSION
+    // --------------------------------------------------
+
+    if (
+        auth.token_version !== admin.token_version
+    ) {
+
+        return {
+            authorized: false,
+            response: Response.json(
+                {
+                    success: false,
+                    message: "Session expired. Please log in again."
+                },
+                {
+                    status: 401
+                }
+            )
+        };
+
+    }
+
     return {
-        id: 1,
-        role: "super_admin"
+        authorized: true,
+        admin
     };
 
 }
 
-export default async function adminHandler(request, env) {
+
+// ======================================================
+// REQUIRE SUPER ADMIN
+// ======================================================
+
+async function requireSuperAdmin(request, env) {
+
+    const result = await requireAdmin(
+        request,
+        env
+    );
+
+    if (!result.authorized) {
+
+        return result;
+
+    }
+
+    if (result.admin.role !== "super_admin") {
+
+        return {
+            authorized: false,
+            response: Response.json(
+                {
+                    success: false,
+                    message: "Super administrator access required."
+                },
+                {
+                    status: 403
+                }
+            )
+        };
+
+    }
+
+    return result;
+
+}
+
+
+// ======================================================
+// REQUIRE CONTENT ADMIN
+//
+// Used for:
+// Exams
+// Subjects
+// Questions
+// Study Resources
+// ======================================================
+
+async function requireContentAdmin(request, env) {
+
+    const result = await requireAdmin(
+        request,
+        env
+    );
+
+    if (!result.authorized) {
+
+        return result;
+
+    }
+
+    const allowedRoles = [
+        "super_admin",
+        "admin"
+    ];
+
+    if (!allowedRoles.includes(result.admin.role)) {
+
+        return {
+            authorized: false,
+            response: Response.json(
+                {
+                    success: false,
+                    message: "Administrator access required."
+                },
+                {
+                    status: 403
+                }
+            )
+        };
+
+    }
+
+    return result;
+
+}
+
+
+export default async function adminHandler(
+    request,
+    env
+) {
 
     try {
 
-        const url = new URL(request.url);
+        const url = new URL(
+            request.url
+        );
 
-        const pathname = url.pathname;
+        const pathname =
+            url.pathname;
 
-        const method = request.method;
+        const method =
+            request.method;
+
 
         // ======================================================
-// ADMIN LOGIN
-// POST /api/admin/login
-// ======================================================
+        // ADMIN LOGIN
+        // POST /api/admin/login
+        // ======================================================
+
+        if (
+
+            method === "POST" &&
+
+            pathname === "/api/admin/login"
+
+        ) {
+
+            const body =
+                await request.json();
+
+            const email =
+                typeof body.email === "string"
+                    ? body.email.trim().toLowerCase()
+                    : "";
+
+            const password =
+                typeof body.password === "string"
+                    ? body.password
+                    : "";
+
+
+            if (!email || !password) {
+
+                return Response.json(
+                    {
+                        success: false,
+                        message:
+                            "Email and password are required."
+                    },
+                    {
+                        status: 400
+                    }
+                );
+
+            }
+
+
+            // --------------------------------------------------
+            // FIND ADMIN
+            // --------------------------------------------------
+
+            const admin =
+                await env.DB.prepare(`
+
+                    SELECT
+
+                        id,
+                        first_name,
+                        last_name,
+                        email,
+                        password_hash,
+                        role,
+                        status,
+                        approval_status,
+                        token_version
+
+                    FROM admins
+
+                    WHERE email = ?
+
+                    LIMIT 1
+
+                `)
+
+                .bind(email)
+
+                .first();
+
+
+            if (!admin) {
+
+                return Response.json(
+                    {
+                        success: false,
+                        message:
+                            "Invalid email or password."
+                    },
+                    {
+                        status: 401
+                    }
+                );
+
+            }
+
+
+            // --------------------------------------------------
+            // APPROVAL CHECK
+            // --------------------------------------------------
+
+            if (
+                admin.approval_status !==
+                "approved"
+            ) {
+
+                if (
+                    admin.approval_status ===
+                    "pending"
+                ) {
+
+                    return Response.json(
+                        {
+                            success: false,
+                            message:
+                                "Your administrator account is awaiting approval."
+                        },
+                        {
+                            status: 403
+                        }
+                    );
+
+                }
+
+                if (
+                    admin.approval_status ===
+                    "rejected"
+                ) {
+
+                    return Response.json(
+                        {
+                            success: false,
+                            message:
+                                "Your administrator account has been rejected."
+                        },
+                        {
+                            status: 403
+                        }
+                    );
+
+                }
+
+                return Response.json(
+                    {
+                        success: false,
+                        message:
+                            "Administrator account is not approved."
+                    },
+                    {
+                        status: 403
+                    }
+                );
+
+            }
+
+
+            // --------------------------------------------------
+            // ACTIVE CHECK
+            // --------------------------------------------------
+
+            if (
+                admin.status !==
+                "active"
+            ) {
+
+                return Response.json(
+                    {
+                        success: false,
+                        message:
+                            "Administrator account is inactive."
+                    },
+                    {
+                        status: 403
+                    }
+                );
+
+            }
+
+
+            // --------------------------------------------------
+            // PASSWORD CHECK
+            // --------------------------------------------------
+
+            if (
+                !admin.password_hash
+            ) {
+
+                return Response.json(
+                    {
+                        success: false,
+                        message:
+                            "Password has not been set for this account."
+                    },
+                    {
+                        status: 403
+                    }
+                );
+
+            }
+
+
+            const passwordMatches =
+                await bcrypt.compare(
+                    password,
+                    admin.password_hash
+                );
+
+
+            if (!passwordMatches) {
+
+                return Response.json(
+                    {
+                        success: false,
+                        message:
+                            "Invalid email or password."
+                    },
+                    {
+                        status: 401
+                    }
+                );
+
+            }
+
+
+            // --------------------------------------------------
+            // CREATE REAL JWT
+            // --------------------------------------------------
+
+            const token =
+                await createToken(
+                    admin,
+                    env
+                );
+
+
+            // --------------------------------------------------
+            // UPDATE LAST LOGIN
+            // --------------------------------------------------
+
+            const now =
+                new Date().toISOString();
+
+            await env.DB.prepare(`
+
+                UPDATE admins
+
+                SET
+
+                    last_login_at = ?,
+
+                    updated_at = ?
+
+                WHERE id = ?
+
+            `)
+
+            .bind(
+
+                now,
+
+                now,
+
+                admin.id
+
+            )
+
+            .run();
+
+
+            // --------------------------------------------------
+            // LOGIN SUCCESS
+            // --------------------------------------------------
+
+            return Response.json({
+
+                success: true,
+
+                token,
+
+                admin: {
+
+                    id:
+                        admin.id,
+
+                    first_name:
+                        admin.first_name,
+
+                    last_name:
+                        admin.last_name,
+
+                    email:
+                        admin.email,
+
+                    role:
+                        admin.role
+
+                }
+
+            });
+
+        }
+
+
+// =====================================================
+// ACCOUNT SETTINGS
+// ALL AUTHENTICATED ADMIN USERS
+// =====================================================
+
+// -----------------------------------------
+// GET MY ACCOUNT
+// GET /api/account
+// -----------------------------------------
 
 if (
-
-    method === "POST" &&
-
-    pathname === "/api/admin/login"
-
+    method === "GET" &&
+    pathname === "/api/account"
 ) {
 
-    const { email, password } = await request.json();
+    const auth =
+        await requireAdmin(
+            request,
+            env
+        );
 
-    if (!email || !password) {
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
+    return Response.json({
+
+        success: true,
+
+        message: "Account retrieved successfully.",
+
+        data: {
+
+            id:
+                auth.admin.id,
+
+            first_name:
+                auth.admin.first_name,
+
+            last_name:
+                auth.admin.last_name,
+
+            email:
+                auth.admin.email,
+
+            role:
+                auth.admin.role,
+
+            status:
+                auth.admin.status,
+
+            approval_status:
+                auth.admin.approval_status
+
+        }
+
+    });
+
+}
+
+
+// -----------------------------------------
+// UPDATE MY ACCOUNT
+// PUT /api/account
+// -----------------------------------------
+
+if (
+    method === "PUT" &&
+    pathname === "/api/account"
+) {
+
+    const auth =
+        await requireAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
+    const body =
+        await request.json();
+
+    const first_name =
+        typeof body.first_name === "string"
+            ? body.first_name.trim()
+            : "";
+
+    const last_name =
+        typeof body.last_name === "string"
+            ? body.last_name.trim()
+            : "";
+
+    const email =
+        typeof body.email === "string"
+            ? body.email.trim().toLowerCase()
+            : "";
+
+
+    // -----------------------------------------
+    // VALIDATION
+    // -----------------------------------------
+
+    if (!first_name) {
 
         return Response.json({
 
             success: false,
 
-            message: "Email and password are required."
+            message: "First name is required."
 
         }, {
 
@@ -109,99 +753,131 @@ if (
 
     }
 
-    const admin = await env.DB.prepare(`
+    if (!last_name) {
 
-        SELECT
+        return Response.json({
 
-            id,
+            success: false,
 
-            first_name,
+            message: "Last name is required."
 
-            last_name,
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+    if (!email) {
+
+        return Response.json({
+
+            success: false,
+
+            message: "Email address is required."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+
+    // -----------------------------------------
+    // BASIC EMAIL VALIDATION
+    // -----------------------------------------
+
+    const emailPattern =
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!emailPattern.test(email)) {
+
+        return Response.json({
+
+            success: false,
+
+            message: "Please enter a valid email address."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+
+    // -----------------------------------------
+    // CHECK EMAIL BELONGS TO ANOTHER ADMIN
+    // -----------------------------------------
+
+    const duplicateEmail =
+        await env.DB.prepare(`
+
+            SELECT id
+
+            FROM admins
+
+            WHERE LOWER(email) = LOWER(?)
+
+            AND id <> ?
+
+            LIMIT 1
+
+        `)
+
+        .bind(
 
             email,
 
-            password_hash,
+            auth.admin.id
 
-            role,
+        )
 
-            status
+        .first();
 
-        FROM admins
 
-        WHERE email = ?
-
-        LIMIT 1
-
-    `)
-
-    .bind(email)
-
-    .first();
-
-    if (!admin) {
+    if (duplicateEmail) {
 
         return Response.json({
 
             success: false,
 
-            message: "Invalid email or password."
+            message: "This email address is already in use."
 
         }, {
 
-            status: 401
+            status: 409
 
         });
 
     }
 
-    if (admin.status !== "active") {
 
-        return Response.json({
+    const now =
+        new Date().toISOString();
 
-            success: false,
 
-            message: "Administrator account is inactive."
-
-        }, {
-
-            status: 403
-
-        });
-
-    }
-
-    const passwordMatches = await bcrypt.compare(
-
-        password,
-
-        admin.password_hash
-
-    );
-
-    if (!passwordMatches) {
-
-        return Response.json({
-
-            success: false,
-
-            message: "Invalid email or password."
-
-        }, {
-
-            status: 401
-
-        });
-
-    }
-
-    const token = "admin-session";
+    // -----------------------------------------
+    // UPDATE ACCOUNT
+    // -----------------------------------------
 
     await env.DB.prepare(`
 
         UPDATE admins
 
-        SET last_login_at = ?
+        SET
+
+            first_name = ?,
+
+            last_name = ?,
+
+            email = ?,
+
+            updated_at = ?
 
         WHERE id = ?
 
@@ -209,108 +885,480 @@ if (
 
     .bind(
 
-        new Date().toISOString(),
+        first_name,
 
-        admin.id
+        last_name,
+
+        email,
+
+        now,
+
+        auth.admin.id
 
     )
 
     .run();
 
+
+    // -----------------------------------------
+    // RETURN UPDATED ACCOUNT
+    // -----------------------------------------
+
+    const updatedAdmin =
+        await env.DB.prepare(`
+
+            SELECT
+
+                id,
+
+                first_name,
+
+                last_name,
+
+                email,
+
+                role,
+
+                status,
+
+                approval_status
+
+            FROM admins
+
+            WHERE id = ?
+
+            LIMIT 1
+
+        `)
+
+        .bind(auth.admin.id)
+
+        .first();
+
+
     return Response.json({
 
         success: true,
 
-        token,
+        message: "Account updated successfully.",
 
-        admin: {
-
-            id: admin.id,
-
-            first_name: admin.first_name,
-
-            last_name: admin.last_name,
-
-            email: admin.email,
-
-            role: admin.role
-
-        }
+        data: updatedAdmin
 
     });
 
 }
-// =====================================================
+
+
+// -----------------------------------------
+// CHANGE MY PASSWORD
+// PATCH /api/account/password
+// -----------------------------------------
+
+if (
+    method === "PATCH" &&
+    pathname === "/api/account/password"
+) {
+
+    const auth =
+        await requireAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
+    const body =
+        await request.json();
+
+
+    const currentPassword =
+        typeof body.current_password === "string"
+            ? body.current_password
+            : "";
+
+    const newPassword =
+        typeof body.new_password === "string"
+            ? body.new_password
+            : "";
+
+    const confirmPassword =
+        typeof body.confirm_password === "string"
+            ? body.confirm_password
+            : "";
+
+
+    // -----------------------------------------
+    // VALIDATION
+    // -----------------------------------------
+
+    if (!currentPassword) {
+
+        return Response.json({
+
+            success: false,
+
+            message: "Current password is required."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+    if (!newPassword) {
+
+        return Response.json({
+
+            success: false,
+
+            message: "New password is required."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+    if (newPassword.length < 6) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "New password must be at least 6 characters."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+    if (newPassword !== confirmPassword) {
+
+        return Response.json({
+
+            success: false,
+
+            message: "New passwords do not match."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+
+    // -----------------------------------------
+    // GET CURRENT PASSWORD HASH
+    // -----------------------------------------
+
+    const admin =
+        await env.DB.prepare(`
+
+            SELECT
+
+                id,
+
+                password_hash,
+
+                token_version
+
+            FROM admins
+
+            WHERE id = ?
+
+            LIMIT 1
+
+        `)
+
+        .bind(auth.admin.id)
+
+        .first();
+
+
+    if (!admin) {
+
+        return Response.json({
+
+            success: false,
+
+            message: "Administrator account not found."
+
+        }, {
+
+            status: 404
+
+        });
+
+    }
+
+
+    if (!admin.password_hash) {
+
+        return Response.json({
+
+            success: false,
+
+            message: "Current password has not been configured."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+
+    // -----------------------------------------
+    // VERIFY CURRENT PASSWORD
+    // -----------------------------------------
+
+    const passwordMatches =
+        await bcrypt.compare(
+
+            currentPassword,
+
+            admin.password_hash
+
+        );
+
+
+    if (!passwordMatches) {
+
+        return Response.json({
+
+            success: false,
+
+            message: "Current password is incorrect."
+
+        }, {
+
+            status: 401
+
+        });
+
+    }
+
+
+    // -----------------------------------------
+    // PREVENT SAME PASSWORD
+    // -----------------------------------------
+
+    const samePassword =
+        await bcrypt.compare(
+
+            newPassword,
+
+            admin.password_hash
+
+        );
+
+
+    if (samePassword) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "New password must be different from your current password."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+
+    // -----------------------------------------
+    // HASH NEW PASSWORD
+    // -----------------------------------------
+
+    const newPasswordHash =
+        await bcrypt.hash(
+
+            newPassword,
+
+            10
+
+        );
+
+
+    const now =
+        new Date().toISOString();
+
+
+    // -----------------------------------------
+    // INCREMENT TOKEN VERSION
+    // INVALIDATES ALL EXISTING SESSIONS
+    // -----------------------------------------
+
+    const currentTokenVersion =
+        Number(admin.token_version ?? 0);
+
+    const nextTokenVersion =
+        currentTokenVersion + 1;
+
+
+    // -----------------------------------------
+    // UPDATE PASSWORD
+    // -----------------------------------------
+
+    await env.DB.prepare(`
+
+        UPDATE admins
+
+        SET
+
+            password_hash = ?,
+
+            token_version = ?,
+
+            updated_at = ?
+
+        WHERE id = ?
+
+    `)
+
+    .bind(
+
+        newPasswordHash,
+
+        nextTokenVersion,
+
+        now,
+
+        auth.admin.id
+
+    )
+
+    .run();
+
+
+    return Response.json({
+
+        success: true,
+
+        message: "Password changed successfully. Please log in again."
+
+    });
+
+}
+
+
+// ======================================================
 // ADMIN DASHBOARD
 // GET /api/admin/dashboard
-// =====================================================
+//
+// DASHBOARD CONTAINS SYSTEM-WIDE INFORMATION,
+// SO THIS IS SUPER ADMIN ONLY.
+// ======================================================
 
 if (
 
     method === "GET" &&
 
-    pathname === "/api/admin/dashboard"
+    pathname ===
+        "/api/admin/dashboard"
 
 ) {
+
+    const auth =
+        await requireSuperAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
 
     // -----------------------------------------
     // Total Students
     // -----------------------------------------
 
-    const totalStudents = await env.DB.prepare(`
+    const totalStudents =
+        await env.DB.prepare(`
 
-        SELECT COUNT(*) AS total
+            SELECT COUNT(*) AS total
 
-        FROM students
+            FROM students
 
-    `).first();
+        `).first();
+
 
     // -----------------------------------------
     // Total Practice Questions
     // -----------------------------------------
 
-    const totalQuestions = await env.DB.prepare(`
+    const totalQuestions =
+        await env.DB.prepare(`
 
-        SELECT COUNT(*) AS total
+            SELECT COUNT(*) AS total
 
-        FROM practice_questions
+            FROM practice_questions
 
-        WHERE status = 'active'
+            WHERE status = 'active'
 
-    `).first();
+        `).first();
+
 
     // -----------------------------------------
     // Active Subscriptions
     // -----------------------------------------
 
-    const activeSubscriptions = await env.DB.prepare(`
-
-        SELECT COUNT(*) AS total
-
-        FROM subscriptions
-
-        WHERE status = 'active'
-
-    `).first();
-
-    // -----------------------------------------
-    // Today's Exam Attempts
-    // (Uses exam_attempts table)
-    // -----------------------------------------
-
-    let todayAttempts = { total: 0 };
-
-    try {
-
-        todayAttempts = await env.DB.prepare(`
+    const activeSubscriptions =
+        await env.DB.prepare(`
 
             SELECT COUNT(*) AS total
 
-            FROM exam_attempts
+            FROM subscriptions
 
-            WHERE DATE(created_at) = DATE('now')
+            WHERE status = 'active'
 
         `).first();
+
+
+    // -----------------------------------------
+    // Today's Exam Attempts
+    // -----------------------------------------
+
+    let todayAttempts = {
+        total: 0
+    };
+
+    try {
+
+        todayAttempts =
+            await env.DB.prepare(`
+
+                SELECT COUNT(*) AS total
+
+                FROM exam_attempts
+
+                WHERE DATE(created_at)
+                    = DATE('now')
+
+            `).first();
 
     } catch {
 
@@ -318,26 +1366,30 @@ if (
 
     }
 
+
     // -----------------------------------------
     // Unread Notifications
     // -----------------------------------------
 
-    const unreadNotifications = await env.DB.prepare(`
+    const unreadNotifications =
+        await env.DB.prepare(`
 
-        SELECT COUNT(*) AS total
+            SELECT COUNT(*) AS total
 
-        FROM notifications
+            FROM notifications
 
-        WHERE is_read = 0
+            WHERE is_read = 0
 
-    `).first();
+        `).first();
+
 
     // -----------------------------------------
     // Recent Activity
-    // (Latest Notifications for now)
     // -----------------------------------------
 
-    const { results: recentActivity } = await env.DB.prepare(`
+    const {
+        results: recentActivity
+    } = await env.DB.prepare(`
 
         SELECT
 
@@ -357,6 +1409,7 @@ if (
 
     `).all();
 
+
     return Response.json({
 
         success: true,
@@ -365,27 +1418,44 @@ if (
 
             admin: {
 
-                first_name: "Administrator",
+                id:
+                    auth.admin.id,
 
-                last_name: ""
+                first_name:
+                    auth.admin.first_name,
+
+                last_name:
+                    auth.admin.last_name,
+
+                email:
+                    auth.admin.email,
+
+                role:
+                    auth.admin.role
 
             },
 
             stats: {
 
-                students: totalStudents?.total || 0,
+                students:
+                    totalStudents?.total || 0,
 
-                questions: totalQuestions?.total || 0,
+                questions:
+                    totalQuestions?.total || 0,
 
-                today_attempts: todayAttempts?.total || 0,
+                today_attempts:
+                    todayAttempts?.total || 0,
 
-                active_subscriptions: activeSubscriptions?.total || 0,
+                active_subscriptions:
+                    activeSubscriptions?.total || 0,
 
-                notifications: unreadNotifications?.total || 0
+                notifications:
+                    unreadNotifications?.total || 0
 
             },
 
-            recent_activity: recentActivity
+            recent_activity:
+                recentActivity || []
 
         }
 
@@ -393,6 +1463,47 @@ if (
 
 }
 
+
+        // ======================================================
+        // DEFAULT RESPONSE
+        // ======================================================
+
+        return Response.json({
+
+            success: false,
+
+            message: "Admin endpoint not found."
+
+        }, {
+
+            status: 404
+
+        });
+
+    } catch (error) {
+
+        console.error(
+            "Admin Error:",
+            error
+        );
+
+        return Response.json({
+
+            success: false,
+
+            message: "Internal server error.",
+
+            error: error.message
+
+        }, {
+
+            status: 500
+
+        });
+
+    }
+
+}
  // =====================================================
 // EXAM MANAGEMENT
 // =====================================================
@@ -514,6 +1625,26 @@ if (
 
 ) {
 
+    // -----------------------------------------
+    // CONTENT ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireContentAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
+    // -----------------------------------------
+    // YOUR EXISTING EXAMS CODE
+    // -----------------------------------------
+
     const { results } = await env.DB.prepare(
 
         `SELECT
@@ -631,6 +1762,26 @@ if (
     pathname === "/api/admin/exams"
 
 ) {
+
+    // -----------------------------------------
+    // CONTENT ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireContentAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
+    // -----------------------------------------
+    // YOUR EXISTING EXAMS CODE
+    // -----------------------------------------
 
     let body;
 
@@ -1004,6 +2155,26 @@ if (
     /^\/api\/admin\/exams\/[^/]+$/.test(pathname)
 
 ) {
+
+    // -----------------------------------------
+    // CONTENT ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireContentAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
+    // -----------------------------------------
+    // YOUR EXISTING EXAMS CODE
+    // -----------------------------------------
 
     const examId =
         pathname.split("/").pop();
@@ -1433,6 +2604,26 @@ if (
 
 ) {
 
+    // -----------------------------------------
+    // CONTENT ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireContentAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
+    // -----------------------------------------
+    // YOUR EXISTING EXAMS CODE
+    // -----------------------------------------
+
     const examId =
         pathname.split("/").pop();
 
@@ -1635,6 +2826,26 @@ if (
 
 ) {
 
+    // -----------------------------------------
+    // CONTENT ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireContentAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
+    // -----------------------------------------
+    // YOUR EXISTING EXAMS CODE
+    // -----------------------------------------
+
     const { results } = await env.DB.prepare(
 
         `SELECT
@@ -1691,6 +2902,26 @@ if (
     url.searchParams.has("exam_id")
 
 ) {
+
+    // -----------------------------------------
+    // CONTENT ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireContentAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
+    // -----------------------------------------
+    // YOUR EXISTING EXAMS CODE
+    // -----------------------------------------
 
     const examId =
         cleanSubjectText(
@@ -1768,6 +2999,26 @@ if (
 
 ) {
 
+    // -----------------------------------------
+    // CONTENT ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireContentAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
+    // -----------------------------------------
+    // YOUR EXISTING EXAMS CODE
+    // -----------------------------------------
+
     const subjectId =
         pathname.split("/").pop();
 
@@ -1842,6 +3093,26 @@ if (
     pathname === "/api/admin/subjects"
 
 ) {
+
+    // -----------------------------------------
+    // CONTENT ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireContentAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
+    // -----------------------------------------
+    // YOUR EXISTING EXAMS CODE
+    // -----------------------------------------
 
     let body;
 
@@ -2188,6 +3459,26 @@ if (
     /^\/api\/admin\/subjects\/[^/]+$/.test(pathname)
 
 ) {
+
+    // -----------------------------------------
+    // CONTENT ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireContentAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
+    // -----------------------------------------
+    // YOUR EXISTING EXAMS CODE
+    // -----------------------------------------
 
     const subjectId =
         pathname.split("/").pop();
@@ -2587,6 +3878,26 @@ if (
     /^\/api\/admin\/subjects\/[^/]+$/.test(pathname)
 
 ) {
+
+    // -----------------------------------------
+    // CONTENT ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireContentAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
+    // -----------------------------------------
+    // YOUR EXISTING EXAMS CODE
+    // -----------------------------------------
 
     const subjectId =
         pathname.split("/").pop();
@@ -3227,6 +4538,26 @@ if (
 
 ) {
 
+    // -----------------------------------------
+    // CONTENT ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireContentAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
+    // -----------------------------------------
+    // YOUR EXISTING EXAMS CODE
+    // -----------------------------------------
+
     try {
 
         const { results } =
@@ -3337,6 +4668,26 @@ if (
     )
 
 ) {
+
+    // -----------------------------------------
+    // CONTENT ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireContentAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
+    // -----------------------------------------
+    // YOUR EXISTING EXAMS CODE
+    // -----------------------------------------
 
     const questionId =
         pathname.split("/").pop();
@@ -3456,6 +4807,26 @@ if (
     pathname === "/api/admin/questions"
 
 ) {
+
+    // -----------------------------------------
+    // CONTENT ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireContentAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
+    // -----------------------------------------
+    // YOUR EXISTING EXAMS CODE
+    // -----------------------------------------
 
     let body;
 
@@ -3780,6 +5151,26 @@ if (
     )
 
 ) {
+
+    // -----------------------------------------
+    // CONTENT ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireContentAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
+    // -----------------------------------------
+    // YOUR EXISTING EXAMS CODE
+    // -----------------------------------------
 
     const questionId =
         pathname.split("/").pop();
@@ -4197,6 +5588,26 @@ if (
 
 ) {
 
+    // -----------------------------------------
+    // CONTENT ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireContentAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
+    // -----------------------------------------
+    // YOUR EXISTING EXAMS CODE
+    // -----------------------------------------
+
     const questionId =
         pathname.split("/").pop();
 
@@ -4313,7 +5724,7 @@ if (
 
 }
 
-        // =====================================================
+// =====================================================
 // STUDENT MANAGEMENT
 // =====================================================
 
@@ -4329,6 +5740,27 @@ if (
     pathname === "/api/admin/students"
 
 ) {
+
+    // -----------------------------------------
+    // SUPER ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireSuperAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
+
+    // -----------------------------------------
+    // EXISTING STUDENT CODE
+    // -----------------------------------------
 
     const { results } = await env.DB.prepare(
 
@@ -4398,6 +5830,22 @@ if (
     pathname.startsWith("/api/admin/students/")
 
 ) {
+
+       // -----------------------------------------
+    // SUPER ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireSuperAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
 
     const studentId = pathname.split("/").pop();
 
@@ -4484,6 +5932,27 @@ if (
     method === "POST" &&
     pathname === "/api/admin/students"
 ) {
+
+    // -----------------------------------------
+    // SUPER ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireSuperAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
+
+    // -----------------------------------------
+    // EXISTING CODE
+    // -----------------------------------------
 
     const body = await request.json();
 
@@ -4745,6 +6214,27 @@ if (
     pathname.startsWith("/api/admin/students/")
 ) {
 
+    // -----------------------------------------
+    // SUPER ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireSuperAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
+
+    // -----------------------------------------
+    // EXISTING CODE
+    // -----------------------------------------
+
     const studentId = pathname.split("/").pop();
 
     const body = await request.json();
@@ -4985,6 +6475,27 @@ if (
     pathname.endsWith("/status")
 ) {
 
+    // -----------------------------------------
+    // SUPER ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireSuperAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
+
+    // -----------------------------------------
+    // EXISTING CODE
+    // -----------------------------------------
+
     const studentId = pathname.split("/")[4];
 
     const body = await request.json();
@@ -5064,6 +6575,27 @@ if (
     pathname.startsWith("/api/admin/students/") &&
     pathname.endsWith("/reset-password")
 ) {
+
+    // -----------------------------------------
+    // SUPER ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireSuperAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
+
+    // -----------------------------------------
+    // EXISTING CODE
+    // -----------------------------------------
 
     const studentId = pathname.split("/")[4];
 
@@ -5156,6 +6688,27 @@ if (
     pathname.startsWith("/api/admin/students/")
 ) {
 
+    // -----------------------------------------
+    // SUPER ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireSuperAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
+
+    // -----------------------------------------
+    // EXISTING CODE
+    // -----------------------------------------
+
     const studentId = pathname.split("/").pop();
 
     const student = await env.DB.prepare(
@@ -5211,7 +6764,8 @@ if (
     });
 
 }
-        // =====================================================
+
+// =====================================================
 // SUBSCRIPTION PLANS MANAGEMENT
 // =====================================================
 
@@ -5224,6 +6778,22 @@ if (
     method === "GET" &&
     pathname === "/api/admin/subscription-plans"
 ) {
+
+    // -----------------------------------------
+// SUPER ADMIN AUTHORIZATION
+// -----------------------------------------
+
+const auth =
+    await requireSuperAdmin(
+        request,
+        env
+    );
+
+if (!auth.authorized) {
+
+    return auth.response;
+
+}
 
     const { results } = await env.DB.prepare(
 
@@ -5270,6 +6840,22 @@ if (
     method === "GET" &&
     pathname.startsWith("/api/admin/subscription-plans/")
 ) {
+
+    // -----------------------------------------
+// SUPER ADMIN AUTHORIZATION
+// -----------------------------------------
+
+const auth =
+    await requireSuperAdmin(
+        request,
+        env
+    );
+
+if (!auth.authorized) {
+
+    return auth.response;
+
+}
 
     const planId = pathname.split("/").pop();
 
@@ -5366,6 +6952,22 @@ if (
     method === "POST" &&
     pathname === "/api/admin/subscription-plans"
 ) {
+
+    // -----------------------------------------
+// SUPER ADMIN AUTHORIZATION
+// -----------------------------------------
+
+const auth =
+    await requireSuperAdmin(
+        request,
+        env
+    );
+
+if (!auth.authorized) {
+
+    return auth.response;
+
+}
 
     const body = await request.json();
 
@@ -5604,6 +7206,22 @@ if (
     method === "PUT" &&
     pathname.startsWith("/api/admin/subscription-plans/")
 ) {
+
+    // -----------------------------------------
+// SUPER ADMIN AUTHORIZATION
+// -----------------------------------------
+
+const auth =
+    await requireSuperAdmin(
+        request,
+        env
+    );
+
+if (!auth.authorized) {
+
+    return auth.response;
+
+}
 
     const planId = pathname.split("/").pop();
 
@@ -5878,6 +7496,22 @@ if (
 
 ) {
 
+    // -----------------------------------------
+// SUPER ADMIN AUTHORIZATION
+// -----------------------------------------
+
+const auth =
+    await requireSuperAdmin(
+        request,
+        env
+    );
+
+if (!auth.authorized) {
+
+    return auth.response;
+
+}
+
     const parts = pathname.split("/");
 
     const planId = parts[parts.length - 2];
@@ -6004,6 +7638,22 @@ if (
     pathname.startsWith("/api/admin/subscription-plans/")
 
 ) {
+
+    // -----------------------------------------
+// SUPER ADMIN AUTHORIZATION
+// -----------------------------------------
+
+const auth =
+    await requireSuperAdmin(
+        request,
+        env
+    );
+
+if (!auth.authorized) {
+
+    return auth.response;
+
+}
 
     const planId = pathname.split("/").pop();
 
@@ -6140,6 +7790,26 @@ if (
 
 ) {
 
+     // -----------------------------------------
+    // SUPER ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireSuperAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
+    // -----------------------------------------
+    // EXISTING CODE
+    // -----------------------------------------
+
     const { results } = await env.DB.prepare(
 
         `SELECT
@@ -6186,6 +7856,26 @@ if (
     pathname.startsWith("/api/admin/features/")
 
 ) {
+
+     // -----------------------------------------
+    // SUPER ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireSuperAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
+    // -----------------------------------------
+    // EXISTING CODE
+    // -----------------------------------------
 
     const featureId = pathname.split("/").pop();
 
@@ -6252,6 +7942,26 @@ if (
     pathname === "/api/admin/features"
 
 ) {
+
+     // -----------------------------------------
+    // SUPER ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireSuperAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
+    // -----------------------------------------
+    // EXISTING CODE
+    // -----------------------------------------
 
     const body = await request.json();
 
@@ -6527,6 +8237,26 @@ if (
     pathname.startsWith("/api/admin/features/")
 
 ) {
+
+     // -----------------------------------------
+    // SUPER ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireSuperAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
+    // -----------------------------------------
+    // EXISTING CODE
+    // -----------------------------------------
 
     const featureId = pathname.split("/").pop();
 
@@ -6836,6 +8566,26 @@ if (
 
 ) {
 
+     // -----------------------------------------
+    // SUPER ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireSuperAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
+    // -----------------------------------------
+    // EXISTING CODE
+    // -----------------------------------------
+
     const featureId = pathname.split("/")[4];
 
     const body = await request.json();
@@ -6964,6 +8714,26 @@ if (
 
 ) {
 
+     // -----------------------------------------
+    // SUPER ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireSuperAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
+    // -----------------------------------------
+    // EXISTING CODE
+    // -----------------------------------------
+
     const featureId = pathname.split("/").pop();
 
     const feature = await env.DB.prepare(
@@ -7068,6 +8838,22 @@ if (
     pathname.startsWith("/api/admin/plan-features/")
 
 ) {
+
+        // -----------------------------------------
+    // SUPER ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireSuperAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
 
     const planId = pathname.split("/").pop();
 
@@ -7176,6 +8962,22 @@ if (
     pathname === "/api/admin/plan-features"
 
 ) {
+
+        // -----------------------------------------
+    // SUPER ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireSuperAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
 
     const body = await request.json();
 
@@ -7449,6 +9251,22 @@ if (
 
 ) {
 
+        // -----------------------------------------
+    // SUPER ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireSuperAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
     const assignmentId = pathname.split("/").pop();
 
     // -----------------------------------------
@@ -7541,6 +9359,22 @@ if (
     pathname.startsWith("/api/admin/plan-features/")
 
 ) {
+
+        // -----------------------------------------
+    // SUPER ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireSuperAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
 
     const planId = pathname.split("/").pop();
 
@@ -7781,6 +9615,22 @@ if (
 
 ) {
 
+        // -----------------------------------------
+    // SUPER ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireSuperAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
     const { results } = await env.DB.prepare(
 
         `SELECT
@@ -7843,6 +9693,22 @@ if (
     pathname.startsWith("/api/admin/subscriptions/")
 
 ) {
+
+        // -----------------------------------------
+    // SUPER ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireSuperAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
 
     const subscriptionId = pathname.split("/").pop();
 
@@ -7927,6 +9793,22 @@ if (
     pathname === "/api/admin/subscriptions"
 
 ) {
+
+        // -----------------------------------------
+    // SUPER ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireSuperAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
 
     const body = await request.json();
 
@@ -8270,6 +10152,22 @@ if (
     pathname.startsWith("/api/admin/subscriptions/")
 
 ) {
+
+        // -----------------------------------------
+    // SUPER ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireSuperAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
 
     const subscriptionId = pathname.split("/").pop();
 
@@ -8632,6 +10530,22 @@ if (
 
 ) {
 
+        // -----------------------------------------
+    // SUPER ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireSuperAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
     const subscriptionId = pathname.split("/")[4];
 
     const body = await request.json();
@@ -8754,6 +10668,22 @@ if (
     pathname.match(/^\/api\/admin\/subscriptions\/[^/]+\/payment-status$/)
 
 ) {
+
+        // -----------------------------------------
+    // SUPER ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireSuperAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
 
     const subscriptionId = pathname.split("/")[4];
 
@@ -8878,6 +10808,22 @@ if (
 
 ) {
 
+        // -----------------------------------------
+    // SUPER ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireSuperAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
     const subscriptionId = pathname.split("/").pop();
 
     const subscription = await env.DB.prepare(
@@ -8953,6 +10899,22 @@ if (
 
 ) {
 
+        // -----------------------------------------
+    // SUPER ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireSuperAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
     const { results } = await env.DB.prepare(
 
         `SELECT
@@ -9015,6 +10977,22 @@ if (
     pathname.startsWith("/api/admin/trial-usage/")
 
 ) {
+
+        // -----------------------------------------
+    // SUPER ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireSuperAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
 
     const trialUsageId = pathname.split("/").pop();
 
@@ -9098,6 +11076,22 @@ if (
     pathname === "/api/admin/trial-usage"
 
 ) {
+
+        // -----------------------------------------
+    // SUPER ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireSuperAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
 
     const body = await request.json();
 
@@ -9489,6 +11483,22 @@ if (
     pathname.startsWith("/api/admin/trial-usage/")
 
 ) {
+
+        // -----------------------------------------
+    // SUPER ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireSuperAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
 
     const trialUsageId = pathname.split("/").pop();
 
@@ -9892,6 +11902,22 @@ if (
 
 ) {
 
+        // -----------------------------------------
+    // SUPER ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireSuperAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
     const trialUsageId = pathname.split("/").pop();
 
     // -----------------------------------------
@@ -9960,7 +11986,7 @@ if (
 
 }
 
-        // =====================================================
+// =====================================================
 // PAYMENT MANAGEMENT
 // =====================================================
 
@@ -9976,6 +12002,22 @@ if (
     pathname === "/api/admin/payments"
 
 ) {
+
+        // -----------------------------------------
+    // SUPER ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireSuperAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
 
     const page = Math.max(
 
@@ -10110,6 +12152,22 @@ if (
 
 ) {
 
+        // -----------------------------------------
+    // SUPER ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireSuperAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
     const paymentId = pathname.split("/").pop();
 
     const payment = await env.DB.prepare(
@@ -10218,6 +12276,22 @@ if (
     pathname === "/api/admin/payments/search"
 
 ) {
+
+        // -----------------------------------------
+    // SUPER ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireSuperAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
 
     const search = url.searchParams.get("search") || "";
 
@@ -10456,6 +12530,22 @@ if (
 
 ) {
 
+        // -----------------------------------------
+    // SUPER ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireSuperAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
     const parts = pathname.split("/");
 
     const paymentId = parts[parts.length - 2];
@@ -10665,6 +12755,22 @@ if (
 
 ) {
 
+        // -----------------------------------------
+    // SUPER ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireSuperAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
     const parts = pathname.split("/");
 
     const paymentId = parts[parts.length - 2];
@@ -10844,6 +12950,22 @@ if (
 
 ) {
 
+        // -----------------------------------------
+    // SUPER ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireSuperAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
     const paymentId = pathname.split("/").pop();
 
     // -----------------------------------------
@@ -10953,6 +13075,26 @@ if (
 // Get all referrals
 if (method === "GET" && pathname === "/api/admin/referrals") {
 
+    // -----------------------------------------
+    // SUPER ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireSuperAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
+    // -----------------------------------------
+    // EXISTING REFERRAL CODE
+    // -----------------------------------------
+
     const { results } = await env.DB.prepare(`
         SELECT
             r.id,
@@ -11003,6 +13145,26 @@ if (
     pathname.startsWith("/api/admin/referrals/")
 
 ) {
+
+    // -----------------------------------------
+    // SUPER ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireSuperAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
+    // -----------------------------------------
+    // EXISTING REFERRAL CODE
+    // -----------------------------------------
 
     const referralId = pathname.split("/").pop();
 
@@ -11108,6 +13270,26 @@ if (
     pathname.startsWith("/api/admin/referrals/")
 
 ) {
+
+    // -----------------------------------------
+    // SUPER ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireSuperAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
+    // -----------------------------------------
+    // EXISTING REFERRAL CODE
+    // -----------------------------------------
 
     const referralId = pathname.split("/").pop();
 
@@ -11254,6 +13436,26 @@ if (
 
 ) {
 
+    // -----------------------------------------
+    // SUPER ADMIN AUTHORIZATION
+    // -----------------------------------------
+
+    const auth =
+        await requireSuperAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
+    // -----------------------------------------
+    // EXISTING REFERRAL CODE
+    // -----------------------------------------
+
     const referralId = pathname.split("/").pop();
 
     // -----------------------------------------
@@ -11319,1219 +13521,1708 @@ if (
     });
 
 }
-       // =====================================================
-        // NOTIFICATION MANAGEMENT
-        // =====================================================
 
-        // -----------------------------------------
-        // GET ALL NOTIFICATIONS
-        // GET /api/admin/notifications
-        // -----------------------------------------
+// ======================================================
+// ADMIN MANAGEMENT
+//
+// SUPER ADMIN ONLY
+//
+// Endpoints:
+//
+// GET    /api/admin/admins
+// GET    /api/admin/admins/:id
+// POST   /api/admin/admins
+// PUT    /api/admin/admins/:id
+// PATCH  /api/admin/admins/:id/approve
+// PATCH  /api/admin/admins/:id/reject
+// PATCH  /api/admin/admins/:id/status
+// PATCH  /api/admin/admins/:id/password
+// DELETE /api/admin/admins/:id
+// ======================================================
 
-        if (
 
-            method === "GET" &&
+// ======================================================
+// GET ALL ADMINS
+// GET /api/admin/admins
+// ======================================================
 
-            pathname === "/api/admin/notifications"
+if (
 
-        ) {
+    method === "GET" &&
 
-            const { results } = await env.DB.prepare(
+    pathname === "/api/admin/admins"
 
-                `SELECT
+) {
 
-                    n.id,
+    const auth =
+        await requireSuperAdmin(
+            request,
+            env
+        );
 
-                    n.student_id,
+    if (!auth.authorized) {
 
-                    u.full_name,
+        return auth.response;
 
-                    n.title,
+    }
 
-                    n.message,
 
-                    n.notification_type,
+    const {
+        results: admins
+    } = await env.DB.prepare(`
 
-                    n.is_read,
+        SELECT
 
-                    n.created_by_admin_id,
+            id,
 
-                    a.full_name AS created_by,
+            first_name,
 
-                    n.created_at
+            last_name,
 
-                FROM notifications n
+            email,
 
-                LEFT JOIN students s
+            role,
 
-                    ON n.student_id = s.id
+            status,
 
-                LEFT JOIN admins a
+            approval_status,
 
-                    ON n.created_by_admin_id = a.id
+            approved_by_admin_id,
 
-                ORDER BY
+            approved_at,
 
-                    n.created_at DESC`
+            password_set_at,
 
-            ).all();
+            last_login_at,
 
-            return Response.json({
+            created_at,
 
-                success: true,
+            updated_at
 
-                message: "Notifications retrieved successfully.",
+        FROM admins
 
-                data: results
+        ORDER BY
 
-            });
+            CASE
 
-        }
+                WHEN role = 'super_admin'
 
-        // -----------------------------------------
-        // GET SINGLE NOTIFICATION
-        // GET /api/admin/notifications/:id
-        // -----------------------------------------
+                THEN 0
 
-        if (
+                ELSE 1
 
-            method === "GET" &&
+            END,
 
-            pathname.startsWith("/api/admin/notifications/")
+            created_at DESC
 
-        ) {
+    `)
 
-            const notificationId = pathname.split("/").pop();
+    .all();
 
-            const notification = await env.DB.prepare(
-
-                `SELECT
-
-                    n.id,
-
-                    n.student_id,
-
-                    u.full_name,
-
-                    n.title,
-
-                    n.message,
-
-                    n.notification_type,
-
-                    n.is_read,
-
-                    n.created_by_admin_id,
-
-                    a.full_name AS created_by,
-
-                    n.created_at
-
-                FROM notifications n
-
-                LEFT JOIN students s
-
-                    ON n.student_id = s.id
-
-                LEFT JOIN admins a
-
-                    ON n.created_by_admin_id = a.id
-
-                WHERE n.id = ?`
-
-            )
-
-            .bind(notificationId)
-
-            .first();
-
-            if (!notification) {
-
-                return Response.json({
-
-                    success: false,
-
-                    message: "Notification not found."
-
-                }, {
-
-                    status: 404
-
-                });
-
-            }
-
-            return Response.json({
-
-                success: true,
-
-                message: "Notification retrieved successfully.",
-
-                data: notification
-
-            });
-
-        }
-
-                // -----------------------------------------
-        // CREATE NOTIFICATION
-        // POST /api/admin/notifications
-        // -----------------------------------------
-
-        if (
-
-            method === "POST" &&
-
-            pathname === "/api/admin/notifications"
-
-        ) {
-
-            const body = await request.json();
-
-            const {
-
-                student_id,
-
-                title,
-
-                message,
-
-                notification_type,
-
-                created_by_admin_id
-
-            } = body;
-
-            // -----------------------------------------
-            // VALIDATION
-            // -----------------------------------------
-
-            if (!title || title.trim() === "") {
-
-                return Response.json({
-
-                    success: false,
-
-                    message: "Notification title is required."
-
-                }, {
-
-                    status: 400
-
-                });
-
-            }
-
-            if (!message || message.trim() === "") {
-
-                return Response.json({
-
-                    success: false,
-
-                    message: "Notification message is required."
-
-                }, {
-
-                    status: 400
-
-                });
-
-            }
-
-            const allowedTypes = [
-
-                "system",
-
-                "subscription",
-
-                "payment",
-
-                "exam",
-
-                "general"
-
-            ];
-
-            if (
-
-                !notification_type ||
-
-                !allowedTypes.includes(notification_type)
-
-            ) {
-
-                return Response.json({
-
-                    success: false,
-
-                    message: "Invalid notification type."
-
-                }, {
-
-                    status: 400
-
-                });
-
-            }
-
-            if (
-
-                !created_by_admin_id ||
-
-                created_by_admin_id.trim() === ""
-
-            ) {
-
-                return Response.json({
-
-                    success: false,
-
-                    message: "Administrator ID is required."
-
-                }, {
-
-                    status: 400
-
-                });
-
-            }
-
-            // -----------------------------------------
-            // VERIFY ADMIN EXISTS
-            // -----------------------------------------
-
-            const admin = await env.DB.prepare(
-
-                `SELECT id
-
-                 FROM admins
-
-                 WHERE id = ?`
-
-            )
-
-            .bind(created_by_admin_id)
-
-            .first();
-
-            if (!admin) {
-
-                return Response.json({
-
-                    success: false,
-
-                    message: "Administrator not found."
-
-                }, {
-
-                    status: 404
-
-                });
-
-            }
-
-            // -----------------------------------------
-            // VERIFY STUDENT (Only if sending to one student)
-            // -----------------------------------------
-
-            if (student_id) {
-
-                const student = await env.DB.prepare(
-
-                    `SELECT id
-
-                     FROM students
-
-                     WHERE id = ?`
-
-                )
-
-                .bind(student_id)
-
-                .first();
-
-                if (!student) {
-
-                    return Response.json({
-
-                        success: false,
-
-                        message: "Student not found."
-
-                    }, {
-
-                        status: 404
-
-                    });
-
-                }
-
-            }
-
-            // -----------------------------------------
-            // CREATE NOTIFICATION
-            // -----------------------------------------
-
-            const notificationId = crypto.randomUUID();
-
-            const now = new Date().toISOString();
-
-            await env.DB.prepare(
-
-                `INSERT INTO notifications (
-
-                    id,
-
-                    student_id,
-
-                    title,
-
-                    message,
-
-                    notification_type,
-
-                    is_read,
-
-                    created_by_admin_id,
-
-                    created_at
-
-                )
-
-                VALUES (
-
-                    ?, ?, ?, ?, ?, ?, ?, ?
-
-                )`
-
-            )
-
-            .bind(
-
-                notificationId,
-
-                student_id || null,
-
-                title.trim(),
-
-                message.trim(),
-
-                notification_type,
-
-                0,
-
-                created_by_admin_id,
-
-                now
-
-            )
-
-            .run();
-
-            return Response.json({
-
-                success: true,
-
-                message: student_id
-
-                    ? "Notification sent successfully."
-
-                    : "Broadcast notification sent successfully.",
-
-                data: {
-
-                    id: notificationId
-
-                }
-
-            }, {
-
-                status: 201
-
-            });
-
-        }
-
-                // =====================================================
-        // UPDATE NOTIFICATION
-        // PUT /api/admin/notifications/:id
-        // =====================================================
-
-        if (
-
-            method === "PUT" &&
-
-            pathname.startsWith("/api/admin/notifications/")
-
-        ) {
-
-            const notificationId = pathname.split("/").pop();
-
-            const body = await request.json();
-
-            const {
-
-                student_id,
-
-                title,
-
-                message,
-
-                notification_type
-
-            } = body;
-
-            // -----------------------------------------
-            // VALIDATION
-            // -----------------------------------------
-
-            if (!title || title.trim() === "") {
-
-                return Response.json({
-
-                    success: false,
-
-                    message: "Notification title is required."
-
-                }, {
-
-                    status: 400
-
-                });
-
-            }
-
-            if (!message || message.trim() === "") {
-
-                return Response.json({
-
-                    success: false,
-
-                    message: "Notification message is required."
-
-                }, {
-
-                    status: 400
-
-                });
-
-            }
-
-            const allowedTypes = [
-
-                "system",
-
-                "subscription",
-
-                "payment",
-
-                "exam",
-
-                "general"
-
-            ];
-
-            if (
-
-                !notification_type ||
-
-                !allowedTypes.includes(notification_type)
-
-            ) {
-
-                return Response.json({
-
-                    success: false,
-
-                    message: "Invalid notification type."
-
-                }, {
-
-                    status: 400
-
-                });
-
-            }
-
-            // -----------------------------------------
-            // VERIFY NOTIFICATION EXISTS
-            // -----------------------------------------
-
-            const notification = await env.DB.prepare(
-
-                `SELECT id
-
-                 FROM notifications
-
-                 WHERE id = ?`
-
-            )
-
-            .bind(notificationId)
-
-            .first();
-
-            if (!notification) {
-
-                return Response.json({
-
-                    success: false,
-
-                    message: "Notification not found."
-
-                }, {
-
-                    status: 404
-
-                });
-
-            }
-
-            // -----------------------------------------
-            // VERIFY STUDENT (Only if sending to one student)
-            // -----------------------------------------
-
-            if (student_id) {
-
-                const student = await env.DB.prepare(
-
-                    `SELECT id
-
-                     FROM students
-
-                     WHERE id = ?`
-
-                )
-
-                .bind(student_id)
-
-                .first();
-
-                if (!student) {
-
-                    return Response.json({
-
-                        success: false,
-
-                        message: "Student not found."
-
-                    }, {
-
-                        status: 404
-
-                    });
-
-                }
-
-            }
-
-            // -----------------------------------------
-            // UPDATE NOTIFICATION
-            // -----------------------------------------
-
-            await env.DB.prepare(
-
-                `UPDATE notifications
-
-                 SET
-
-                    student_id = ?,
-
-                    title = ?,
-
-                    message = ?,
-
-                    notification_type = ?
-
-                 WHERE id = ?`
-
-            )
-
-            .bind(
-
-                student_id || null,
-
-                title.trim(),
-
-                message.trim(),
-
-                notification_type,
-
-                notificationId
-
-            )
-
-            .run();
-
-            return Response.json({
-
-                success: true,
-
-                message: "Notification updated successfully."
-
-            });
-
-        }
-
-                // =====================================================
-        // DELETE NOTIFICATION
-        // DELETE /api/admin/notifications/:id
-        // =====================================================
-
-        if (
-
-            method === "DELETE" &&
-
-            pathname.startsWith("/api/admin/notifications/")
-
-        ) {
-
-            const notificationId = pathname.split("/").pop();
-
-            // -----------------------------------------
-            // VERIFY NOTIFICATION EXISTS
-            // -----------------------------------------
-
-            const notification = await env.DB.prepare(
-
-                `SELECT id
-
-                 FROM notifications
-
-                 WHERE id = ?`
-
-            )
-
-            .bind(notificationId)
-
-            .first();
-
-            if (!notification) {
-
-                return Response.json({
-
-                    success: false,
-
-                    message: "Notification not found."
-
-                }, {
-
-                    status: 404
-
-                });
-
-            }
-
-            // -----------------------------------------
-            // DELETE NOTIFICATION
-            // -----------------------------------------
-
-            await env.DB.prepare(
-
-                `DELETE FROM notifications
-
-                 WHERE id = ?`
-
-            )
-
-            .bind(notificationId)
-
-            .run();
-
-            return Response.json({
-
-                success: true,
-
-                message: "Notification deleted successfully."
-
-            });
-
-        }
-
-                // =====================================================
-        // SYSTEM SETTINGS
-        // SUPER ADMIN ONLY
-        // =====================================================
-
-        // -----------------------------------------
-        // GET ALL SETTINGS
-        // GET /api/admin/settings
-        // -----------------------------------------
-
-        if (
-
-            method === "GET" &&
-
-            pathname === "/api/admin/settings"
-
-        ) {
-
-            const { results } = await env.DB.prepare(
-
-                `SELECT
-
-                    id,
-
-                    setting_key,
-
-                    setting_value,
-
-                    description,
-
-                    updated_by_admin_id,
-
-                    updated_at
-
-                 FROM system_settings
-
-                 ORDER BY
-
-                    setting_key ASC`
-
-            ).all();
-
-            return Response.json({
-
-                success: true,
-
-                message: "System settings retrieved successfully.",
-
-                data: results
-
-            });
-
-        }
-
-        // -----------------------------------------
-        // GET SINGLE SETTING
-        // GET /api/admin/settings/:key
-        // -----------------------------------------
-
-        if (
-
-            method === "GET" &&
-
-            pathname.startsWith("/api/admin/settings/")
-
-        ) {
-
-            const settingKey = decodeURIComponent(
-
-                pathname.split("/").pop()
-
-            );
-
-            const setting = await env.DB.prepare(
-
-                `SELECT
-
-                    id,
-
-                    setting_key,
-
-                    setting_value,
-
-                    description,
-
-                    updated_by_admin_id,
-
-                    updated_at
-
-                 FROM system_settings
-
-                 WHERE setting_key = ?`
-
-            )
-
-            .bind(settingKey)
-
-            .first();
-
-            if (!setting) {
-
-                return Response.json({
-
-                    success: false,
-
-                    message: "Setting not found."
-
-                }, {
-
-                    status: 404
-
-                });
-
-            }
-
-            return Response.json({
-
-                success: true,
-
-                message: "Setting retrieved successfully.",
-
-                data: setting
-
-            });
-
-        }
-
-                // -----------------------------------------
-        // CREATE / UPDATE SYSTEM SETTING
-        // POST /api/admin/settings
-        // -----------------------------------------
-
-        if (
-
-            method === "POST" &&
-
-            pathname === "/api/admin/settings"
-
-        ) {
-
-            const body = await request.json();
-
-            const {
-
-                setting_key,
-
-                setting_value,
-
-                description,
-
-                updated_by_admin_id
-
-            } = body;
-
-            // -----------------------------------------
-            // VALIDATION
-            // -----------------------------------------
-
-            if (
-
-                !setting_key ||
-
-                setting_key.trim() === ""
-
-            ) {
-
-                return Response.json({
-
-                    success: false,
-
-                    message: "Setting key is required."
-
-                }, {
-
-                    status: 400
-
-                });
-
-            }
-
-            if (
-
-                !updated_by_admin_id ||
-
-                updated_by_admin_id.trim() === ""
-
-            ) {
-
-                return Response.json({
-
-                    success: false,
-
-                    message: "Administrator ID is required."
-
-                }, {
-
-                    status: 400
-
-                });
-
-            }
-
-            // -----------------------------------------
-            // VERIFY ADMIN EXISTS
-            // -----------------------------------------
-
-            const admin = await env.DB.prepare(
-
-                `SELECT id
-
-                 FROM admins
-
-                 WHERE id = ?`
-
-            )
-
-            .bind(updated_by_admin_id)
-
-            .first();
-
-            if (!admin) {
-
-                return Response.json({
-
-                    success: false,
-
-                    message: "Administrator not found."
-
-                }, {
-
-                    status: 404
-
-                });
-
-            }
-
-            const now = new Date().toISOString();
-
-            // -----------------------------------------
-            // CHECK IF SETTING EXISTS
-            // -----------------------------------------
-
-            const existing = await env.DB.prepare(
-
-                `SELECT id
-
-                 FROM system_settings
-
-                 WHERE setting_key = ?`
-
-            )
-
-            .bind(setting_key.trim())
-
-            .first();
-
-            if (existing) {
-
-                await env.DB.prepare(
-
-                    `UPDATE system_settings
-
-                     SET
-
-                        setting_value = ?,
-
-                        description = ?,
-
-                        updated_by_admin_id = ?,
-
-                        updated_at = ?
-
-                     WHERE setting_key = ?`
-
-                )
-
-                .bind(
-
-                    setting_value ?? "",
-
-                    description ?? "",
-
-                    updated_by_admin_id,
-
-                    now,
-
-                    setting_key.trim()
-
-                )
-
-                .run();
-
-                return Response.json({
-
-                    success: true,
-
-                    message: "System setting updated successfully."
-
-                });
-
-            }
-
-            // -----------------------------------------
-            // CREATE NEW SETTING
-            // -----------------------------------------
-
-            const settingId = crypto.randomUUID();
-
-            await env.DB.prepare(
-
-                `INSERT INTO system_settings (
-
-                    id,
-
-                    setting_key,
-
-                    setting_value,
-
-                    description,
-
-                    updated_by_admin_id,
-
-                    updated_at
-
-                )
-
-                VALUES (
-
-                    ?, ?, ?, ?, ?, ?
-
-                )`
-
-            )
-
-            .bind(
-
-                settingId,
-
-                setting_key.trim(),
-
-                setting_value ?? "",
-
-                description ?? "",
-
-                updated_by_admin_id,
-
-                now
-
-            )
-
-            .run();
-
-            return Response.json({
-
-                success: true,
-
-                message: "System setting created successfully.",
-
-                data: {
-
-                    id: settingId
-
-                }
-
-            }, {
-
-                status: 201
-
-            });
-
-        }
-
-                // =====================================================
-        // DELETE SYSTEM SETTING
-        // DELETE /api/admin/settings/:key
-        // =====================================================
-
-        if (
-
-            method === "DELETE" &&
-
-            pathname.startsWith("/api/admin/settings/")
-
-        ) {
-
-            const settingKey = decodeURIComponent(
-
-                pathname.split("/").pop()
-
-            );
-
-            // -----------------------------------------
-            // VERIFY SETTING EXISTS
-            // -----------------------------------------
-
-            const setting = await env.DB.prepare(
-
-                `SELECT id
-
-                 FROM system_settings
-
-                 WHERE setting_key = ?`
-
-            )
-
-            .bind(settingKey)
-
-            .first();
-
-            if (!setting) {
-
-                return Response.json({
-
-                    success: false,
-
-                    message: "System setting not found."
-
-                }, {
-
-                    status: 404
-
-                });
-
-            }
-
-            // -----------------------------------------
-            // DELETE SETTING
-            // -----------------------------------------
-
-            await env.DB.prepare(
-
-                `DELETE FROM system_settings
-
-                 WHERE setting_key = ?`
-
-            )
-
-            .bind(settingKey)
-
-            .run();
-
-            return Response.json({
-
-                success: true,
-
-                message: "System setting deleted successfully."
-
-            });
-
-        }
-    // =====================================================
-    // DEFAULT RESPONSE
-    // =====================================================
 
     return Response.json({
 
-        success: false,
+        success: true,
 
-        message: "Admin endpoint not found."
+        message:
+            "Administrators retrieved successfully.",
 
-    }, {
-
-        status: 404
-
-    });
-
-} catch (error) {
-
-    console.error("Admin Error:", error);
-
-    return Response.json({
-
-        success: false,
-
-        message: "Internal server error.",
-
-        error: error.message
-
-    }, {
-
-        status: 500
+        data:
+            admins || []
 
     });
 
 }
+
+
+// ======================================================
+// GET SINGLE ADMIN
+// GET /api/admin/admins/:id
+// ======================================================
+
+if (
+
+    method === "GET" &&
+
+    /^\/api\/admin\/admins\/[^/]+$/.test(
+        pathname
+    )
+
+) {
+
+    const auth =
+        await requireSuperAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
+
+    const adminId =
+        pathname.split("/").pop();
+
+
+    const admin =
+        await env.DB.prepare(`
+
+            SELECT
+
+                id,
+
+                first_name,
+
+                last_name,
+
+                email,
+
+                role,
+
+                status,
+
+                approval_status,
+
+                approved_by_admin_id,
+
+                approved_at,
+
+                password_set_at,
+
+                last_login_at,
+
+                created_at,
+
+                updated_at
+
+            FROM admins
+
+            WHERE id = ?
+
+            LIMIT 1
+
+        `)
+
+        .bind(adminId)
+
+        .first();
+
+
+    if (!admin) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Administrator not found."
+
+        }, {
+
+            status: 404
+
+        });
+
+    }
+
+
+    return Response.json({
+
+        success: true,
+
+        message:
+            "Administrator retrieved successfully.",
+
+        data:
+            admin
+
+    });
+
+}
+
+
+// ======================================================
+// CREATE ADMIN
+// POST /api/admin/admins
+// ======================================================
+
+if (
+
+    method === "POST" &&
+
+    pathname === "/api/admin/admins"
+
+) {
+
+    const auth =
+        await requireSuperAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
+
+    let body;
+
+
+    try {
+
+        body =
+            await request.json();
+
+    } catch {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Invalid JSON request body."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+
+    const firstName =
+        typeof body.first_name === "string"
+            ? body.first_name.trim()
+            : "";
+
+
+    const lastName =
+        typeof body.last_name === "string"
+            ? body.last_name.trim()
+            : "";
+
+
+    const email =
+        typeof body.email === "string"
+            ? body.email.trim().toLowerCase()
+            : "";
+
+
+    const password =
+        typeof body.password === "string"
+            ? body.password
+            : "";
+
+
+    const role =
+        typeof body.role === "string"
+            ? body.role.trim()
+            : "admin";
+
+
+    // --------------------------------------------------
+    // VALIDATION
+    // --------------------------------------------------
+
+    if (!firstName) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "First name is required."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+
+    if (!lastName) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Last name is required."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+
+    if (!email) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Email address is required."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+
+    const emailPattern =
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+
+    if (!emailPattern.test(email)) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Please enter a valid email address."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+
+    if (!password) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Password is required."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+
+    if (password.length < 8) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Password must be at least 8 characters."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+
+    if (
+
+        role !== "admin" &&
+
+        role !== "super_admin"
+
+    ) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Invalid administrator role."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+
+    // --------------------------------------------------
+    // CHECK DUPLICATE EMAIL
+    // --------------------------------------------------
+
+    const existingAdmin =
+        await env.DB.prepare(`
+
+            SELECT id
+
+            FROM admins
+
+            WHERE LOWER(email) = LOWER(?)
+
+            LIMIT 1
+
+        `)
+
+        .bind(email)
+
+        .first();
+
+
+    if (existingAdmin) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "An administrator with this email already exists."
+
+        }, {
+
+            status: 409
+
+        });
+
+    }
+
+
+    // --------------------------------------------------
+    // CREATE PASSWORD HASH
+    // --------------------------------------------------
+
+    const passwordHash =
+        await bcrypt.hash(
+            password,
+            10
+        );
+
+
+    const adminId =
+        crypto.randomUUID();
+
+
+    const now =
+        new Date().toISOString();
+
+
+    // --------------------------------------------------
+    // CREATE ADMIN
+    // --------------------------------------------------
+
+    await env.DB.prepare(`
+
+        INSERT INTO admins (
+
+            id,
+
+            first_name,
+
+            last_name,
+
+            email,
+
+            password_hash,
+
+            role,
+
+            status,
+
+            approval_status,
+
+            approved_by_admin_id,
+
+            approved_at,
+
+            password_set_at,
+
+            token_version,
+
+            created_at,
+
+            updated_at
+
+        )
+
+        VALUES (
+
+            ?, ?, ?, ?, ?,
+
+            ?,
+
+            'active',
+
+            'approved',
+
+            ?, ?,
+
+            ?,
+
+            1,
+
+            ?, ?
+
+        )
+
+    `)
+
+    .bind(
+
+        adminId,
+
+        firstName,
+
+        lastName,
+
+        email,
+
+        passwordHash,
+
+        role,
+
+        auth.admin.id,
+
+        now,
+
+        now,
+
+        now,
+
+        now
+
+    )
+
+    .run();
+
+
+    return Response.json({
+
+        success: true,
+
+        message:
+            "Administrator created successfully.",
+
+        data: {
+
+            id:
+                adminId,
+
+            first_name:
+                firstName,
+
+            last_name:
+                lastName,
+
+            email,
+
+            role
+
+        }
+
+    }, {
+
+        status: 201
+
+    });
+
+}
+
+
+// ======================================================
+// UPDATE ADMIN
+// PUT /api/admin/admins/:id
+// ======================================================
+
+if (
+
+    method === "PUT" &&
+
+    /^\/api\/admin\/admins\/[^/]+$/.test(
+        pathname
+    )
+
+) {
+
+    const auth =
+        await requireSuperAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
+
+    const adminId =
+        pathname.split("/").pop();
+
+
+    let body;
+
+
+    try {
+
+        body =
+            await request.json();
+
+    } catch {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Invalid JSON request body."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+
+    const admin =
+        await env.DB.prepare(`
+
+            SELECT
+
+                id,
+
+                role
+
+            FROM admins
+
+            WHERE id = ?
+
+            LIMIT 1
+
+        `)
+
+        .bind(adminId)
+
+        .first();
+
+
+    if (!admin) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Administrator not found."
+
+        }, {
+
+            status: 404
+
+        });
+
+    }
+
+
+    const firstName =
+        typeof body.first_name === "string"
+            ? body.first_name.trim()
+            : "";
+
+
+    const lastName =
+        typeof body.last_name === "string"
+            ? body.last_name.trim()
+            : "";
+
+
+    const email =
+        typeof body.email === "string"
+            ? body.email.trim().toLowerCase()
+            : "";
+
+
+    if (
+
+        !firstName ||
+
+        !lastName ||
+
+        !email
+
+    ) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "First name, last name and email are required."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+
+    const emailPattern =
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+
+    if (!emailPattern.test(email)) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Please enter a valid email address."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+
+    const duplicateEmail =
+        await env.DB.prepare(`
+
+            SELECT id
+
+            FROM admins
+
+            WHERE LOWER(email) = LOWER(?)
+
+            AND id <> ?
+
+            LIMIT 1
+
+        `)
+
+        .bind(
+
+            email,
+
+            adminId
+
+        )
+
+        .first();
+
+
+    if (duplicateEmail) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "This email address is already in use."
+
+        }, {
+
+            status: 409
+
+        });
+
+    }
+
+
+    const now =
+        new Date().toISOString();
+
+
+    await env.DB.prepare(`
+
+        UPDATE admins
+
+        SET
+
+            first_name = ?,
+
+            last_name = ?,
+
+            email = ?,
+
+            updated_at = ?
+
+        WHERE id = ?
+
+    `)
+
+    .bind(
+
+        firstName,
+
+        lastName,
+
+        email,
+
+        now,
+
+        adminId
+
+    )
+
+    .run();
+
+
+    return Response.json({
+
+        success: true,
+
+        message:
+            "Administrator updated successfully."
+
+    });
+
+}
+
+
+// ======================================================
+// APPROVE ADMIN
+// PATCH /api/admin/admins/:id/approve
+// ======================================================
+
+if (
+
+    method === "PATCH" &&
+
+    /^\/api\/admin\/admins\/[^/]+\/approve$/.test(
+        pathname
+    )
+
+) {
+
+    const auth =
+        await requireSuperAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
+
+    const parts =
+        pathname.split("/");
+
+
+    const adminId =
+        parts[parts.length - 2];
+
+
+    if (adminId === auth.admin.id) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "You cannot approve your own administrator account."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+
+    const admin =
+        await env.DB.prepare(`
+
+            SELECT
+
+                id
+
+            FROM admins
+
+            WHERE id = ?
+
+            LIMIT 1
+
+        `)
+
+        .bind(adminId)
+
+        .first();
+
+
+    if (!admin) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Administrator not found."
+
+        }, {
+
+            status: 404
+
+        });
+
+    }
+
+
+    const now =
+        new Date().toISOString();
+
+
+    await env.DB.prepare(`
+
+        UPDATE admins
+
+        SET
+
+            approval_status = 'approved',
+
+            approved_by_admin_id = ?,
+
+            approved_at = ?,
+
+            status = 'active',
+
+            updated_at = ?
+
+        WHERE id = ?
+
+    `)
+
+    .bind(
+
+        auth.admin.id,
+
+        now,
+
+        now,
+
+        adminId
+
+    )
+
+    .run();
+
+
+    return Response.json({
+
+        success: true,
+
+        message:
+            "Administrator approved successfully."
+
+    });
+
+}
+
+
+// ======================================================
+// REJECT ADMIN
+// PATCH /api/admin/admins/:id/reject
+// ======================================================
+
+if (
+
+    method === "PATCH" &&
+
+    /^\/api\/admin\/admins\/[^/]+\/reject$/.test(
+        pathname
+    )
+
+) {
+
+    const auth =
+        await requireSuperAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
+
+    const parts =
+        pathname.split("/");
+
+
+    const adminId =
+        parts[parts.length - 2];
+
+
+    if (adminId === auth.admin.id) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "You cannot reject your own administrator account."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+
+    const admin =
+        await env.DB.prepare(`
+
+            SELECT id
+
+            FROM admins
+
+            WHERE id = ?
+
+            LIMIT 1
+
+        `)
+
+        .bind(adminId)
+
+        .first();
+
+
+    if (!admin) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Administrator not found."
+
+        }, {
+
+            status: 404
+
+        });
+
+    }
+
+
+    const now =
+        new Date().toISOString();
+
+
+    await env.DB.prepare(`
+
+        UPDATE admins
+
+        SET
+
+            approval_status = 'rejected',
+
+            status = 'inactive',
+
+            token_version = token_version + 1,
+
+            updated_at = ?
+
+        WHERE id = ?
+
+    `)
+
+    .bind(
+
+        now,
+
+        adminId
+
+    )
+
+    .run();
+
+
+    return Response.json({
+
+        success: true,
+
+        message:
+            "Administrator rejected successfully."
+
+    });
+
+}
+
+
+// ======================================================
+// CHANGE ADMIN STATUS
+// PATCH /api/admin/admins/:id/status
+// ======================================================
+
+if (
+
+    method === "PATCH" &&
+
+    /^\/api\/admin\/admins\/[^/]+\/status$/.test(
+        pathname
+    )
+
+) {
+
+    const auth =
+        await requireSuperAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
+
+    const parts =
+        pathname.split("/");
+
+
+    const adminId =
+        parts[parts.length - 2];
+
+
+    if (adminId === auth.admin.id) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "You cannot change your own account status."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+
+    let body;
+
+
+    try {
+
+        body =
+            await request.json();
+
+    } catch {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Invalid JSON request body."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+
+    const status =
+        typeof body.status === "string"
+            ? body.status.trim().toLowerCase()
+            : "";
+
+
+    if (
+
+        status !== "active" &&
+
+        status !== "inactive"
+
+    ) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Status must be active or inactive."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+
+    const admin =
+        await env.DB.prepare(`
+
+            SELECT id
+
+            FROM admins
+
+            WHERE id = ?
+
+            LIMIT 1
+
+        `)
+
+        .bind(adminId)
+
+        .first();
+
+
+    if (!admin) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Administrator not found."
+
+        }, {
+
+            status: 404
+
+        });
+
+    }
+
+
+    const now =
+        new Date().toISOString();
+
+
+    await env.DB.prepare(`
+
+        UPDATE admins
+
+        SET
+
+            status = ?,
+
+            token_version =
+                CASE
+
+                    WHEN ? = 'inactive'
+
+                    THEN token_version + 1
+
+                    ELSE token_version
+
+                END,
+
+            updated_at = ?
+
+        WHERE id = ?
+
+    `)
+
+    .bind(
+
+        status,
+
+        status,
+
+        now,
+
+        adminId
+
+    )
+
+    .run();
+
+
+    return Response.json({
+
+        success: true,
+
+        message:
+
+            status === "active"
+
+                ? "Administrator activated successfully."
+
+                : "Administrator deactivated successfully."
+
+    });
+
+}
+
+
+// ======================================================
+// RESET ADMIN PASSWORD
+// PATCH /api/admin/admins/:id/password
+// ======================================================
+
+if (
+
+    method === "PATCH" &&
+
+    /^\/api\/admin\/admins\/[^/]+\/password$/.test(
+        pathname
+    )
+
+) {
+
+    const auth =
+        await requireSuperAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
+
+    const parts =
+        pathname.split("/");
+
+
+    const adminId =
+        parts[parts.length - 2];
+
+
+    let body;
+
+
+    try {
+
+        body =
+            await request.json();
+
+    } catch {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Invalid JSON request body."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+
+    const password =
+        typeof body.password === "string"
+            ? body.password
+            : "";
+
+
+    if (!password) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "New password is required."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+
+    if (password.length < 8) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Password must be at least 8 characters."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+
+    const admin =
+        await env.DB.prepare(`
+
+            SELECT id
+
+            FROM admins
+
+            WHERE id = ?
+
+            LIMIT 1
+
+        `)
+
+        .bind(adminId)
+
+        .first();
+
+
+    if (!admin) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Administrator not found."
+
+        }, {
+
+            status: 404
+
+        });
+
+    }
+
+
+    const passwordHash =
+        await bcrypt.hash(
+
+            password,
+
+            10
+
+        );
+
+
+    const now =
+        new Date().toISOString();
+
+
+    await env.DB.prepare(`
+
+        UPDATE admins
+
+        SET
+
+            password_hash = ?,
+
+            password_set_at = ?,
+
+            token_version =
+                token_version + 1,
+
+            updated_at = ?
+
+        WHERE id = ?
+
+    `)
+
+    .bind(
+
+        passwordHash,
+
+        now,
+
+        now,
+
+        adminId
+
+    )
+
+    .run();
+
+
+    return Response.json({
+
+        success: true,
+
+        message:
+            "Administrator password updated successfully."
+
+    });
+
+}
+
+
+// ======================================================
+// DELETE ADMIN
+// DELETE /api/admin/admins/:id
+// ======================================================
+
+if (
+
+    method === "DELETE" &&
+
+    /^\/api\/admin\/admins\/[^/]+$/.test(
+        pathname
+    )
+
+) {
+
+    const auth =
+        await requireSuperAdmin(
+            request,
+            env
+        );
+
+    if (!auth.authorized) {
+
+        return auth.response;
+
+    }
+
+
+    const adminId =
+        pathname.split("/").pop();
+
+
+    if (adminId === auth.admin.id) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "You cannot delete your own administrator account."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+
+    const admin =
+        await env.DB.prepare(`
+
+            SELECT
+
+                id,
+
+                role
+
+            FROM admins
+
+            WHERE id = ?
+
+            LIMIT 1
+
+        `)
+
+        .bind(adminId)
+
+        .first();
+
+
+    if (!admin) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Administrator not found."
+
+        }, {
+
+            status: 404
+
+        });
+
+    }
+
+
+    // --------------------------------------------------
+    // PROTECT OTHER SUPER ADMINS
+    // --------------------------------------------------
+
+    if (admin.role === "super_admin") {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Super administrator accounts cannot be deleted."
+
+        }, {
+
+            status: 403
+
+        });
+
+    }
+
+
+    await env.DB.prepare(`
+
+        DELETE FROM admins
+
+        WHERE id = ?
+
+    `)
+
+    .bind(adminId)
+
+    .run();
+
+
+    return Response.json({
+
+        success: true,
+
+        message:
+            "Administrator deleted successfully."
+
+    });
 
 }
