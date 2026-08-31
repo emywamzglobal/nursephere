@@ -19,15 +19,15 @@ const Auth = {};
 
 Auth.KEYS = {
 
-    TOKEN: "accessToken",
+    TOKEN: "adminToken",
 
-    USER_ID: "userId",
+    USER_ID: "adminId",
 
-    USER_NAME: "userName",
+    USER_NAME: "adminFirstName",
 
-    USER_EMAIL: "userEmail",
+    USER_EMAIL: "adminEmail",
 
-    USER_ROLE: "userRole"
+    USER_ROLE: "adminRole"
 
 };
 
