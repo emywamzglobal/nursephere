@@ -79,7 +79,7 @@ if (
 ) {
 
     const response =
-        await adminRegisterHandler(
+        await registerHandler(
             request,
             env
         );
@@ -102,8 +102,6 @@ if (
     return response;
 
 }
-
-
 
         // -----------------------------
         // Register Student
