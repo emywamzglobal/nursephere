@@ -1710,9 +1710,18 @@ function openProfileUpload(
 
 }
 
-
 /*=========================================================
     PROFILE PHOTO UPLOAD
+
+    Worker contract:
+
+    PUT /api/profile/avatar
+
+    FormData:
+        avatar
+
+    Authentication:
+        Bearer studentToken
 =========================================================*/
 
 async function uploadProfilePhoto() {
@@ -1757,10 +1766,8 @@ async function uploadProfilePhoto() {
             "Only JPG, PNG and WebP images are allowed."
         );
 
-
         profileUpload.value =
             "";
-
 
         return;
 
@@ -1769,6 +1776,10 @@ async function uploadProfilePhoto() {
 
     /*-----------------------------------------------------
         VALIDATE FILE SIZE
+
+        Maximum: 5 MB
+
+        Matches the Worker validation.
     -----------------------------------------------------*/
 
     const MAX_IMAGE_SIZE =
@@ -1781,13 +1792,11 @@ async function uploadProfilePhoto() {
     ) {
 
         showProfileError(
-            "Image must be smaller than 5 MB."
+            "Avatar image must not exceed 5 MB."
         );
-
 
         profileUpload.value =
             "";
-
 
         return;
 
@@ -1796,52 +1805,43 @@ async function uploadProfilePhoto() {
 
     try {
 
-        const token =
-            getStudentToken();
+        /*-------------------------------------------------
+            CREATE FORM DATA
 
+            IMPORTANT:
 
-        if (
-            !token
-        ) {
+            Worker expects:
 
-            verifyLogin();
-
-            return;
-
-        }
-
+                formData.get("avatar")
+        -------------------------------------------------*/
 
         const formData =
             new FormData();
 
 
         formData.append(
-            "file",
+            "avatar",
             file
         );
 
 
-        /*
-            The avatar upload endpoint is
-            handled by the main Worker.
-        */
+        /*-------------------------------------------------
+            UPLOAD AVATAR
 
-        const response =
-            await fetch(
+            Matches Worker exactly:
 
-                `${PROFILE_API_BASE}/upload`,
+                PUT /api/profile/avatar
+        -------------------------------------------------*/
+
+        const result =
+            await apiRequest(
+
+                "/profile/avatar",
 
                 {
 
                     method:
-                        "POST",
-
-                    headers: {
-
-                        "Authorization":
-                            `Bearer ${token}`
-
-                    },
+                        "PUT",
 
                     body:
                         formData
@@ -1851,47 +1851,13 @@ async function uploadProfilePhoto() {
             );
 
 
-        if (
-            response.status ===
-            401
-        ) {
-
-            localStorage.removeItem(
-                "studentToken"
-            );
-
-
-            window.location.replace(
-                "../login.html"
-            );
-
-
-            return;
-
-        }
-
-
-        let result;
-
-
-        try {
-
-            result =
-                await response.json();
-
-        }
-
-        catch {
-
-            throw new Error(
-                "Invalid response from the server."
-            );
-
-        }
-
+        /*-------------------------------------------------
+            VERIFY SUCCESS
+        -------------------------------------------------*/
 
         if (
-            !response.ok
+            !result ||
+            !result.success
         ) {
 
             throw new Error(
@@ -1905,71 +1871,42 @@ async function uploadProfilePhoto() {
         }
 
 
-        if (
-            !result?.success
-        ) {
-
-            throw new Error(
-
-                result?.message ||
-
-                "Unable to upload profile photo."
-
-            );
-
-        }
-
-
-        /*
-            The upload worker stores the R2 object key.
-
-            If the API provides an actual browser URL,
-            use it immediately.
-
-            If it only provides an R2 object key,
-            do NOT assign that key to img.src because
-            it is not a browser URL.
-        */
-
-        const returnedAvatarUrl =
-
-            result.avatar_url ||
-
-            result.avatarUrl ||
-
-            result.url ||
-
-            "";
-
-
-        if (
-            isBrowserImageUrl(
-                returnedAvatarUrl
-            )
-        ) {
-
-            setAvatar(
-                returnedAvatarUrl
-            );
-
-        }
-
+        /*-------------------------------------------------
+            SUCCESS MESSAGE
+        -------------------------------------------------*/
 
         showProfileMessage(
 
             result.message ||
 
-            "Profile photo uploaded successfully."
+            "Avatar updated successfully."
 
         );
 
 
-        /*
-            Reload from database.
+        /*-------------------------------------------------
+            RELOAD DATABASE PROFILE
 
-            This keeps the database as the
-            source of truth.
-        */
+            Flow:
+
+            Worker saves image → R2
+
+            Worker saves avatar_key → D1
+
+            loadProfile()
+
+            GET /api/avatar/{studentId}
+
+            setAvatar(imageUrl)
+
+            ↓
+
+            profileImage updated
+
+            studentAvatar updated
+
+            ONE IMAGE EVERYWHERE
+        -------------------------------------------------*/
 
         await loadProfile();
 
@@ -1986,12 +1923,20 @@ async function uploadProfilePhoto() {
 
 
         showProfileError(
-            error.message
+
+            error.message ||
+
+            "Unable to upload profile photo."
+
         );
 
     }
 
     finally {
+
+        /*-------------------------------------------------
+            RESET FILE INPUT
+        -------------------------------------------------*/
 
         profileUpload.value =
             "";
@@ -1999,7 +1944,6 @@ async function uploadProfilePhoto() {
     }
 
 }
-
 
 /*=========================================================
     SET AVATAR

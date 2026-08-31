@@ -39,14 +39,494 @@ export default async function profileHandler(
         const pathname =
             url.pathname;
 
-        /*=========================================================
+  // =========================================================
+// AVATAR UPLOAD
+//
+// PUT /api/profile/avatar
+//
+// Receives a student's avatar,
+// stores it permanently in R2,
+// and saves the R2 key in D1.
+// =========================================================
+
+if (
+
+    request.method === "PUT"
+
+    &&
+
+    pathname === "/api/profile/avatar"
+
+) {
+
+    // =====================================================
+    // AUTHENTICATION
+    // =====================================================
+
+    const authHeader =
+        request.headers.get(
+            "Authorization"
+        );
+
+
+    if (
+
+        !authHeader ||
+
+        !authHeader.startsWith(
+            "Bearer "
+        )
+
+    ) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Unauthorized."
+
+        }, {
+
+            status: 401
+
+        });
+
+    }
+
+
+    const token =
+        authHeader.substring(7);
+
+
+    const valid =
+        await jwt.verify(
+            token,
+            env.JWT_SECRET
+        );
+
+
+    if (!valid) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Invalid or expired session."
+
+        }, {
+
+            status: 401
+
+        });
+
+    }
+
+
+    // =====================================================
+    // VERIFIED STUDENT ID
+    // =====================================================
+
+    const payload =
+        jwt.decode(token).payload;
+
+
+    const studentId =
+        payload.studentId;
+
+
+    if (!studentId) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Student identity missing."
+
+        }, {
+
+            status: 401
+
+        });
+
+    }
+
+
+    // =====================================================
+    // VERIFY R2 BINDING
+    // =====================================================
+
+    if (!env.IMAGES) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Image storage is unavailable."
+
+        }, {
+
+            status: 500
+
+        });
+
+    }
+
+
+    // =====================================================
+    // READ FORM DATA
+    // =====================================================
+
+    const formData =
+        await request.formData();
+
+
+    const avatar =
+        formData.get(
+            "avatar"
+        );
+
+
+    if (
+
+        !avatar ||
+
+        typeof avatar === "string"
+
+    ) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Avatar image is required."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+
+    // =====================================================
+    // VALIDATE FILE TYPE
+    // =====================================================
+
+    const allowedTypes = [
+
+        "image/jpeg",
+
+        "image/png",
+
+        "image/webp"
+
+    ];
+
+
+    if (
+
+        !allowedTypes.includes(
+            avatar.type
+        )
+
+    ) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Only JPG, PNG, and WebP images are allowed."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+
+    // =====================================================
+    // VALIDATE FILE SIZE
+    //
+    // Maximum: 5 MB
+    // =====================================================
+
+    const maxFileSize =
+        5 * 1024 * 1024;
+
+
+    if (
+
+        avatar.size >
+
+        maxFileSize
+
+    ) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Avatar image must not exceed 5 MB."
+
+        }, {
+
+            status: 400
+
+        });
+
+    }
+
+
+    // =====================================================
+    // CREATE PERMANENT R2 KEY
+    //
+    // Example:
+    //
+    // avatars/STUDENT-ID/avatar-UUID.jpg
+    // =====================================================
+
+    let extension =
+        "jpg";
+
+
+    if (
+        avatar.type ===
+        "image/png"
+    ) {
+
+        extension =
+            "png";
+
+    }
+
+    else if (
+        avatar.type ===
+        "image/webp"
+    ) {
+
+        extension =
+            "webp";
+
+    }
+
+
+    const avatarKey =
+
+        `avatars/${studentId}/avatar-${crypto.randomUUID()}.${extension}`;
+
+
+    // =====================================================
+    // GET EXISTING AVATAR
+    //
+    // We will delete the old file after
+    // successfully saving the new one.
+    // =====================================================
+
+    const existingStudent =
+        await env.DB.prepare(
+
+            `
+            SELECT
+
+                avatar_key
+
+            FROM students
+
+            WHERE id = ?
+
+            LIMIT 1
+            `
+
+        )
+
+        .bind(
+            studentId
+        )
+
+        .first();
+
+
+    if (!existingStudent) {
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Student not found."
+
+        }, {
+
+            status: 404
+
+        });
+
+    }
+
+
+    const oldAvatarKey =
+        existingStudent.avatar_key;
+
+
+    // =====================================================
+    // SAVE IMAGE TO R2
+    // =====================================================
+
+    await env.IMAGES.put(
+
+        avatarKey,
+
+        avatar.stream(),
+
+        {
+
+            httpMetadata: {
+
+                contentType:
+                    avatar.type
+
+            }
+
+        }
+
+    );
+
+
+    // =====================================================
+    // SAVE R2 KEY IN D1
+    // =====================================================
+
+    const now =
+        new Date()
+            .toISOString();
+
+
+    try {
+
+        await env.DB.prepare(
+
+            `
+            UPDATE students
+
+            SET
+
+                avatar_key = ?,
+
+                avatar_url = ?,
+
+                updated_at = ?
+
+            WHERE id = ?
+            `
+
+        )
+
+        .bind(
+
+            avatarKey,
+
+            avatarKey,
+
+            now,
+
+            studentId
+
+        )
+
+        .run();
+
+
+    }
+
+    catch (databaseError) {
+
+        // Remove uploaded file if database update fails
+
+        await env.IMAGES.delete(
+            avatarKey
+        );
+
+
+        throw databaseError;
+
+    }
+
+
+    // =====================================================
+    // DELETE OLD AVATAR
+    //
+    // Only after new avatar is safely stored.
+    // =====================================================
+
+    if (
+
+        oldAvatarKey
+
+        &&
+
+        oldAvatarKey !== avatarKey
+
+    ) {
+
+        try {
+
+            await env.IMAGES.delete(
+                oldAvatarKey
+            );
+
+        }
+
+        catch (deleteError) {
+
+            console.error(
+
+                "Unable to delete old avatar:",
+
+                deleteError
+
+            );
+
+        }
+
+    }
+
+
+    // =====================================================
+    // SUCCESS
+    // =====================================================
+
+    return Response.json({
+
+        success: true,
+
+        message:
+            "Avatar updated successfully.",
+
+        avatar_key:
+            avatarKey
+
+    });
+
+}          
+
+/*=========================================================
             STUDENT AVATAR
 
             GET /api/avatar/:studentId
 
             Retrieves the student's private avatar
             directly from R2.
-        =========================================================*/
+ =========================================================*/
 
         if (
             request.method === "GET" &&
