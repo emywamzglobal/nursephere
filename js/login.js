@@ -378,9 +378,22 @@ if (
                 );
 
 
-                completeStudentLogin(
-                    result.token,
-                    result.student
+                setTimeout(
+
+                    function () {
+
+                        completeStudentLogin(
+
+                            result.token,
+
+                            result.student
+
+                        );
+
+                    },
+
+                    100
+
                 );
 
 
