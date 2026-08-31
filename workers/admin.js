@@ -1463,47 +1463,6 @@ if (
 
 }
 
-
-        // ======================================================
-        // DEFAULT RESPONSE
-        // ======================================================
-
-        return Response.json({
-
-            success: false,
-
-            message: "Admin endpoint not found."
-
-        }, {
-
-            status: 404
-
-        });
-
-    } catch (error) {
-
-        console.error(
-            "Admin Error:",
-            error
-        );
-
-        return Response.json({
-
-            success: false,
-
-            message: "Internal server error.",
-
-            error: error.message
-
-        }, {
-
-            status: 500
-
-        });
-
-    }
-
-}
  // =====================================================
 // EXAM MANAGEMENT
 // =====================================================
@@ -15224,5 +15183,46 @@ if (
             "Administrator deleted successfully."
 
     });
+
+}
+
+        // ======================================================
+        // DEFAULT RESPONSE
+        // ======================================================
+
+        return Response.json({
+
+            success: false,
+
+            message: "Admin endpoint not found."
+
+        }, {
+
+            status: 404
+
+        });
+
+    } catch (error) {
+
+        console.error(
+            "Admin Error:",
+            error
+        );
+
+        return Response.json({
+
+            success: false,
+
+            message: "Internal server error.",
+
+            error: error.message
+
+        }, {
+
+            status: 500
+
+        });
+
+    }
 
 }
