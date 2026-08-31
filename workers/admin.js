@@ -13778,12 +13778,8 @@ if (
             ? body.password
             : "";
 
-
     const role =
-        typeof body.role === "string"
-            ? body.role.trim()
-            : "admin";
-
+          "admin";
 
     // --------------------------------------------------
     // VALIDATION
@@ -13899,31 +13895,6 @@ if (
         });
 
     }
-
-
-    if (
-
-        role !== "admin" &&
-
-        role !== "super_admin"
-
-    ) {
-
-        return Response.json({
-
-            success: false,
-
-            message:
-                "Invalid administrator role."
-
-        }, {
-
-            status: 400
-
-        });
-
-    }
-
 
     // --------------------------------------------------
     // CHECK DUPLICATE EMAIL

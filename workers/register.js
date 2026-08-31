@@ -26,6 +26,440 @@ export default async function registerHandler(
     try {
 
         // ======================================================
+// ADMIN REGISTRATION / ACCOUNT ACTIVATION
+//
+// POST /api/admin/register
+//
+// Allows an existing approved administrator to create
+// their own password and activate their account.
+//
+// This is used for:
+// - Jullie's initial Super Admin account activation
+// - Future administrator account activation
+// ======================================================
+
+if (
+
+    request.method === "POST"
+
+    &&
+
+    new URL(request.url).pathname ===
+        "/api/admin/register"
+
+) {
+
+    try {
+
+
+        // ==================================================
+        // READ REQUEST BODY
+        // ==================================================
+
+        const data =
+            await request.json();
+
+
+        const email =
+            typeof data.email === "string"
+
+                ? data.email
+                    .trim()
+                    .toLowerCase()
+
+                : "";
+
+
+        const password =
+            typeof data.password === "string"
+
+                ? data.password
+
+                : "";
+
+
+        // ==================================================
+        // VALIDATE EMAIL
+        // ==================================================
+
+        if (
+
+            !email
+
+        ) {
+
+            return Response.json({
+
+                success: false,
+
+                message:
+                    "Email address is required."
+
+            }, {
+
+                status: 400
+
+            });
+
+        }
+
+
+        const emailPattern =
+            /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+
+        if (
+
+            !emailPattern.test(
+                email
+            )
+
+        ) {
+
+            return Response.json({
+
+                success: false,
+
+                message:
+                    "Please enter a valid email address."
+
+            }, {
+
+                status: 400
+
+            });
+
+        }
+
+
+        // ==================================================
+        // VALIDATE PASSWORD
+        // ==================================================
+
+        if (
+
+            !password
+
+        ) {
+
+            return Response.json({
+
+                success: false,
+
+                message:
+                    "Password is required."
+
+            }, {
+
+                status: 400
+
+            });
+
+        }
+
+
+        if (
+
+            password.length < 8
+
+        ) {
+
+            return Response.json({
+
+                success: false,
+
+                message:
+                    "Password must be at least 8 characters."
+
+            }, {
+
+                status: 400
+
+            });
+
+        }
+
+
+        // ==================================================
+        // FIND EXISTING ADMINISTRATOR
+        // ==================================================
+
+        const admin =
+            await env.DB.prepare(
+
+                `
+                SELECT
+
+                    id,
+
+                    first_name,
+
+                    last_name,
+
+                    email,
+
+                    password_hash,
+
+                    role,
+
+                    status,
+
+                    approval_status
+
+                FROM admins
+
+                WHERE LOWER(email) =
+                    LOWER(?)
+
+                LIMIT 1
+                `
+
+            )
+
+            .bind(
+                email
+            )
+
+            .first();
+
+
+        // ==================================================
+        // ADMIN ACCOUNT MUST EXIST
+        // ==================================================
+
+        if (
+
+            !admin
+
+        ) {
+
+            return Response.json({
+
+                success: false,
+
+                message:
+                    "No administrator account was found with this email address."
+
+            }, {
+
+                status: 404
+
+            });
+
+        }
+
+
+        // ==================================================
+        // CHECK ACCOUNT STATUS
+        // ==================================================
+
+        if (
+
+            admin.status !==
+                "active"
+
+        ) {
+
+            return Response.json({
+
+                success: false,
+
+                message:
+                    "This administrator account is inactive."
+
+            }, {
+
+                status: 403
+
+            });
+
+        }
+
+
+        // ==================================================
+        // CHECK APPROVAL STATUS
+        // ==================================================
+
+        if (
+
+            admin.approval_status !==
+                "approved"
+
+        ) {
+
+            return Response.json({
+
+                success: false,
+
+                message:
+                    "This administrator account has not been approved."
+
+            }, {
+
+                status: 403
+
+            });
+
+        }
+
+
+        // ==================================================
+        // PREVENT PASSWORD FROM BEING SET TWICE
+        // ==================================================
+
+        if (
+
+            admin.password_hash
+
+        ) {
+
+            return Response.json({
+
+                success: false,
+
+                message:
+                    "This administrator account has already been activated. Please log in instead."
+
+            }, {
+
+                status: 409
+
+            });
+
+        }
+
+
+        // ==================================================
+        // HASH PASSWORD
+        // ==================================================
+
+        const passwordHash =
+            await bcrypt.hash(
+
+                password,
+
+                10
+
+            );
+
+
+        const now =
+            new Date()
+                .toISOString();
+
+
+        // ==================================================
+        // ACTIVATE ADMINISTRATOR ACCOUNT
+        // ==================================================
+
+        await env.DB.prepare(
+
+            `
+            UPDATE admins
+
+            SET
+
+                password_hash = ?,
+
+                password_set_at = ?,
+
+                updated_at = ?
+
+            WHERE id = ?
+
+            AND password_hash IS NULL
+            `
+
+        )
+
+        .bind(
+
+            passwordHash,
+
+            now,
+
+            now,
+
+            admin.id
+
+        )
+
+        .run();
+
+
+        // ==================================================
+        // SUCCESS
+        // ==================================================
+
+        return Response.json({
+
+            success: true,
+
+            message:
+                "Administrator account activated successfully.",
+
+            admin: {
+
+                id:
+                    admin.id,
+
+                first_name:
+                    admin.first_name,
+
+                last_name:
+                    admin.last_name,
+
+                email:
+                    admin.email,
+
+                role:
+                    admin.role
+
+            }
+
+        }, {
+
+            status: 200
+
+        });
+
+
+    }
+
+    catch (
+
+        error
+
+    ) {
+
+
+        console.error(
+
+            "Admin Registration Error:",
+
+            error
+
+        );
+
+
+        return Response.json({
+
+            success: false,
+
+            message:
+                "Unable to activate administrator account."
+
+        }, {
+
+            status: 500
+
+        });
+
+    }
+
+}
+
+// ======================================================
 // EMAIL VERIFICATION
 //
 // GET /api/register/verify?token=TOKEN

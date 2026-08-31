@@ -66,6 +66,45 @@ if (request.method === "OPTIONS") {
 
         }
 
+        // ======================================================
+// ADMIN REGISTRATION
+// ======================================================
+
+if (
+
+    url.pathname === "/api/admin/register" &&
+
+    request.method === "POST"
+
+) {
+
+    const response =
+        await adminRegisterHandler(
+            request,
+            env
+        );
+
+
+    Object.entries(
+        corsHeaders
+    ).forEach(
+        ([key, value]) => {
+
+            response.headers.set(
+                key,
+                value
+            );
+
+        }
+    );
+
+
+    return response;
+
+}
+
+
+
         // -----------------------------
         // Register Student
         // -----------------------------
@@ -189,6 +228,43 @@ if (
 
         }
     );
+
+    return response;
+
+}
+
+// ======================================================
+// ADMIN LOGIN
+// ======================================================
+
+if (
+
+    url.pathname === "/api/admin/login" &&
+
+    request.method === "POST"
+
+) {
+
+    const response =
+        await loginHandler(
+            request,
+            env
+        );
+
+
+    Object.entries(
+        corsHeaders
+    ).forEach(
+        ([key, value]) => {
+
+            response.headers.set(
+                key,
+                value
+            );
+
+        }
+    );
+
 
     return response;
 
@@ -895,7 +971,6 @@ if (
 
 }
 
-
 // -----------------------------
 // Payment Management
 // -----------------------------
@@ -1018,27 +1093,39 @@ if (
     return response;
 
 }
-// -----------------------------
-// Admin
-// -----------------------------
+
+// ======================================================
+// ADMIN MANAGEMENT
+// ======================================================
+
 if (
 
-    url.pathname.startsWith("/api/admin")
+    url.pathname.startsWith("/api/admin/") ||
+
+    url.pathname.startsWith("/api/account")
 
 ) {
 
-    const response = await adminHandler(request, env);
+    const response =
+        await adminHandler(
+            request,
+            env
+        );
 
-    Object.entries(corsHeaders).forEach(([key, value]) => {
+    Object.entries(corsHeaders).forEach(
+        ([key, value]) => {
 
-        response.headers.set(key, value);
+            response.headers.set(
+                key,
+                value
+            );
 
-    });
+        }
+    );
 
     return response;
 
 }
-
 
 // -----------------------------
 // API Route Not Found

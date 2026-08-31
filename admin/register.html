@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nursephere Admin Login</title>
+
+    <link rel="stylesheet" href="css/login.css">
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+</head>
+
+<body>
+
+<div class="login-container">
+
+    <div class="login-card">
+
+        <div class="logo">
+
+            <img src="../assets/logo/logo.jpeg" alt="Nursephere">
+
+            <h2>Nursephere</h2>
+
+            <p>Administrator Account Setup</p>
+
+        </div>
+
+        <form id="registerForm">
+
+            <div class="input-group">
+
+                <label>Email Address</label>
+
+                <div class="input-box">
+
+                    <i class="fa-solid fa-envelope"></i>
+
+                    <input
+                        type="email"
+                        id="email"
+                        placeholder="Your authorized email"
+                        readonly
+                        required
+                    >
+
+                </div>
+
+            </div>
+
+
+            <div class="input-group">
+
+                <label>Create Password</label>
+
+                <div class="input-box">
+
+                    <i class="fa-solid fa-lock"></i>
+
+                    <input
+                        type="password"
+                        id="password"
+                        placeholder="Create your password"
+                        required
+                    >
+
+                    <span id="togglePassword">
+
+                        <i class="fa-solid fa-eye"></i>
+
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            <div class="input-group">
+
+                <label>Confirm Password</label>
+
+                <div class="input-box">
+
+                    <i class="fa-solid fa-lock"></i>
+
+                    <input
+                        type="password"
+                        id="confirmPassword"
+                        placeholder="Confirm your password"
+                        required
+                    >
+
+                    <span id="toggleConfirmPassword">
+
+                        <i class="fa-solid fa-eye"></i>
+
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            <button type="submit" id="registerBtn">
+
+                <i class="fa-solid fa-user-check"></i>
+
+                Activate Account
+
+            </button>
+
+
+            <div id="message"></div>
+
+        </form>
+
+
+        <div class="options">
+
+            <span>Already have an account?</span>
+
+            <a href="login.html">
+
+                Login
+
+            </a>
+
+        </div>
+
+    </div>
+
+</div>
+<!-- Shared Libraries -->
+<script src="../shared/api.js"></script>
+<script src="../shared/auth.js"></script>
+<script src="../shared/utils.js"></script>
+
+<!-- Register Script -->
+<script src="js/register.js"></script>
+
+</body>
+</html>
