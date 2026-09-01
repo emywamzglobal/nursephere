@@ -325,36 +325,34 @@ export default async function loginHandler(
             // ==================================================
 
             const token =
-                await jwt.sign(
+    await jwt.sign(
 
-                    {
+        {
 
-                        adminId:
-                            admin.id,
+            id:
+                admin.id,
 
-                        email:
-                            admin.email,
+            email:
+                admin.email,
 
-                        role:
-                            admin.role,
+            role:
+                admin.role,
 
-                        tokenVersion:
-                            admin.token_version
+            token_version:
+                admin.token_version
 
-                    },
+        },
 
-                    env.JWT_SECRET,
+        env.JWT_SECRET,
 
-                    {
+        {
 
-                        expiresIn:
-                            "30d"
+            expiresIn:
+                "30d"
 
-                    }
+        }
 
-                );
-
-
+    );
             // ==================================================
             // UPDATE LAST LOGIN
             // ==================================================

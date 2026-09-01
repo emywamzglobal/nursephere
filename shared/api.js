@@ -23,7 +23,16 @@ const API = {
 
 function getToken() {
 
-    return localStorage.getItem("accessToken") || "";
+    const path =
+        window.location.pathname.toLowerCase();
+
+    if (path.includes("/admin/")) {
+
+        return localStorage.getItem("adminToken") || "";
+
+    }
+
+    return localStorage.getItem("studentToken") || "";
 
 }
 

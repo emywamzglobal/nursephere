@@ -9,8 +9,10 @@
 
     <!-- Responsive Design -->
 
-    <meta name="viewport"
-        content="width=device-width, initial-scale=1.0">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
     <!-- Page Title -->
 
@@ -18,123 +20,160 @@
 
     <!-- Description -->
 
-    <meta name="description"
-        content="Nursephere Administration Management">
+    <meta
+        name="description"
+        content="Nursephere Administration Management"
+    >
 
     <!-- Favicon -->
 
-    <link rel="icon"
+    <link
+        rel="icon"
         type="image/png"
         sizes="32x32"
-        href="../assets/favicon/favicon-32x32.png">
+        href="../assets/favicon/favicon-32x32.png"
+    >
 
-    <link rel="icon"
+    <link
+        rel="icon"
         type="image/png"
         sizes="16x16"
-        href="../assets/favicon/favicon-16x16.png">
+        href="../assets/favicon/favicon-16x16.png"
+    >
 
     <!-- Google Fonts -->
 
-    <link rel="preconnect"
-        href="https://fonts.googleapis.com">
+    <link
+        rel="preconnect"
+        href="https://fonts.googleapis.com"
+    >
 
-    <link rel="preconnect"
+    <link
+        rel="preconnect"
         href="https://fonts.gstatic.com"
-        crossorigin>
+        crossorigin
+    >
 
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
-        rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet"
+    >
 
     <!-- Font Awesome -->
 
-    <link rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
+    >
 
     <!-- Admin CSS -->
 
-    <link rel="stylesheet"
-        href="css/admin-main.css">
+    <link
+        rel="stylesheet"
+        href="css/admin-main.css"
+    >
 
-    <link rel="stylesheet"
-        href="css/dashboard.css">
+    <link
+        rel="stylesheet"
+        href="css/dashboard.css"
+    >
 
-    <link rel="stylesheet"
-        href="css/header.css">
+    <link
+        rel="stylesheet"
+        href="css/header.css"
+    >
 
-    <link rel="stylesheet"
-        href="css/sidebar.css">
+    <link
+        rel="stylesheet"
+        href="css/sidebar.css"
+    >
 
-    <link rel="stylesheet"
-        href="css/admin-management.css">
-        
-
+    <link
+        rel="stylesheet"
+        href="css/admin-management.css"
+    >
 
 </head>
 
+
 <body>
 
+
+<!-- ===================================
+        ADMIN APPLICATION LAYOUT
+==================================== -->
+
+<div class="admin-layout">
+
+
     <!-- ===================================
-            ADMIN APPLICATION LAYOUT
+            ADMIN SIDEBAR
     ==================================== -->
 
-    <div class="admin-layout">
+    <aside
+        class="admin-sidebar"
+        id="adminSidebar"
+    >
 
-        <!-- Sidebar -->
 
-        <!-- ===========================
-        ADMIN SIDEBAR
-=========================== -->
+        <!-- Logo -->
 
-<aside class="admin-sidebar" id="adminSidebar">
+        <div class="sidebar-logo">
 
-    <!-- Logo -->
+            <img
+                src="../assets/logo/logo.jpeg"
+                alt="Nursephere Logo"
+            >
 
-    <div class="sidebar-logo">
+            <div class="logo-text">
 
-        <img src="../assets/logo/logo.jpeg"
-             alt="Nursephere Logo">
+                <h2>
 
-        <div class="logo-text">
+                    Nursephere
 
-            <h2>
+                </h2>
 
-                Nursephere
+                <p>
 
-            </h2>
+                    Admin Portal
 
-            <p>
+                </p>
 
-                Admin Portal
-
-            </p>
+            </div>
 
         </div>
 
-    </div>
 
-    <!-- Navigation -->
+        <!-- Navigation -->
 
-    <nav class="sidebar-nav">
+        <nav class="sidebar-nav">
 
-        <span class="nav-title">
+            <span class="nav-title">
 
-            ADMINISTRATION
-
-        </span>
-
-        <a href="dashboard.html" class="nav-link">
-
-            <i class="fas fa-chart-line"></i>
-
-            <span>
-
-                Dashboard
+                ADMINISTRATION
 
             </span>
 
-        </a>
 
-        <!-- Administrator Management -->
+            <!-- Dashboard -->
+
+            <a
+                href="dashboard.html"
+                class="nav-link"
+            >
+
+                <i class="fas fa-chart-line"></i>
+
+                <span>
+
+                    Dashboard
+
+                </span>
+
+            </a>
+
+
+            <!-- Administrator Management -->
 
             <a
                 href="admin-management.html"
@@ -144,422 +183,651 @@
 
                 <i class="fas fa-user-shield"></i>
 
-                <span>Administrator Management</span>
+                <span>
+
+                    Administrator Management
+
+                </span>
 
             </a>
 
-        <a href="questions-resources-management.html" class="nav-link">
 
-            <i class="fas fa-circle-question"></i>
+            <!-- Question Management -->
 
-            <span>
+            <a
+                href="questions-resources-management.html"
+                class="nav-link"
+            >
 
-                Question Management
+                <i class="fas fa-circle-question"></i>
+
+                <span>
+
+                    Question Management
+
+                </span>
+
+            </a>
+
+
+            <!-- Students -->
+
+            <a
+                href="students.html"
+                class="nav-link"
+            >
+
+                <i class="fas fa-user-graduate"></i>
+
+                <span>
+
+                    Students
+
+                </span>
+
+            </a>
+
+
+            <!-- Subscriptions -->
+
+            <a
+                href="subscriptions.html"
+                class="nav-link"
+            >
+
+                <i class="fas fa-credit-card"></i>
+
+                <span>
+
+                    Subscriptions
+
+                </span>
+
+            </a>
+
+
+            <!-- Referrals -->
+
+            <a
+                href="referrals.html"
+                class="nav-link"
+            >
+
+                <i class="fas fa-user-plus"></i>
+
+                <span>
+
+                    Referrals
+
+                </span>
+
+            </a>
+
+        </nav>
+
+
+        <!-- Account -->
+
+        <div class="sidebar-bottom">
+
+            <span class="nav-title">
+
+                ACCOUNT
 
             </span>
 
-        </a>
 
-        <a href="students.html" class="nav-link">
+            <!-- Settings -->
 
-            <i class="fas fa-user-graduate"></i>
+            <a
+                href="settings.html"
+                class="nav-link"
+            >
 
-            <span>
+                <i class="fas fa-gear"></i>
 
-                Students
+                <span>
 
-            </span>
+                    Settings
 
-        </a>
+                </span>
 
-        <a href="subscriptions.html" class="nav-link">
+            </a>
 
-            <i class="fas fa-credit-card"></i>
 
-            <span>
+            <!-- Logout -->
 
-                Subscriptions
+            <a
+                href="login.html"
+                class="nav-link logout-link"
+            >
 
-            </span>
+                <i class="fas fa-right-from-bracket"></i>
 
-        </a>
+                <span>
 
-        <a href="referrals.html" class="nav-link">
+                    Logout
 
-            <i class="fas fa-user-plus"></i>
+                </span>
 
-            <span>
-
-                Referrals
-
-            </span>
-
-        </a>
-
-    </nav>
-
-    <!-- Account -->
-
-    <div class="sidebar-bottom">
-
-        <span class="nav-title">
-
-            ACCOUNT
-
-        </span>
-
-        <a href="settings.html" class="nav-link">
-
-            <i class="fas fa-gear"></i>
-
-            <span>
-
-                Settings
-
-            </span>
-
-        </a>
-
-        <a href="login.html" class="nav-link logout-link">
-
-            <i class="fas fa-right-from-bracket"></i>
-
-            <span>
-
-                Logout
-
-            </span>
-
-        </a>
-
-    </div>
-
-</aside>
-
-<div class="admin-container">
-
-    <!-- =====================================================
-         PAGE HEADER
-    ====================================================== -->
-
-    <div class="page-header">
-
-        <div>
-
-            <h1>
-
-                Administrator Management
-
-            </h1>
-
-            <p>
-
-                Manage administrator accounts and access permissions.
-
-            </p>
+            </a>
 
         </div>
 
-        <button
-            type="button"
-            class="primary-btn"
-            id="createAdminBtn"
-        >
-
-            <i class="fa-solid fa-user-plus"></i>
-
-            Add Administrator
-
-        </button>
-
-    </div>
+    </aside>
 
 
-    <!-- =====================================================
-         MESSAGE AREA
-    ====================================================== -->
 
-    <div id="message"></div>
+    <!-- ===================================
+            MAIN APPLICATION
+    ==================================== -->
 
-
-    <!-- =====================================================
-         ADMINISTRATION STATS
-    ====================================================== -->
-
-    <div class="stats-grid">
-
-        <div class="stat-card">
-
-            <div class="stat-icon">
-
-                <i class="fa-solid fa-users"></i>
-
-            </div>
-
-            <div class="stat-content">
-
-                <span>Total Administrators</span>
-
-                <h2 id="totalAdmins">0</h2>
-
-            </div>
-
-        </div>
+    <div class="admin-main">
 
 
-        <div class="stat-card">
+        <!-- ===================================
+                ADMIN HEADER
+        ==================================== -->
 
-            <div class="stat-icon">
-
-                <i class="fa-solid fa-user-check"></i>
-
-            </div>
-
-            <div class="stat-content">
-
-                <span>Active Administrators</span>
-
-                <h2 id="activeAdmins">0</h2>
-
-            </div>
-
-        </div>
+        <header class="admin-header">
 
 
-        <div class="stat-card">
+            <!-- Sidebar Toggle -->
 
-            <div class="stat-icon">
+            <button
+                class="menu-toggle"
+                id="menuToggle"
+            >
 
-                <i class="fa-solid fa-clock"></i>
+                <i class="fas fa-bars"></i>
 
-            </div>
-
-            <div class="stat-content">
-
-                <span>Pending Approval</span>
-
-                <h2 id="pendingAdmins">0</h2>
-
-            </div>
-
-        </div>
+            </button>
 
 
-        <div class="stat-card">
+            <!-- Refresh -->
 
-            <div class="stat-icon">
+            <button
+                id="refreshButton"
+                class="btn btn-primary"
+            >
 
-                <i class="fa-solid fa-user-slash"></i>
+                <i class="fas fa-rotate"></i>
 
-            </div>
+                Refresh
 
-            <div class="stat-content">
-
-                <span>Inactive Administrators</span>
-
-                <h2 id="inactiveAdmins">0</h2>
-
-            </div>
-
-        </div>
-
-    </div>
+            </button>
 
 
-    <!-- =====================================================
-         ADMINISTRATOR LIST
-    ====================================================== -->
+            <!-- Search -->
 
-    <div class="content-card">
+            <div class="header-search">
 
+                <i class="fas fa-search"></i>
 
-        <!-- =================================================
-             CARD HEADER
-        ================================================== -->
-
-        <div class="content-card-header">
-
-            <div>
-
-                <h2>
-
-                    Administrators
-
-                </h2>
-
-                <p>
-
-                    View and manage administrator accounts.
-
-                </p>
+                <input
+                    type="text"
+                    placeholder="Search students, questions, subscriptions..."
+                >
 
             </div>
 
 
-            <!-- SEARCH -->
+            <!-- Header Right -->
 
-            <div class="table-actions">
+            <div class="header-right">
 
-                <div class="search-box">
 
-                    <i class="fa-solid fa-magnifying-glass"></i>
+                <!-- Notifications -->
 
-                    <input
-                        type="text"
-                        id="searchAdmins"
-                        placeholder="Search administrators..."
+                <button class="header-icon">
+
+                    <i class="fas fa-bell"></i>
+
+                    <span
+                        class="notification-badge"
+                        id="notificationCount"
                     >
+
+                        0
+
+                    </span>
+
+                </button>
+
+
+                <!-- Admin Profile -->
+
+                <div class="admin-profile">
+
+                    <img
+                        src="../assets/images/avatar-placeholder.png"
+                        alt="Administrator"
+                    >
+
+                    <div>
+
+                        <h4 id="userName"></h4>
+
+                        <small>
+
+                            Admin
+
+                        </small>
+
+                    </div>
+
+                    <i class="fas fa-chevron-down"></i>
+
+                </div>
+
+            </div>
+
+        </header>
+
+
+
+        <!-- ===================================
+                PAGE CONTENT
+        ==================================== -->
+
+        <main class="dashboard-content">
+
+
+            <!-- PAGE LOADER -->
+
+            <div
+                id="pageLoader"
+                class="page-loader"
+                style="display: none;"
+            >
+
+                <i class="fas fa-spinner fa-spin"></i>
+
+            </div>
+
+
+
+            <!-- ===================================
+                    ADMIN MANAGEMENT CONTENT
+            ==================================== -->
+
+            <section class="content">
+
+
+                <!-- PAGE HEADER -->
+
+                <div class="page-header">
+
+                    <div>
+
+                        <h1>
+
+                            Administrator Management
+
+                        </h1>
+
+                        <p>
+
+                            Manage administrator accounts and access permissions.
+
+                        </p>
+
+                    </div>
+
+
+                    <button
+                        type="button"
+                        class="primary-btn"
+                        id="createAdminBtn"
+                    >
+
+                        <i class="fa-solid fa-user-plus"></i>
+
+                        Add Administrator
+
+                    </button>
 
                 </div>
 
 
-                <!-- STATUS FILTER -->
 
-                <select id="statusFilter">
+                <!-- MESSAGE AREA -->
 
-                    <option value="">
+                <div id="message"></div>
 
-                        All Statuses
 
-                    </option>
 
-                    <option value="active">
+                <!-- ===================================
+                        ADMINISTRATION STATS
+                ==================================== -->
 
-                        Active
+                <div class="stats-grid">
 
-                    </option>
 
-                    <option value="inactive">
+                    <!-- Total -->
 
-                        Inactive
+                    <div class="stat-card">
 
-                    </option>
+                        <div class="stat-icon">
 
-                    <option value="pending">
+                            <i class="fa-solid fa-users"></i>
 
-                        Pending Approval
+                        </div>
 
-                    </option>
+                        <div class="stat-content">
 
-                </select>
+                            <span>
 
-            </div>
+                                Total Administrators
 
-        </div>
+                            </span>
 
+                            <h2 id="totalAdmins">
 
-        <!-- =================================================
-             ADMIN TABLE
-        ================================================== -->
+                                0
 
-        <div class="table-responsive">
+                            </h2>
 
-            <table class="admin-table">
+                        </div>
 
-                <thead>
+                    </div>
 
-                    <tr>
 
-                        <th>
 
-                            Administrator
+                    <!-- Active -->
 
-                        </th>
+                    <div class="stat-card">
 
-                        <th>
+                        <div class="stat-icon">
 
-                            Email
+                            <i class="fa-solid fa-user-check"></i>
 
-                        </th>
+                        </div>
 
-                        <th>
+                        <div class="stat-content">
 
-                            Role
+                            <span>
 
-                        </th>
+                                Active Administrators
 
-                        <th>
+                            </span>
 
-                            Account Status
+                            <h2 id="activeAdmins">
 
-                        </th>
+                                0
 
-                        <th>
+                            </h2>
 
-                            Approval
+                        </div>
 
-                        </th>
+                    </div>
 
-                        <th>
 
-                            Last Login
 
-                        </th>
+                    <!-- Pending -->
 
-                        <th>
+                    <div class="stat-card">
 
-                            Actions
+                        <div class="stat-icon">
 
-                        </th>
+                            <i class="fa-solid fa-clock"></i>
 
-                    </tr>
+                        </div>
 
-                </thead>
+                        <div class="stat-content">
 
+                            <span>
 
-                <tbody id="adminsTableBody">
+                                Pending Approval
 
+                            </span>
 
-                    <!-- Loading state -->
+                            <h2 id="pendingAdmins">
 
-                    <tr>
+                                0
 
-                        <td
-                            colspan="7"
-                            class="table-loading"
-                        >
+                            </h2>
 
-                            <i class="fa-solid fa-spinner fa-spin"></i>
+                        </div>
 
-                            Loading administrators...
+                    </div>
 
-                        </td>
 
-                    </tr>
 
+                    <!-- Inactive -->
 
-                </tbody>
+                    <div class="stat-card">
 
-            </table>
+                        <div class="stat-icon">
 
-        </div>
+                            <i class="fa-solid fa-user-slash"></i>
 
+                        </div>
 
-        <!-- =================================================
-             EMPTY STATE
-        ================================================== -->
+                        <div class="stat-content">
 
-        <div
-            id="emptyAdmins"
-            class="empty-state"
-            style="display: none;"
-        >
+                            <span>
 
-            <i class="fa-solid fa-users"></i>
+                                Inactive Administrators
 
-            <h3>
+                            </span>
 
-                No administrators found
+                            <h2 id="inactiveAdmins">
 
-            </h3>
+                                0
 
-            <p>
+                            </h2>
 
-                Create an administrator account to get started.
+                        </div>
 
-            </p>
+                    </div>
 
-        </div>
+                </div>
+
+
+
+                <!-- ===================================
+                        ADMINISTRATOR LIST
+                ==================================== -->
+
+                <div class="content-card">
+
+
+                    <!-- CARD HEADER -->
+
+                    <div class="content-card-header">
+
+
+                        <div>
+
+                            <h2>
+
+                                Administrators
+
+                            </h2>
+
+                            <p>
+
+                                View and manage administrator accounts.
+
+                            </p>
+
+                        </div>
+
+
+                        <!-- TABLE ACTIONS -->
+
+                        <div class="table-actions">
+
+
+                            <!-- Search -->
+
+                            <div class="search-box">
+
+                                <i class="fa-solid fa-magnifying-glass"></i>
+
+                                <input
+                                    type="text"
+                                    id="searchAdmins"
+                                    placeholder="Search administrators..."
+                                >
+
+                            </div>
+
+
+                            <!-- Status Filter -->
+
+                            <select id="statusFilter">
+
+                                <option value="">
+
+                                    All Statuses
+
+                                </option>
+
+                                <option value="active">
+
+                                    Active
+
+                                </option>
+
+                                <option value="inactive">
+
+                                    Inactive
+
+                                </option>
+
+                                <option value="pending">
+
+                                    Pending Approval
+
+                                </option>
+
+                            </select>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <!-- ADMIN TABLE -->
+
+                    <div class="table-responsive">
+
+                        <table class="admin-table">
+
+                            <thead>
+
+                                <tr>
+
+                                    <th>
+
+                                        Administrator
+
+                                    </th>
+
+                                    <th>
+
+                                        Email
+
+                                    </th>
+
+                                    <th>
+
+                                        Role
+
+                                    </th>
+
+                                    <th>
+
+                                        Account Status
+
+                                    </th>
+
+                                    <th>
+
+                                        Approval
+
+                                    </th>
+
+                                    <th>
+
+                                        Last Login
+
+                                    </th>
+
+                                    <th>
+
+                                        Actions
+
+                                    </th>
+
+                                </tr>
+
+                            </thead>
+
+
+                            <tbody id="adminsTableBody">
+
+
+                                <!-- Loading State -->
+
+                                <tr>
+
+                                    <td
+                                        colspan="7"
+                                        class="table-loading"
+                                    >
+
+                                        <i class="fa-solid fa-spinner fa-spin"></i>
+
+                                        Loading administrators...
+
+                                    </td>
+
+                                </tr>
+
+                            </tbody>
+
+                        </table>
+
+                    </div>
+
+
+
+                    <!-- EMPTY STATE -->
+
+                    <div
+                        id="emptyAdmins"
+                        class="empty-state"
+                        style="display: none;"
+                    >
+
+                        <i class="fa-solid fa-users"></i>
+
+                        <h3>
+
+                            No administrators found
+
+                        </h3>
+
+                        <p>
+
+                            Create an administrator account to get started.
+
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+            </section>
+
+
+        </main>
+
 
     </div>
 
@@ -568,9 +836,9 @@
 
 
 
-<!-- =========================================================
-     CREATE ADMIN MODAL
-========================================================= -->
+<!-- ===================================
+        CREATE ADMIN MODAL
+==================================== -->
 
 <div
     class="modal"
@@ -583,7 +851,7 @@
     <div class="modal-content">
 
 
-        <!-- HEADER -->
+        <!-- Header -->
 
         <div class="modal-header">
 
@@ -617,12 +885,13 @@
         </div>
 
 
-        <!-- FORM -->
+
+        <!-- Form -->
 
         <form id="createAdminForm">
 
 
-            <!-- FIRST NAME -->
+            <!-- First Name -->
 
             <div class="form-group">
 
@@ -641,7 +910,8 @@
             </div>
 
 
-            <!-- LAST NAME -->
+
+            <!-- Last Name -->
 
             <div class="form-group">
 
@@ -660,7 +930,8 @@
             </div>
 
 
-            <!-- EMAIL -->
+
+            <!-- Email -->
 
             <div class="form-group">
 
@@ -678,34 +949,37 @@
 
             </div>
 
-            <!-- PASSWORD -->
-
-<div class="form-group">
-
-    <label for="adminPassword">
-
-        Password
-
-    </label>
-
-    <input
-        type="password"
-        id="adminPassword"
-        placeholder="Enter temporary password"
-        minlength="8"
-        required
-    >
-
-    <small>
-
-        Password must be at least 8 characters.
-
-    </small>
-
-</div>
 
 
-            <!-- ROLE -->
+            <!-- Password -->
+
+            <div class="form-group">
+
+                <label for="adminPassword">
+
+                    Password
+
+                </label>
+
+                <input
+                    type="password"
+                    id="adminPassword"
+                    placeholder="Enter temporary password"
+                    minlength="8"
+                    required
+                >
+
+                <small>
+
+                    Password must be at least 8 characters.
+
+                </small>
+
+            </div>
+
+
+
+            <!-- Role -->
 
             <div class="form-group">
 
@@ -716,19 +990,18 @@
                 </label>
 
                 <select
-    id="adminRole"
-    required
->
+                    id="adminRole"
+                    required
+                >
 
-    <option value="admin">
+                    <option value="admin">
 
-        Administrator
+                        Administrator
 
-    </option>
+                    </option>
 
-</select>
+                </select>
 
-                
 
                 <small>
 
@@ -739,14 +1012,17 @@
             </div>
 
 
-            <!-- MESSAGE -->
+
+            <!-- Message -->
 
             <div id="createAdminMessage"></div>
 
 
-            <!-- ACTIONS -->
+
+            <!-- Actions -->
 
             <div class="modal-actions">
+
 
                 <button
                     type="button"
@@ -773,7 +1049,6 @@
 
             </div>
 
-
         </form>
 
     </div>
@@ -782,9 +1057,9 @@
 
 
 
-<!-- =========================================================
-     CONFIRM ACTION MODAL
-========================================================= -->
+<!-- ===================================
+        CONFIRM ACTION MODAL
+==================================== -->
 
 <div
     class="modal"
@@ -796,6 +1071,8 @@
 
     <div class="modal-content small-modal">
 
+
+        <!-- Header -->
 
         <div class="modal-header">
 
@@ -819,6 +1096,9 @@
         </div>
 
 
+
+        <!-- Content -->
+
         <div class="confirm-content">
 
             <p id="confirmAdminMessage">
@@ -830,7 +1110,11 @@
         </div>
 
 
+
+        <!-- Actions -->
+
         <div class="modal-actions">
+
 
             <button
                 type="button"
@@ -861,9 +1145,12 @@
 
 
 
-<!-- =========================================================
-     SHARED LIBRARIES
-========================================================= -->
+<!-- ===================================
+        JAVASCRIPT
+==================================== -->
+
+
+<!-- Shared -->
 
 <script src="../shared/api.js"></script>
 
@@ -872,9 +1159,12 @@
 <script src="../shared/utils.js"></script>
 
 
-<!-- =========================================================
-     ADMIN MANAGEMENT SCRIPT
-========================================================= -->
+<!-- Admin Layout -->
+
+<script src="js/admin-main.js"></script>
+
+
+<!-- Administrator Management -->
 
 <script src="js/admin.js"></script>
 
